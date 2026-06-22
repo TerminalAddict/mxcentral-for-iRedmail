@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Migrate from Cluebringer to iRedAPD</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="migrate-from-cluebringer-to-iredapd">Migrate from Cluebringer to iRedAPD</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="cluebringer.to.iredapd.html#migrate-from-cluebringer-to-iredapd">Migrate from Cluebringer to iRedAPD</a><ul>
+<li><a href="cluebringer.to.iredapd.html#summary">Summary</a></li>
+<li><a href="cluebringer.to.iredapd.html#migrate-to-iredapd">Migrate to iRedAPD</a><ul>
+<li><a href="cluebringer.to.iredapd.html#upgrade-iredapd-to-170-or-later-releases">Upgrade iRedAPD to 1.7.0 or later releases</a></li>
+<li><a href="cluebringer.to.iredapd.html#migrate-cluebringer-to-iredapd">Migrate Cluebringer to iRedAPD</a></li>
+</ul>
+</li>
+<li><a href="cluebringer.to.iredapd.html#after-migration">After migration</a><ul>
+<li><a href="cluebringer.to.iredapd.html#enable-required-plugins-remove-old-plugins">Enable required plugins, remove old plugins</a></li>
+<li><a href="cluebringer.to.iredapd.html#disable-cluebringer-in-postfix">Disable Cluebringer in Postfix</a></li>
+<li><a href="cluebringer.to.iredapd.html#enable-iredapd-in-postfix">Enable iRedAPD in Postfix</a></li>
+<li><a href="cluebringer.to.iredapd.html#restart-postfix-service">Restart Postfix service</a></li>
+<li><a href="cluebringer.to.iredapd.html#stop-cluebringer-service-and-remove-cluebringer-packages">Stop Cluebringer service, and remove Cluebringer packages</a></li>
+<li><a href="cluebringer.to.iredapd.html#disable-cluebringer-in-iredadmin-pro">Disable Cluebringer in iRedAdmin-Pro</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="summary">Summary</h2>
+<p>iRedMail-0.9.3 and later releases drop Cluebringer, and replace it by iRedAPD,
+because:</p>
+<ul>
+<li>Cluebringer is not under active development anymore.</li>
+<li>No new Cluebringer release since 2013 (the latest stable release doesn't
+  support IPv6).</li>
+<li>Cluebringer is not available in Debian (jessie) official repositories
+  anymore, developers didn't bring it back.</li>
+</ul>
+<p>Not all Cluebringer features are implemented in iRedAPD, but the most important
+2 features have been implemented:</p>
+<ul>
+<li>throttling</li>
+<li>greylisting</li>
+</ul>
+<p>If you need other Cluebringer features, please stay with Cluebringer and let
+us know which features you need, so that we can implement it in future release
+of iRedAPD.</p>
+<h2 id="migrate-to-iredapd">Migrate to iRedAPD</h2>
+<h3 id="upgrade-iredapd-to-170-or-later-releases">Upgrade iRedAPD to 1.7.0 or later releases</h3>
+<p>Please Make sure you're running iRedAPD-1.7.0 or later release, you can check
+the version number with command below:</p>
+<pre><code>grep '__version__' /opt/iredapd/libs/__init__.py
+</code></pre>
+<p>If you're not running iRedAPD-1.7.0 or later release, please follow our
+tutorial to upgrade it: <a href="upgrade.iredapd.html">Upgrade iRedAPD</a>.</p>
+<h3 id="migrate-cluebringer-to-iredapd">Migrate Cluebringer to iRedAPD</h3>
+<p>iRedAPD-1.7.0 and later release ship two scripts to migrate greylisting and
+throttling settings from Cluebringer:</p>
+<ul>
+<li><code>/opt/iredapd/tools/migrate_cluebringer_greylisting.py</code>: used to migrate
+  greylisting settings.</li>
+<li><code>/opt/iredapd/tools/migrate_cluebringer_throttle.py</code>: used to migrate
+  throttling settings.</li>
+</ul>
+<p>Please open above two files, update below parameters with correct SQL server
+address, port, database name, username and password for your existing
+Cluebringer database. You can find them in files below:</p>
+<ul>
+<li>On RHEL/CentOS, it's <code>/etc/policyd/cluebringer.conf</code>.</li>
+<li>Debian/Ubuntu: it's <code>/etc/cluebringer/cluebringer.conf</code>.</li>
+<li>FreeBSD: it's <code>/usr/local/etc/cluebringer.conf</code>.</li>
+<li>OpenBSD: Not applicable, cluebringer is not available on OpenBSD.</li>
+</ul>
+<pre><code>cluebringer_db_host = '127.0.0.1'
+cluebringer_db_port = 3306
+cluebringer_db_name = 'cluebringer'
+cluebringer_db_user = 'root'
+cluebringer_db_password = ''
+</code></pre>
+<p>Then run below commands to migrate greylisting and throttling settings:</p>
+<pre><code># cd /opt/iredapd/tools/
+# python migrate_cluebringer_greylisting.py
+# python migrate_cluebringer_throttle.py
+</code></pre>
+<p>That's it.</p>
+<h2 id="after-migration">After migration</h2>
+<h3 id="enable-required-plugins-remove-old-plugins">Enable required plugins, remove old plugins</h3>
+<blockquote>
+<p>Restarting iRedAPD service is required if you changed its config file.</p>
+</blockquote>
+<ul>
+<li>To enable whitelists, blacklists, greylisting and throttling offered by
+  iRedAPD, please enable plugins <code>amavisd_wblist</code>, <code>greylisting</code> and <code>throttle</code>
+  in iRedAPD config file like below:</li>
+</ul>
+<pre><code># File: /opt/iredapd/settings.py
+
+plugins = [..., 'amavisd_wblist', 'greylisting', 'throttle']
+</code></pre>
+<p>The order of plugin names doesn't matter.</p>
+<ul>
+<li>
+<p>Several plugins in old iRedAPD have been removed, you should remove them
+  from parameter <code>plugins =</code> in iRedAPD config file:</p>
+<ul>
+<li>ldap_amavisd_block_blacklisted_senders</li>
+<li>ldap_recipient_restrictions</li>
+<li>sql_user_restrictions</li>
+<li>amavisd_message_size_limit</li>
+</ul>
+<p>First 3 plugins are replaced by <code>amavisd_wblist</code>, last one is replaced by
+plugin <code>throttle</code>.</p>
+</li>
+</ul>
+<h3 id="disable-cluebringer-in-postfix">Disable Cluebringer in Postfix</h3>
+<p>After migrated to iRedAPD, we need to update Postfix config file
+<code>/etc/postfix/main.cf</code> (Linux) or <code>/usr/local/etc/postfix/main.cf</code> (FreeBSD)
+to remove Cluebringer settings:</p>
+<ul>
+<li>Remove all <code>check_policy_service inet:127.0.0.1:10031</code> in <code>main.cf</code>, like below:</li>
+</ul>
+<pre><code>smtpd_recipient_restrictions =
+    ...
+    check_policy_service inet:127.0.0.1:10031       # &lt;- Remove this line
+    ...
+
+smtpd_end_of_data_restrictions =
+    ...
+    check_policy_service inet:127.0.0.1:10031       # &lt;- Remove this line
+    ...
+</code></pre>
+<h3 id="enable-iredapd-in-postfix">Enable iRedAPD in Postfix</h3>
+<p>Make sure iRedAPD are enabled in <strong>BOTH</strong> <code>smtpd_recipient_restrictions</code>
+and <code>smtpd_end_of_data_restrictions</code> like below:</p>
+<pre><code>smtpd_recipient_restrictions =
+    ...
+    check_policy_service inet:127.0.0.1:7777
+    permit_mynetworks
+    ...
+
+smtpd_end_of_data_restrictions = check_policy_service inet:127.0.0.1:7777
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you have additional IP addresses/networks listed in Postfix setting
+"mynetworks =", you have to list them all in iRedAPD config file
+(<code>/opt/iredapd/settings.py</code>) too, like below:</p>
+<p><code>MYNETWORKS = ['xx.xx.xx.xx', 'xx.xx.xx.0/24', ...]</code></p>
+</div>
+<h3 id="restart-postfix-service">Restart Postfix service</h3>
+<p>Reloading or restarting Postfix service is required after changed <code>main.cf</code>.</p>
+<ul>
+<li>On Linux/FreeBSD:</li>
+</ul>
+<pre><code># service postfix restart
+</code></pre>
+<ul>
+<li>On OpenBSD:</li>
+</ul>
+<pre><code># /etc/rc.d/postfix restart
+</code></pre>
+<h3 id="stop-cluebringer-service-and-remove-cluebringer-packages">Stop Cluebringer service, and remove Cluebringer packages</h3>
+<p>We don't need Cluebringer anymore, so it's ok to stop cluebringer service and
+remove the packages:</p>
+<ul>
+<li>On RHEL/CentOS:</li>
+</ul>
+<pre><code># service cbpolicyd stop &amp;&amp; yum remove cluebringer
+</code></pre>
+<ul>
+<li>On Debian/Ubuntu:</li>
+</ul>
+<pre><code># service postfix-cluebringer stop &amp;&amp; apt-get remove --purge postfix-cluebringer
+</code></pre>
+<ul>
+<li>On FreeBSD:</li>
+</ul>
+<pre><code># service policyd2 stop &amp;&amp; cd /usr/ports/mail/policyd2/ &amp;&amp; make deinstall
+</code></pre>
+<ul>
+<li>
+<p>Edit root user's cron job, remove the one used to clean up Cluebringer SQL
+  database:</p>
+<ol>
+<li>Run command to edit root user's cron job: <code># crontab -e -u root</code></li>
+<li>Find cron job like below, remove it or comment out it:</li>
+</ol>
+</li>
+</ul>
+<pre><code>3   3   *   *   *   /usr/sbin/cbpadmin --config=/etc/policyd/cluebringer.conf --cleanup &gt;/dev/null
+</code></pre>
+<ul>
+<li>Optionally, you can drop its SQL database <code>cluebringer</code> also.</li>
+</ul>
+<h3 id="disable-cluebringer-in-iredadmin-pro">Disable Cluebringer in iRedAdmin-Pro</h3>
+<p>To disable Cluebringer integration in iRedAdmin-Pro, please set
+<code>policyd_enabled = False</code> in iRedAdmin-Pro config file, then restart Apache
+or uwsgi (if you're running Nginx) service.</p>
+<blockquote>
+<p>After you have upgraded to the latest iRedAdmin-Pro release (at least
+iRedAdmin-Pro-LDAP-2.4.0, or iRedAdmin-Pro-SQL-2.2.0, both released on Dec 14,
+2015), you can either <strong>COMMENT OUT</strong> or <strong>REMOVE</strong> all parameters which start
+with <code>policyd_</code> in iRedAdmin-Pro config file, for example:</p>
+</blockquote>
+<pre><code>policyd_enabled =
+policyd_db_host =
+policyd_db_port =
+policyd_db_name =
+policyd_db_user =
+policyd_db_password =
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

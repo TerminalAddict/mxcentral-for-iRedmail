@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Interact iRedAdmin-Pro RESTful API with `curl`</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="interact-iredadmin-pro-restful-api-with-curl">Interact iRedAdmin-Pro RESTful API with <code>curl</code></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>For more details about iRedAdmin-Pro RESTful API, please read document:
+  <a href="iredadmin-pro.restful.api.html">iRedAdmin-Pro: RESTful API</a>.</li>
+<li>If you need an API which has not yet been implemented, don't hesitate to
+  <a href="https://www.iredmail.org/contact.html">contact us</a>.</li>
+</ul>
+</div>
+<p>Sample <code>curl</code> commands to interact iRedAdmin-Pro RESTful API.</p>
+<ul>
+<li>replace <code>&lt;server&gt;</code> in url by the real server address (hostname or IP) which
+  runs iRedAdmin-Pro (with the <code>/iredadmin</code> prefix). for example,
+  <code>https://my_domain.com/iredadmin</code>.</li>
+<li>replace <code>&lt;domain&gt;</code> in url by the real domain name.</li>
+<li>replace <code>&lt;mail&gt;</code> in url by the real email address.</li>
+</ul>
+<pre><code>#
+# Login
+#
+# It will create a plain text file `cookie.txt` under current directory.
+curl -X POST -c cookie.txt -d &quot;username=&lt;username&gt;&amp;password=&lt;password&gt;&quot; https://&lt;server&gt;/iredadmin/api/login
+
+#
+# Create domain (POST)
+#
+# cn=ABC Inc. (display name: &quot;ABC Inc.&quot;)
+# quota=20480 (quota: 20 GB)
+curl -X POST -i -b cookie.txt -d &quot;cn=ABC Inc.&amp;quota=20480&quot; https://&lt;server&gt;/iredadmin/api/domain/&lt;domain&gt;
+
+#
+# Create mail user (POST)
+#
+# cn=Zhang Huangbin (display name: &quot;Zhang Huangbin&quot;)
+# mailQuota=1024 (mailbox quota: 1 GB)
+curl -X POST -i -b cookie.txt -d &quot;password=A@StrongPassword2&amp;cn=Zhang Huangbin&amp;mailQuota=1024&quot; https://&lt;server&gt;/iredadmin/api/user/&lt;mail&gt;
+
+#
+# Delete mail user (DELETE)
+#
+curl -X DELETE -i -b cookie.txt https://&lt;server&gt;/iredadmin/api/user/&lt;mail&gt;
+
+#
+# Update mail user profiles (PUT)
+#
+curl -X PUT -i -b cookie.txt -d &quot;cn=John Smith&amp;mailQuota=2048&quot; https://&lt;server&gt;/iredadmin/api/user/&lt;mail&gt;
+
+# If name contains non-ascii characters, please use `--data-urlencode` instead
+# of `-d`, curl will encode it before submitting, so that you can correctly
+# preserve non-ascii characters.
+#
+# In this example, it contains a Norwegian char `ø`.
+curl -X PUT -i -b cookie.txt --data-urlencode &quot;cn=Jørn&quot; https://&lt;server&gt;/iredadmin/api/user/&lt;mail&gt;
+
+#
+# Create mail alias (POST)
+#
+# cn=My Alias (display name: &quot;My Alias&quot;)
+curl -X POST -i -b cookie.txt -d &quot;cn=My Alias&quot; https://&lt;server&gt;/iredadmin/api/alias/&lt;mail&gt;
+
+#
+# Delete mail alias (DELETE)
+#
+curl -X DELETE -i -b cookie.txt https://&lt;server&gt;/iredadmin/api/alias/&lt;mail&gt;
+
+#
+# Create mailing list (POST, OpenLDAP backend only)
+#
+curl -X POST -i -b cookie.txt -d &quot;cn=My List&quot; https://&lt;server&gt;/iredadmin/api/maillist/&lt;mail&gt;
+
+#
+# Delete mail alias (DELETE)
+#
+curl -X DELETE -i -b cookie.txt https://&lt;server&gt;/iredadmin/api/maillist/&lt;mail&gt;
+
+#
+# Delete domain (DELETE)
+#
+curl -X DELETE -i -b cookie.txt https://&lt;server&gt;/iredadmin/api/domain/&lt;domain&gt;
+</code></pre>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="iredadmin-pro.restful.api.python.html">Interact iRedAdmin-Pro RESTful API with Python</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

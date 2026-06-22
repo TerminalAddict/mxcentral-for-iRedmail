@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Log executed SQL commands in MySQL/MariaDB</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="debug.mysql-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="log-executed-sql-commands-in-mysqlmariadb">Log executed SQL commands in MySQL/MariaDB</h1>
+<blockquote>
+<p>Don't know where MySQL config file is? check this tutorial:
+<a href="file.locations.html#mysql-mariadb">Locations of configuration and log files of major components</a>.</p>
+</blockquote>
+<p>To log executed SQL commands, please add below two settings in MySQL/MariaDB
+config file <code>my.cnf</code>:</p>
+<pre><code>[mysqld]
+general_log = 1
+general_log_file = /var/log/mysql.log
+</code></pre>
+<p>Then restart MySQL/MariaDB service.</p>
+<p>Note: MySQL/MariaDB daemon user must have permission to write this log file.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

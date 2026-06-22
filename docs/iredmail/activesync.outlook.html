@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Exchange ActiveSync: Setup Outlook 2013 for Windows</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="exchange-activesync-setup-outlook-2013-for-windows">Exchange ActiveSync: Setup Outlook 2013 for Windows</h1>
+<div class="admonition note">
+<p class="admonition-title">Important Notes</p>
+<ul>
+<li>SOGo provides <strong>EAS (Exchange ActiveSync)</strong> support, but not <strong>EWS
+  (Exchange Web Service)</strong>.</li>
+<li><strong>Outlook</strong> 2013, 2016 for Windows works well with EAS.</li>
+<li>Mainstream <strong>mobile devices</strong> (iOS, Android, BlackBerry 10) work well with
+  EAS, they can sync mails, calendars, contacts, tasks.</li>
+<li>Apple Mail.app, and Outlook for Mac support EWS. But not EAS.</li>
+<li>Outlook 2010 for Windows supports MAPI.</li>
+</ul>
+<p>iRedMail doesn't integrate <a href="http://www.openchange.org">OpenChange</a> and
+<a href="http://www.samba.org">Samba4</a> for native MAPI support.</p>
+</div>
+<h2 id="requirements">Requirements</h2>
+<ul>
+<li>iRedMail-0.9.0 or later releases is required.</li>
+<li>You must choose to install SOGo groupware during iRedMail installation. If
+  you install SOGo after iRedMail installation, don't forget to install
+  <code>sogo-activesync</code> package for ActiveSync support.</li>
+<li>Outlook 2013 for Windows. Earlier releases of Outlook for Windows doesn't work.</li>
+</ul>
+<h2 id="step-by-step-configuration">Step-by-step configuration</h2>
+<p>1: Open application <code>Outlook 2013</code>:</p>
+<p><img alt="" src="images/sogo/outlook.2013.app.png" /></p>
+<p>2: Add a new account in Outlook, in <code>Auto Account Setup</code> page, please choose <code>Manual setup
+   or additional server types</code>, then click <code>Next</code>:</p>
+<p><img alt="" src="images/sogo/outlook.add.account.png" /></p>
+<p>3: In <code>Choose Service</code> page, please choose <code>Outlook.com or Exchange ActiveSync
+   compatible service</code>, then click <code>Next</code>:</p>
+<p><img alt="" src="images/sogo/outlook.choose.service.png" /></p>
+<p>4: In <code>Server Settings</code> page, fill up the form with your server address and
+   email account credential, then click <code>Next</code>:</p>
+<ul>
+<li>Your Name: <code>your full name</code></li>
+<li>E-mail Address: <code>your full email address</code></li>
+<li>Mail server: <code>your server name or IP address</code></li>
+<li>User Name: <code>your full email address</code></li>
+<li>Password: <code>password of your email account</code></li>
+</ul>
+<p><img alt="" src="images/sogo/outlook.server.settings.png" /></p>
+<p>After you click <code>Next</code>, Outlook will start verifying your email account, please
+wait and you will see below screen after verified:</p>
+<p><img alt="" src="images/sogo/outlook.test.account.settings.png" /></p>
+<p>That's all.</p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="http://sogo.nu">SOGo web site</a></li>
+<li>
+<p>Outlook plugins:</p>
+<ul>
+<li>
+<p><a href="https://github.com/aluxnimm/outlookcaldavsynchronizer">Outlook CalDav Synchronizer</a></p>
+<blockquote>
+<p>Outlook Plugin, which synchronizes events, tasks and contacts(beta) between Outlook and Google, SOGo, Horde or any other CalDAV or CardDAV server. Supported Outlook versions are 2016, 2013, 2010 and 2007.</p>
+</blockquote>
+</li>
+</ul>
+</li>
+<li>
+<p><a href="https://support.microsoft.com/en-us/help/3189194/how-to-disable-simplified-account-creation-in-outlook-2016">How to disable Simplified Account Creation in Outlook 2016</a></p>
+</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

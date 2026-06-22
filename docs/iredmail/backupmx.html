@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>How to mark a mail domain as backup MX</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="how-to-mark-a-mail-domain-as-backup-mx">How to mark a mail domain as backup MX</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="backupmx.html#how-to-mark-a-mail-domain-as-backup-mx">How to mark a mail domain as backup MX</a><ul>
+<li><a href="backupmx.html#how-backup-mx-works-in-brief">How backup MX works in brief</a></li>
+<li><a href="backupmx.html#make-sure-you-have-correct-dns-records-for-the-mail-domain">Make sure you have correct DNS records for the mail domain</a></li>
+<li><a href="backupmx.html#mark-domain-as-backup-mx-with-iredadmin-pro">Mark domain as backup MX with iRedAdmin-Pro</a></li>
+<li><a href="backupmx.html#mark-domain-as-backup-mx-with-command-line-tools">Mark domain as backup MX with command line tools</a><ul>
+<li><a href="backupmx.html#for-sql-backends">For SQL backends</a></li>
+<li><a href="backupmx.html#for-ldap-backends">For LDAP backends</a></li>
+</ul>
+</li>
+<li><a href="backupmx.html#see-also">See also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>This tutorial describes how to mark a mail domain as a backup MX.</p>
+<h2 id="how-backup-mx-works-in-brief">How backup MX works in brief</h2>
+<p>When smtp service on primary MX server is down, emails will be delivered to
+backup MX server. When backup MX server detects smtp service on primary MX is
+back online, it will relay received emails to primary MX.</p>
+<h2 id="make-sure-you-have-correct-dns-records-for-the-mail-domain">Make sure you have correct DNS records for the mail domain</h2>
+<p>To let other mail servers know your server is the backup MX server of this
+mail domain, you must add your mail server info in its MX type DNS record.</p>
+<p>For example, main mail server of your mail domain <code>example.com</code> is
+<code>mx01.example.com</code>, to set your iRedMail server <code>mx02.example.com</code> as backup
+MX of <code>example.com</code>, you need to add <code>mx02.example.com</code> as your lower priority
+mail server in MX type DNS record.</p>
+<pre><code>example.com.    3600    IN  MX  5   mx01.example.com
+example.com.    3600    IN  MX  10  mx02.example.com
+</code></pre>
+<p>Server <code>mx01.example.com</code> has priority number <code>5</code>, and <code>mx02.example.com</code> has
+priority number <code>10</code>. For mail service, the lowest number has highest priority.
+so with above example, server <code>mx01.example.com</code> is the primary MX, and
+<code>mx02.example.com</code> is a backup MX.</p>
+<p>When mail service on <code>mx01.example.com</code> is down, other mail services will
+connect to <code>mx02.example.com</code>.</p>
+<h2 id="mark-domain-as-backup-mx-with-iredadmin-pro">Mark domain as backup MX with iRedAdmin-Pro</h2>
+<p>It's easy to manage domain profile With iRedAdmin-Pro, including backup MX setting.
+Go to domain profile page, click tab <code>Backup MX</code>:</p>
+<p><img alt="" src="images/iredadmin/domain_profile_backupmx.png" width="1000px" /></p>
+<h2 id="mark-domain-as-backup-mx-with-command-line-tools">Mark domain as backup MX with command line tools</h2>
+<h3 id="for-sql-backends">For SQL backends</h3>
+<div class="admonition note">
+<p class="admonition-title">Primary server address</p>
+<p>It's recommended to set the IP address of primary MX as relay server to
+avoid mail loop.</p>
+</div>
+<p>SQL commands (we use MySQL for example):</p>
+<pre><code>USE vmail;
+UPDATE domain SET transport='relay:[45.56.127.226]:25',backupmx=1 WHERE domain='example.com';
+</code></pre>
+<p>In above example, we mark domain <code>example.com</code> as a backup MX, and use IP
+address <code>45.56.127.226</code> as primary MX server, you should replace it by the real
+IP address.</p>
+<h3 id="for-ldap-backends">For LDAP backends</h3>
+<p>In domain object, please add LDAP attribute/value pair like below:</p>
+<pre><code>domainBackupMX: yes
+mtaTransport: relay:[45.56.127.226]:25
+</code></pre>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/MX_record#The_backup_MX">Backup MX (wikipedia)</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

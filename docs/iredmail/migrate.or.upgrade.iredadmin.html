@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Migrate or upgrade iRedAdmin / iRedAdmin-Pro</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="migrate-or-upgrade-iredadmin-iredadmin-pro">Migrate or upgrade iRedAdmin / iRedAdmin-Pro</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="migrate.or.upgrade.iredadmin.html#migrate-or-upgrade-iredadmin-iredadmin-pro">Migrate or upgrade iRedAdmin / iRedAdmin-Pro</a><ul>
+<li><a href="migrate.or.upgrade.iredadmin.html#requirements">Requirements</a></li>
+<li><a href="migrate.or.upgrade.iredadmin.html#download-the-latest-iredadmin">Download the latest iRedAdmin</a></li>
+<li><a href="migrate.or.upgrade.iredadmin.html#upgrade-steps">Upgrade Steps</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Paid Remote Upgrade Support</p>
+<p>We offer remote upgrade support if you don't want to get your hands dirty,
+check <a href="https://www.iredmail.org/support.html">the details</a> and
+<a href="https://www.iredmail.org/contact.html">contact us</a>.</p>
+</div>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Since iRedAdmin-0.9.2 (open source edition), and iRedAdmin-Pro-SQL-3.0,
+iRedAdmin-Pro-LDAP-3.2, iRedAdmin or iRedAdmin-Pro is running as a
+standalone service named "iredadmin", each time you modified its config
+file, please restart the service ("iredadmin").</p>
+</div>
+<p>This tutorial describes how to update or migrate iRedAdmin (either open source
+edition or old iRedAdmin-Pro release) to the latest iRedAdmin release (again,
+either open source edition or iRedAdmin-Pro).</p>
+<h2 id="requirements">Requirements</h2>
+<ol>
+<li>
+<p>The latest iRedAdmin-Pro always requires the latest iRedMail stable release,
+   so you <strong>MUST</strong> upgrade iRedMail to the latest stable release before
+   upgrading iRedAdmin-Pro.</p>
+<ul>
+<li>
+<p><a href="iredmail.releases.html">iRedMail Upgrade Tutorials</a></p>
+</li>
+<li>
+<p>If you run the latest iRedAdmin-Pro with old iRedMail release, you may
+  get error due to missing some required ldap attribute/value pairs
+  (OpenLDAP backend), or missing some required SQL columns.</p>
+</li>
+<li>
+<p>If you run the latest iRedMail with old iRedAdmin-Pro, you may get error
+  due to missing dropped SQL columns, or created accounts may miss some
+  properties required by the latest iRedMail.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>You <strong>MUST</strong> have iRedAdmin open source edition or old iRedAdmin-Pro release
+   installed and running on your server before upgrading.</p>
+</li>
+</ol>
+<h2 id="download-the-latest-iredadmin">Download the latest iRedAdmin</h2>
+<ul>
+<li>iRedAdmin open source edition is available for <a href="https://github.com/iredmail/iRedAdmin/tags">download here</a>.
+  Downloaded file might be in <code>&lt;version&gt;.tar.gz</code> format, e.g. <code>2.2.tar.gz</code>,
+  please rename it to <code>iRedAdmin-2.2.tar.gz</code> instead.</li>
+<li>
+<p>iRedAdmin-Pro customers can get download link of new release by following
+  steps below:</p>
+<ul>
+<li>Login to iRedAdmin-Pro as global admin.</li>
+<li>Click <code>License</code> button on the top-right corner. it will show you basic
+  license info and a <code>Download</code> button if new version is available.</li>
+<li>Click <code>Download</code> button, your mailbox (license owner) will receive an email
+  with download link in a short time. Note: if your mail server has greylisting
+  enabled, it may take longer, please be patient and don't request download
+  link again and again.</li>
+</ul>
+<p>If you cannot download iRedAdmin-Pro for some reason, please <a href="https://www.iredmail.org/contact.html">contact us</a>.</p>
+</li>
+</ul>
+<h2 id="upgrade-steps">Upgrade Steps</h2>
+<ul>
+<li>Upload or copy the latest iRedAdmin to your server which has iRedAdmin
+  open source edition or old iRedAdmin-Pro release running. We assume you
+  uploaded it to <code>/root/iRedAdmin-x.y.z.tar.bz2</code> (<code>x.y.z</code> is a placeholder of
+  the version number).</li>
+<li>Uncompress and upgrade iRedAdmin:</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<ul>
+<li>Do not rename the extracted directory (<code>iRedAdmin-x.y.z</code>), otherwise
+  upgrade may fail.</li>
+<li>iRedAdmin open source edition is packed as <code>.tar.gz</code> (compressed with
+  gzip) file, but iRedAdmin-Pro is <code>.tar.bz2</code> (compressed with bzip2).</li>
+</ul>
+</div>
+<p>For iRedAdmin open source edition:</p>
+<pre><code>cd /root/
+tar zxf iRedAdmin-x.y.z.tar.gz
+cd iRedAdmin-x.y.z/tools/
+sudo bash upgrade_iredadmin.sh
+</code></pre>
+<p>For iRedAdmin-Pro:</p>
+<pre><code>cd /root/
+tar xjf iRedAdmin-Pro-x.y.z.tar.bz2
+cd iRedAdmin-Pro-x.y.z/tools/
+sudo bash upgrade_iredadmin.sh
+</code></pre>
+<p>That's all. If it doesn't work for you, please post a new topic in our
+<a href="https://forum.iredmail.org/">online support forum</a>.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

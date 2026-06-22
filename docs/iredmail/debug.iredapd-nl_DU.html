@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Zet debug modus aan in iRedAPD</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="debug.iredapd.html">English</a> /</p>
+</div>
+<h1 id="zet-debug-modus-aan-in-iredapd">Zet debug modus aan in iRedAPD</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Bekijk onze lichtgewicht on-premise e-mail archiveringsoftware ontwikkeld door 
+ het iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</p>
+</div>
+<div class="toc">
+<ul>
+<li><a href="debug.iredapd-nl_DU.html#zet-debug-modus-aan-in-iredapd">Zet debug modus aan in iRedAPD</a><ul>
+<li><a href="debug.iredapd-nl_DU.html#logbestand">Logbestand</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>Om debug modus aan te zetten in iRedAPD moet je het logniveau instellen op <code>debug</code> in
+iRedAPD configuratiebestand <code>/opt/iredapd/settings.py</code>, daarna iRedAPD
+service herstarten.</p>
+<pre><code># Log level: info, debug.
+log_level = 'debug'
+</code></pre>
+<h3 id="logbestand">Logbestand</h3>
+<p>Het logbestand is geconfigureerd in <code>/opt/iredapd/settings.py</code>, door parameter <code>log_file =</code>.
+Bekijk zijn logbestand voor een gedetailleerde log.</p>
+<ul>
+<li>iRedAPD-1.7.0 en nieuwer: <code>/var/log/iredapd/iredapd.log</code></li>
+<li>iRedAPD-1.6.0 en ouder: <code>/var/log/iredapd.log</code></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

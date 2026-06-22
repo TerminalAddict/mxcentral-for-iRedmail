@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade Dovecot from 2.2.x to 2.3.x</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-dovecot-from-22x-to-23x">Upgrade Dovecot from 2.2.x to 2.3.x</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.dovecot.2.2-2.3.html#upgrade-dovecot-from-22x-to-23x">Upgrade Dovecot from 2.2.x to 2.3.x</a><ul>
+<li><a href="upgrade.dovecot.2.2-2.3.html#upgrade-dovecot-on-linuxfreebsdopenbsd">Upgrade Dovecot on Linux/FreeBSD/OpenBSD</a></li>
+<li><a href="upgrade.dovecot.2.2-2.3.html#sql-structure-changes-for-mysqlmariadbpostgresql-backends">SQL structure changes for MySQL/MariaDB/PostgreSQL backends</a></li>
+<li><a href="upgrade.dovecot.2.2-2.3.html#ldap-changes-for-openldapldapd-backends">LDAP changes for OpenLDAP/ldapd backends</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>Dovecot 2.3 breaks some backward compatible, and here's a short tutorial to
+convert your Dovecot 2.2 config file to fully work with Dovecot 2.3.</p>
+<p>For more details, please read Dovecot wiki page: <a href="https://wiki2.dovecot.org/Upgrading/2.3">Upgrading Dovecot v2.2 to v2.3</a>.</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>Currently only FreeBSD offers Dovecot 2.3 by the ports tree, other Linux
+  or OpenBSD distributions still offers Dovecot 2.2, you should stick to
+  Dovecot 2.2 if your Linux/BSD vendor doesn't offer 2.3 yet.</li>
+<li>Dovecot 2.3 uses TLSv1 as minimal SSL protocol, if you prefer TLSv1.1 or
+  TLSv1.2, please set the protocol version in parameter <code>ssl_min_protocol</code>
+  like below:</li>
+</ul>
+<p><code>ssl_min_protocol = TLSv1.2</code></p>
+</div>
+<h2 id="upgrade-dovecot-on-linuxfreebsdopenbsd">Upgrade Dovecot on Linux/FreeBSD/OpenBSD</h2>
+<p>Open a shell terminal, and switch to Dovecot configuration directory first:</p>
+<ul>
+<li>On Linux/OpenBSD:</li>
+</ul>
+<pre><code>cd /etc/dovecot/
+</code></pre>
+<ul>
+<li>On FreeBSD:<ul>
+<li>Please upgrade ports <code>mail/dovecot</code> and <code>mail/dovecot-pigeonhole</code> first.
+  You can use tool like <code>portmaster</code> or <code>portupgrade</code> for this purpose.
+  FYI: <a href="https://www.freebsd.org/doc/handbook/ports-using.html">Using the Ports Collection</a></li>
+<li>After upgraded both ports, please run:</li>
+</ul>
+</li>
+</ul>
+<pre><code>cd /usr/local/etc/dovecot/
+</code></pre>
+<p>Run commands below as root user, these commands will:</p>
+<ul>
+<li>Comment out parameter <code>ssl_protocols</code></li>
+<li>Remove parameter <code>postmaster_address</code></li>
+<li>Rename plugin names and parameters:<ul>
+<li><code>stats</code> -&gt; <code>old_stats</code></li>
+<li><code>imap_stats</code> -&gt; <code>imap_old_stats</code></li>
+<li><code>stats_refresh</code> -&gt; <code>old_stats_refresh</code></li>
+<li><code>service stats {}</code> -&gt; <code>service old-stats {}</code></li>
+<li><code>fifo_listener stats-mail {}</code> -&gt; <code>fifo_listener old-stats-mail {}</code></li>
+<li><code>stats_track_cmds</code> -&gt; <code>old_stats_track_cmds</code></li>
+</ul>
+</li>
+</ul>
+<pre><code>perl -pi -e 's/^ssl_protocols/#${1}/g' dovecot.conf
+perl -pi -e 's#(postmaster_address.*)##g' dovecot.conf
+perl -pi -e 's#^(mail_plugins.*) stats(.*)#${1} old_stats${2}#g' dovecot.conf
+perl -pi -e 's#imap_stats#imap_old_stats#g' dovecot.conf
+perl -pi -e 's#service stats#service old-stats#g' dovecot.conf
+perl -pi -e 's#fifo_listener stats-mail#fifo_listener old-stats-mail#g' dovecot.conf
+perl -pi -e 's#stats_refresh#old_stats_refresh#g' dovecot.conf
+perl -pi -e 's#stats_track_cmds#old_stats_track_cmds#g' dovecot.conf
+</code></pre>
+<ul>
+<li>On RHEL/CentOS, please add new setting in <code>dovecot.conf</code>:</li>
+</ul>
+<pre><code>ssl_dh = &lt;/etc/pki/tls/dh2048_param.pem
+
+service stats {
+    unix_listener stats-reader {
+        user = vmail
+        group = vmail
+        mode = 0660
+    }
+
+    unix_listener stats-writer {
+        user = vmail
+        group = vmail
+        mode = 0660
+    }
+}
+</code></pre>
+<ul>
+<li>On Debian/Ubuntu/OpenBSD/FreeBSD, please add new setting in <code>dovecot.conf</code>:</li>
+</ul>
+<pre><code>ssl_dh = &lt;/etc/ssl/dh2048_param.pem
+
+service stats {
+    unix_listener stats-reader {
+        user = vmail
+        group = vmail
+        mode = 0660
+    }
+
+    unix_listener stats-writer {
+        user = vmail
+        group = vmail
+        mode = 0660
+    }
+}
+</code></pre>
+<h2 id="sql-structure-changes-for-mysqlmariadbpostgresql-backends">SQL structure changes for MySQL/MariaDB/PostgreSQL backends</h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you upgraded iRedMail to <code>1.0</code> release, you should already have these
+SQL changes, please double check and not apply them blindly.</p>
+</div>
+<p>Dovecot-2.3 changes the flag for TLS secure connections internally, it's used
+by iRedMail to detect the connection type. We need to create a new SQL column
+for this change.</p>
+<ul>
+<li>For MySQL/MariaDB, please login to SQL server as root user, then run SQL
+  commands below:</li>
+</ul>
+<pre><code>USE vmail;
+ALTER TABLE mailbox ADD COLUMN enableimaptls TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE mailbox ADD INDEX (enableimaptls);
+ALTER TABLE mailbox ADD COLUMN enablepop3tls TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE mailbox ADD INDEX (enablepop3tls);
+ALTER TABLE mailbox ADD COLUMN enablesievetls TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE mailbox ADD INDEX (enablesievetls);
+</code></pre>
+<ul>
+<li>For PostgreSQL backend, please switch to PostgreSQL daemon user with <code>su</code>
+  command first, then run SQL commands below:</li>
+</ul>
+<pre><code>\c vmail;
+ALTER TABLE mailbox ADD COLUMN enableimaptls INT2 NOT NULL DEFAULT 1;
+CREATE INDEX idx_mailbox_enableimaptls ON mailbox (enableimaptls);
+ALTER TABLE mailbox ADD COLUMN enablepop3tls INT2 NOT NULL DEFAULT 1;
+CREATE INDEX idx_mailbox_enablepop3tls ON mailbox (enablepop3tls);
+ALTER TABLE mailbox ADD COLUMN enablesievetls INT2 NOT NULL DEFAULT 1;
+CREATE INDEX idx_mailbox_enablesievetls ON mailbox (enablesievetls);
+</code></pre>
+<h2 id="ldap-changes-for-openldapldapd-backends">LDAP changes for OpenLDAP/ldapd backends</h2>
+<p>We need to add new ldap attribute/value pairs for existing mail users.</p>
+<ul>
+<li>Download script used to update existing mail users:</li>
+</ul>
+<pre><code>cd /root/
+wget https://raw.githubusercontent.com/iredmail/iRedMail/master/update/ldap/update-ldap-dovecot-2.3.py
+</code></pre>
+<ul>
+<li>Open downloaded file <code>update-ldap-dovecot-2.3.py</code>, set LDAP server
+  related settings in this file. For example:</li>
+</ul>
+<pre><code># Part of file: update-ldap-dovecot-2.3.py
+
+uri = 'ldap://127.0.0.1:389'
+basedn = 'o=domains,dc=example,dc=com'
+bind_dn = 'cn=vmailadmin,dc=example,dc=com'
+bind_pw = 'password'
+</code></pre>
+<p>You can find required LDAP credential in iRedAdmin config file or
+<code>iRedMail.tips</code> file under your iRedMail installation directory. Using either
+<code>cn=Manager,dc=xx,dc=xx</code> or <code>cn=vmailadmin,dc=xx,dc=xx</code> as bind dn is ok, both
+of them have read-write privilege to update mail accounts.</p>
+<ul>
+<li>Execute this script with Python-3, it will add required data:</li>
+</ul>
+<pre><code>python3 update-ldap-dovecot-2.3.py
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

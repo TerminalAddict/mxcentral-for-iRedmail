@@ -1,0 +1,38 @@
+# Settings for mxcentral-for-iRedmail.
+#
+# Include this file from the active iRedMail nginx server block, for example:
+# include /etc/nginx/templates/mxcentral.tmpl;
+#
+# Adjust this path to the deployed Laravel public directory.
+
+# Redirect /mxcentral to /mxcentral/.
+location = /mxcentral {
+    return 301 /mxcentral/;
+}
+
+# Laravel public files under /mxcentral.
+location /mxcentral/ {
+    alias /opt/www/mxcentral-for-iRedmail/public/;
+    index index.php;
+    try_files $uri $uri/ @mxcentral_front_controller;
+}
+
+# Laravel front controller.
+location @mxcentral_front_controller {
+    rewrite ^ /mxcentral/index.php last;
+}
+
+# Do not expose any other PHP files directly.
+location ~ ^/mxcentral/(?!index\.php$).+\.php$ {
+    return 404;
+}
+
+location = /mxcentral/index.php {
+    include /etc/nginx/templates/hsts.tmpl;
+    include /etc/nginx/templates/fastcgi_php.tmpl;
+
+    fastcgi_param SCRIPT_FILENAME /opt/www/mxcentral-for-iRedmail/public/index.php;
+    fastcgi_param SCRIPT_NAME /mxcentral/index.php;
+    fastcgi_param DOCUMENT_ROOT /opt/www/mxcentral-for-iRedmail/public;
+    fastcgi_param REQUEST_URI $request_uri;
+}

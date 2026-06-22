@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>ChangeLog of iRedMail Enterprise Edition</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="changelog-of-iredmail-enterprise-edition">ChangeLog of iRedMail Enterprise Edition</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Release Date</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="ee.changelog.html#v1.7.4">v1.7.4</a></td>
+<td>2026-05-25</td>
+<td>Roundcube / SOGo security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.7.3">v1.7.3</a></td>
+<td>2026-05-08</td>
+<td>Golang v1.26.3 security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.7.2">v1.7.2</a></td>
+<td>2026-04-10</td>
+<td>Golang v1.26.2 security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.7.1">v1.7.1</a></td>
+<td>2026-03-30</td>
+<td>Roundcube security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.7.0">v1.7.0</a></td>
+<td>2026-03-26</td>
+<td>Roundcube security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.6.2">v1.6.2</a></td>
+<td>2026-02-09</td>
+<td>Roundcube security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.6.1">v1.6.1</a></td>
+<td>2026-01-16</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.6.0">v1.6.0</a></td>
+<td>2025-12-29</td>
+<td>Roundcube security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.5.1">v1.5.1</a></td>
+<td>2025-09-29</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.5.0">v1.5.0</a></td>
+<td>2025-09-08</td>
+<td>Z-Push security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.4.0">v1.4.0</a></td>
+<td>2025-07-11</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.3.1">v1.3.1</a></td>
+<td>2025-06-03</td>
+<td>Roundcube security fix</td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.3.0">v1.3.0</a></td>
+<td>2025-05-22</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.2.1">v1.2.1</a></td>
+<td>2025-04-04</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.2.0">v1.2.0</a></td>
+<td>2025-04-03</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.1.0">v1.1.0</a></td>
+<td>2025-03-11</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0.2">v1.0.2</a></td>
+<td>2025-02-20</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0.1">v1.0.1</a></td>
+<td>2025-01-26</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0.0">v1.0.0</a></td>
+<td>2025-01-24</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0-beta9">v1.0-beta9</a></td>
+<td>2024-12-12</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0-beta8">v1.0-beta8</a></td>
+<td>2024-09-14</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0-beta7">v1.0-beta7</a></td>
+<td>2024-08-02</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0-beta6">v1.0-beta6</a></td>
+<td>2024-05-31</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0-beta5">v1.0-beta5</a></td>
+<td>2024-05-08</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="ee.changelog.html#v1.0-beta4">v1.0-beta4</a></td>
+<td>2024-04-26</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><br/></p>
+<ul>
+<li><a href="https://www.iredmail.org/ee.html">Introduce EE</a></li>
+<li><a href="install.ee.html">Install EE</a></li>
+<li><a href="upgrade.ee.html">Upgrade EE</a></li>
+<li><a href="ee.best.practice.html">Best Practice</a></li>
+<li><a href="ee.ad.html">Replicate mail accounts from Microsoft Active Directory</a></li>
+<li><a href="ee.remote.mysql.html">Use a Remote MySQL/MariaDB server as backend database</a></li>
+</ul>
+<h2 id="v1.7.4">v1.7.4, May 25, 2026</h2>
+<ul>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>Able to delete account on search result page and account profile page.</li>
+<li>Display header <code>X-Spam-Status</code> and its value while viewing quarantined
+  mail.</li>
+<li>Save removed and remained SQL records after cleaned up milter database.
+  Numbers will be displayed on Activities page too.</li>
+<li>Remove <code>Unsubscribe ALL subscribers</code> option to prevent accidental operation.
+  Thanks to Brian.</li>
+<li>Update packages to latest version if available when upgrading EE.</li>
+<li>Protect web-based installation with http basic auth.</li>
+<li>Amavisd is now called as a milter (via <code>amavisd-milter</code>). We don't call
+  it with Postfix parameter <code>content_filter</code> anymore.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>Not generate apparmor config file for php-fpm on Ubuntu.</li>
+<li>Incorrectly ce-create DKIM key when using non-default dkim selector.
+  Thanks to Davesworld@forum.</li>
+<li>Blacklist sender email address instead of sender domain by default.
+  Thanks to dansenie.</li>
+<li>Cannot view full headers of quarantined emails in some case.
+  Thanks to dansenie.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li><a href="https://www.sogo.nu/news/2026/sogo-v5128-released.html">SOGo Groupware v5.12.8</a>.
+  Addressed 4 security vulnerabilities.</li>
+<li>
+<p>Roundcube webmail 1.7.1, addressed 8 security vulnerabilities. Release notes: <a href="https://roundcube.net/news/2026/05/10/roundcube-1.7.0-released">v1.7.0</a>, <a href="https://roundcube.net/news/2026/05/24/security-updates-1.6.16-and-1.7.1">v1.7.1</a>.</p>
+<p>Roundcube 1.7.0 drops support for PHP&lt;8.1, hence PHP packages on
+CentOS / Rocky / AlmaLinux 8 and 9 will be upgraded to version 8.2
+automatically (via command
+<code>dnf module enable -y php:8.2 &amp;&amp; dnf module switch-to -y php:8.2</code>).</p>
+</li>
+<li>
+<p>milter v1.5.1. Update dependent packages and rebuild with Golang v1.26.3
+  (includes security fixes).</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.7.3">v1.7.3, May 08, 2026</h2>
+<ul>
+<li>Built with Golang v1.26.3 which addresses security vulnerabilities in several standard packages. <a href="https://go.dev/doc/devel/release#go1.26.3">https://go.dev/doc/devel/release#go1.26.3</a></li>
+<li>Removed OpenBSD support due to no one run EE on it.</li>
+<li>Drop push notification support and disable doveadm http api. It didn't work
+  due to a <a href="https://dovecot.org/mailman3/archives/list/dovecot@dovecot.org/thread/M7ZICN7IXLMF6IRHVNP7PAQZSAWI6GW4/">Dovecot "bug"</a>.</li>
+<li>Fixed issues:<ul>
+<li>[dovecot] Not disable quota-status service when using NFS storage. FYI <a href="https://doc.dovecot.org/2.3/configuration_manual/nfs/">"Do not use the quota-status service (with NFS)."</a></li>
+<li>[dovecot] Add missing email headers in quota warning notification email.</li>
+<li>[dovecot] Not send quota warning to end user and postmaster.
+  Thanks to v.gritsch.</li>
+<li>[dovecot] Cron job <code>doveadm fts optimize -A</code> generates file with incorrect
+  file owner (<code>root</code>), which causes error <code>Failed to open glass revision
+  file for reading</code>.</li>
+<li>[mlmmj] Not actually sync mailing list subscribers from disk to SQL db.</li>
+<li>[ad] User cannot login for self service.
+  Thanks to v.gritsch.</li>
+<li>[ad] Cannot update user filter and group filter.
+  Thanks to Serhii Zahuba.</li>
+<li>[ad] Not sync group members after initial replication.
+  Thanks to Serhii Zahuba.</li>
+<li>Not send quarantine notifications.</li>
+<li>Minor web UI tweaks and fixes.</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.7.2">v1.7.2, April 10, 2026</h2>
+<ul>
+<li>Built with Golang v1.26.2 which addresses security vulnerabilities in
+  several standard packages. <a href="https://go.dev/doc/devel/release#go1.26.2">https://go.dev/doc/devel/release#go1.26.2</a></li>
+<li>Improvements:<ul>
+<li>Display additional warning message if a later version contains security
+  fixes.</li>
+<li>Able to set selector and key length while creating DKIM key.</li>
+<li>[firewall] Able to add firewall rule with network port range (e.g. 1000-1005).</li>
+<li>[fail2ban] Replace action <code>iptables-multiport</code> by <code>firewallcmd-multiport</code>
+  on RedHat family OSes.</li>
+<li>[ad] Support renaming email address.</li>
+<li>[ad] Log all added/updated/removed accounts.</li>
+<li>[ad] Mention Bind DN requires domain admin privilege to query deleted
+  accounts for removing deleted account locally.</li>
+<li>Allow domain admin to create and delete DKIM keys.</li>
+</ul>
+</li>
+<li>Fixed issues:<ul>
+<li>Not show all email headers while viewing full header of quarantined email.</li>
+<li>[postfix] Incorrect SQL lookup file for virtual mailboxes.
+  Thanks to TUCAN IT.</li>
+<li>[ad] Account was not removed locally after removed from Active Directory.
+  Thanks to Serhii Zahuba.</li>
+<li>[dovecot] Not enable quota-status service for Dovecot 2.4 (Debian 13).</li>
+<li>[dovecot] Missing quota_status_* parameters for Dovecot 2.4 (Debian 13).
+  Thanks to TUCAN IT.</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.7.1">v1.7.1, Mar 30, 2026</h2>
+<ul>
+<li>Improvements:<ul>
+<li>Able to update DKIM selector.</li>
+</ul>
+</li>
+<li>Fixed issues:<ul>
+<li>Not stop mlmmjadmin service before removing its systemd service file.
+  Thanks to Fabian Santiago.</li>
+<li>Domain admin cannot manage mailing list subscribers.</li>
+<li>Setting access policy for mailing list may fail.</li>
+<li>[dovecot] Incorrect quota usage info on user profile page.
+  Thanks to Serhii Zahuba.</li>
+</ul>
+</li>
+<li>Updated packages:<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/releases/tag/1.6.15">Roundcube webmail 1.6.15 (security fix)</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.7.0">v1.7.0, Mar 26, 2026</h2>
+<ul>
+<li>Supports new distribution release:<ul>
+<li>Ubuntu 26.04 LTS (tested with nightly build, will re-test with stable
+  release later)</li>
+</ul>
+</li>
+<li>Removed component <code>mlmmjadmin</code>, all features have been implemented in EE
+  internally.<ul>
+<li>EE will migrate data of existing (mlmmj) mailing list accounts at the end
+  of EE upgrade automatically.</li>
+<li>Mailing list settings are stored in SQL table <code>vmail.maillist_settings</code>.</li>
+<li>Subscribers are stored in <code>vmail.maillist_subscribers</code>.</li>
+<li>Mailing list may have a lot subscribers, adding many subscribers in
+  LDAP or removing many from LDAP could take long time (e.g. 10 seconds,
+  or even minutes), so we decide to store subscribers in SQL db too for
+  OpenLDAP backend.</li>
+</ul>
+</li>
+<li>Improvements:<ul>
+<li>Able to sort by Display Name on mailing list and mail alias list page.</li>
+<li>Able to sort by Employee ID on user list page.</li>
+<li>[fail2ban] No more delay while unbanning IP address(es).</li>
+<li>Smoothly switch to new URI of admin panel (default is <code>/admin/</code>).</li>
+<li>Able to archive mailing list data while deleting domain.</li>
+<li>If no access policy is given while creating mail alias account, it will
+  be set to "moderators only" by default.</li>
+<li>[ldap] Display full dn while viewing LDIF data of account.</li>
+<li>Display quota usage on user profile page.</li>
+<li>Do not send quarantine notification to end user if domain doesn't enable
+  self service. Thanks to Espen.</li>
+<li>Re-enable Dovecot quota status service (was disabled in v1.5.0).</li>
+</ul>
+</li>
+<li>Fixed issues:<ul>
+<li>[postfix] DKIM signature may be broken due to mime conversion handled by
+  Postfix internally.</li>
+<li>[nginx] Not block access to <code>composer.lock</code> under Roundcube root directory.</li>
+<li>[ldap] Cannot filter accounts based on first char of email address.</li>
+<li>[self-service] End user cannot see all received mails.
+  Thanks to Lance Reynolds.</li>
+<li>[self-service] Pagination doesn't work on Sent Mails / Received Mails pages.
+  Thanks to Lance Reynolds.</li>
+<li>[dovecot] Mailbox current quota usage didn't work on Debian 13 (trixie).
+  Thanks to pamartin64@forum.</li>
+<li>[dovecot] Mailbox quota limit didn't work on Debian 13 (trixie).
+  Thanks to pamartin64@forum.</li>
+<li>[nginx] Incorrect XML tag in autoconfig xml file.</li>
+<li>ACL for admin panel (<code>/admin/</code> by default) was (incorrectly) applied for
+  self-service endpoint (<code>/self-service/</code> by default).</li>
+<li>Per-domain password policy was not enforced while resetting password.
+  Thanks to Leon Koster.</li>
+<li>Pagination doesn't work on Activities page.</li>
+<li>Minor web UI tweaks.</li>
+</ul>
+</li>
+<li>Updated packages:<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/releases/tag/1.6.14">Roundcube webmail 1.6.14 (security fixes)</a></li>
+<li>milter v1.5.0.<ul>
+<li>fixed: Not correctly handle SMTP session which sends multiple emails in same session.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.6.2">v1.6.2, Feb 9, 2026</h2>
+<ul>
+<li>Updated packages:<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/releases/tag/1.6.13">Roundcube 1.6.13, addresses security issues.</a>.</li>
+<li><a href="https://github.com/vrana/adminer/releases/tag/v5.4.2">Adminer 5.4.2, addresses security issues.</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.6.1">v1.6.1, Jan 16, 2026</h2>
+<ul>
+<li>API changes:<ul>
+<li>Query parameter <code>jails</code> has been removed for below 2 URIs, introduces 3
+  new parameters: <code>jail</code>, <code>ip</code>, <code>country</code>.<ul>
+<li><code>GET /api/f2b/banned</code></li>
+<li><code>DELETE /api/f2b/unban_all</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>New features:<ul>
+<li>Able to set global relay host and login username/password
+  (<code>Server Settings</code> -&gt; <code>SMTP Service</code>).</li>
+<li>Able to set access control for 3 web applications (<code>Server Settings</code> -&gt;
+  <code>Web Applications</code>): EE, Adminer, Netdata. If you have custom access
+  controls in config files under <code>/opt/iredmail/custom/nginx/webapps/</code>,
+  better remove the custom ones and manage them on EE web UI instead.</li>
+</ul>
+</li>
+<li>Improvements:<ul>
+<li>Refacter deployment code base with grpc.</li>
+<li>Abort to sort banned IP addresses by IP, country, hostname, jail, time stamp.</li>
+<li>Able to filter banned IP addresses by IP, country, jail.</li>
+<li>Add link on <code>Banned IP Addresses</code> page, jump to manage whitelisted
+  Fail2ban clients (<code>Server Settings</code> -&gt; <code>Fail2ban</code>).</li>
+</ul>
+</li>
+<li>Fixed issues:<ul>
+<li>Unable to create new DKIM key after removed catch-all key.
+  Thanks to Monel.</li>
+<li>Prosody daemon cannot read ssl cert/key files.
+  Thanks to Brian D. Lisle.</li>
+<li>Incorrect file permission of logrotate config files (/etc/logrotate.d/*).
+  Thanks to Pam.</li>
+<li>Incorrect link to (mlmmj) mailing list profile page in <code>Top Recipients</code>
+  section on <code>Dashboard</code> page,</li>
+<li>Incorrect sample settings for local delivery agent on domain profile page.</li>
+</ul>
+</li>
+<li>Updated packages:<ul>
+<li>iRedAPD 6.1</li>
+<li>mlmmjadmin 3.6.2</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.6.0">v1.6.0, Dec 29, 2025</h2>
+<ul>
+<li>Supports new distribution release:<ul>
+<li>OpenBSD 7.8. Support for 7.6 will be dropped in 6 months.</li>
+</ul>
+</li>
+<li>Z-Push is now disabled on RedHat family OSes and Debian 13 (trixie) due
+  to missing required php-imap package.</li>
+<li>Last login tracking is now disabled on RedHat family OSes release 9 for
+  PostgreSQL backend, due to buggy Dovecot-2.3.16.</li>
+<li>New features:<ul>
+<li>Replicate users and groups from Microsoft Active Directory to iRedMail
+  server as mail users and mail aliases. Click "Account Resources" on left
+  sidebar to add such replication. <a href="ee.ad.html">Tutorial</a></li>
+<li>Supports using a remote MySQL or MariaDB server as backend to store
+  mail accounts and application data. <a href="ee.remote.mysql.html">Tutorial</a></li>
+</ul>
+</li>
+<li>Improvements:<ul>
+<li>Remove data from Z-Push database while removing user or domain.</li>
+<li>Sign mobileconfig file with ssl cert (requested with the builtin SSL
+  cert manager).</li>
+<li>Display custom short branding name as issuer in 2FA authorizator app.</li>
+<li>Do not require email address in http query for Mozilla autoconfig.</li>
+<li>Able to filter activities by admin, account, client IP and event name.</li>
+</ul>
+</li>
+<li>Fixed issues:<ul>
+<li>Incorrect sieve config on Debian 13 (trixie).</li>
+<li>Incorrect setting in Apple mobileconfig file for SMTP connection.
+  Thanks to Samet Yilmaz.</li>
+<li>Not update email address after renamed user in Roundcube SQL table
+  <code>identities</code>.
+  Thanks to noc@.</li>
+<li>Domain admin cannot search accounts under managed domains.
+  Thanks to Leon Koster.</li>
+<li>Duplicate UUID in generated mobileconfig file.
+  Thanks to dmytro.storozhuk@.</li>
+<li>Not set correct account priority for throttle settings.
+  Thanks to noc@.</li>
+<li>Fail to re-issue ssl cert after added new domain name in cert.</li>
+<li>Not update zpush config file to disable caldav/carddav service after
+  removed SOGo component.
+  Thanks to Daniel Neculai.</li>
+<li>Not correctly apply default quota for new user.
+  Thanks to Daniel Neculai.</li>
+<li>Not apply default timezone for new user.
+  Thanks to Daniel Neculai.</li>
+<li>Incorrect comment lines of sample relay settings on user profile page.
+  Thanks to Daniel Neculai.</li>
+<li>Not remove commands <code>/usr/local/bin/z-push-*</code> while uninstall Z-Push
+  component.
+  Thanks to Daniel Neculai.</li>
+<li>Several incorrect parameter value types in API doc.</li>
+<li>Few minor web UI issues.</li>
+</ul>
+</li>
+<li>Updated packages:<ul>
+<li>roundcube 1.6.12 (<a href="https://roundcube.net/news/2025/12/13/security-updates-1.6.12-and-1.5.12">fixes 2 security vulnerabilities</a>)</li>
+<li>milter v1.4.0<ul>
+<li>Not correctly mark message as received for local recipients.</li>
+<li>Fixed: Not reject email with invalid address in <code>From:</code> header.</li>
+<li>Fixed: Not reject email which not contain <code>From:</code> header.</li>
+</ul>
+</li>
+<li>iRedAPD 6.0, supports secure (ssl) sql connection.</li>
+<li>mlmmjadmin 3.6.0, supports secure (ssl) sql connection.</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.5.1">v1.5.1, Sep 29, 2025</h2>
+<ul>
+<li>API:<ul>
+<li>NEW: Export mailbox quota usage while getting full user profile
+  (<code>GET /api/user/&lt;email&gt;</code>):</li>
+<li><strong>BREAKING CHANGE</strong>: last login date has been moved to same level of user profile:</li>
+</ul>
+</li>
+</ul>
+<pre><code># GET /api/user/&lt;email&gt;
+{
+    &quot;_msg&quot;: ...,
+    &quot;_success&quot;: ...,
+    &quot;data&quot;: {
+        &quot;profile&quot;: {
+            ...
+            &quot;last_login&quot;: {...}         // OLD. REMOVED.
+        },
+        &quot;last_login&quot;: {...},            // NEW
+        &quot;used_quota&quot;: {                 // NEW
+            &quot;size&quot;: ...,                // Size (in bytes) of stored messages
+            &quot;messages&quot;: ...             // Number of stored messages
+        }
+    }
+}
+</code></pre>
+<ul>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>Remove data in SpamAssassin SQL database while removing user or domain.</li>
+<li>Update SQL databases used by other applications while renaming user's
+  email address.</li>
+<li>Able to abort disabling component.</li>
+<li>Always allow deleting SQL database and user while disabling component.</li>
+<li>PostgreSQL now loads additional config files under <code>/opt/iredmail/custom/postgresql/conf.d/</code>.</li>
+<li>Able to check all search result with the new <code>Previous Page</code> and <code>Next
+  Page</code> buttons.</li>
+<li>Display password last change date on user list and profile page.</li>
+<li>Allow to customize base URI of SOGo Groupware. Defaults to <code>/SOGo/</code>.
+  Note: SOGo hard-codes this URI internally, it will be redirected to
+  <code>/SOGo/</code> after login.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>Email sent by mlmmj was not signed with DKIM signature. Thanks to Peter.</li>
+<li>Incorrect URLs of newsletter subscription and unsubscription.</li>
+<li>Resetting password always reports error INVALID_LINK.
+  Thanks to Leon Koster.</li>
+<li>Not correctly create symbol link of Roundcube third-party plugins.</li>
+<li>Not save password last change time in UTC timezone in Roundcube.</li>
+<li>Not backup milter SQL database (introduced in EE v1.5.0).</li>
+<li>Incorrect path to mysql client on RedHat family OS version 8.</li>
+<li>Upgrade from EE v1.3.0 failed due to missing milter related file
+  introduced in v1.4.0.</li>
+<li>Cannot start netdata in Docker container.</li>
+<li>Mistakenly hard-coded hostname in DNS result page. Thanks to Ian Little.</li>
+<li>Missing python module on Rocky 8. Thanks to Justin.</li>
+<li>Incorrect permission on PostgreSQL data directory. Thanks to Swarn Sandhu.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>milter v1.2.0<ul>
+<li>Fixed: Not correctly count sent / received mails.</li>
+<li>Fixed: Not correctly recognize emails sent with <code>sendmail</code> or <code>mail</code>
+  commands from localhost.</li>
+</ul>
+</li>
+<li>adminer 5.4.1</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.5.0">v1.5.0, Sep 8, 2025</h2>
+<blockquote>
+<p><strong>BREAKING CHANGES</strong></p>
+<ul>
+<li>Dovecot quota status service has been removed. If you have custom Postfix
+  config file <code>/opt/iredmail/custom/postfix/main.cf</code>, please remove line
+  <code>check_policy_service inet:127.0.0.1:12340</code> and restart Postfix service.<ul>
+<li>It's not recommended to maintain custom Postfix settings with
+    <code>/opt/iredmail/custom/postfix/main.cf</code> and <code>/opt/iredmail/custom/postfix/master.cf</code>.
+    Read our <a href="ee.best.practice.html#postfix"><code>Best Practice</code></a> tutorial
+    for customization.</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<ul>
+<li>
+<p>Supports new distribution release:</p>
+<ul>
+<li>Debian 13.<ul>
+<li><strong>WARNING</strong>: Debian 13 offers Dovecot 2.4 which uses different config
+  syntax than Dovecot 2.3. If you have custom config files for Dovecot
+  2.3, Dovecot may fail to start. In this case, you must fix config
+  syntax manually in your custom config files.</li>
+<li><strong>WARNING</strong>: SOGo team doesn't offer binary packages for Debian 13 yet,
+  so if you're running SOGo on Debian, do <strong>NOT</strong> upgrade OS right now.</li>
+<li>Driver of full-text search has been switched from <code>fts-xapian</code>
+  (third-party driver) to <code>fts-flatcurve</code> (Dovecot builtin driver).<ul>
+<li>Dovecot will re-index all mails after upgraded to Debian 13 when
+  user accesses the mailbox.</li>
+<li>You may want to remove directory <code>xapian-indexes</code> inside each
+  mailbox manually, it stores index data generated by <code>fts-xapian</code>,
+  it's useless after switched to <code>fts-flatcurve</code>, and it may
+  take a lot disk space.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>Docker edition is now available, based on Debian 12 and Ubuntu 24.04,
+  available for amd64 and arm64 platform:
+  <a href="https://hub.docker.com/r/iredmail/ee">https://hub.docker.com/r/iredmail/ee</a></p>
+</li>
+<li>
+<p>New features:</p>
+<ul>
+<li>Able to view / manage smtp sessions saved by milter. Old sessions will
+  be cleaned up everyday. Defaults to keep for 30 days.</li>
+<li>Able to discard saved changes of server settings.</li>
+<li>While disabling a component, you can now choose to uninstall software,
+  remove its config files and data, SQL database and SQL user.</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>Sort mail users by display name.</li>
+<li>Install netdata from yum/apt repositories offered by upstream (netdata).
+  <strong>WARNING</strong>: Directory <code>/opt/netdata/</code> will be removed automatically.</li>
+<li>Show commands used to query DNS records manually.</li>
+<li>Able to manage per-user mailbox path on user profile page.</li>
+<li>Disabled Dovecot quota status service (not much useful but takes up dict
+  processes).</li>
+<li>Set <code>vsz_limit=0</code> (unlimited) in Dovecot by default.</li>
+<li>Able to download quarantined mail.</li>
+<li>Able to release or delete multiple quarantined mails.</li>
+<li>Able to release or delete quarantined mail while adding whitelist or
+  blacklist.</li>
+<li>Disabled DKIM verification for sent emails in Amavisd.</li>
+<li>Show allowed special characters while updating Password Policy.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>Data was not loaded on Sent Mails and Received Mails pages.</li>
+<li>Email sent by mlmmj was not signed with DKIM signature.</li>
+<li>Not generate mailbox path if mailbox format is not "maildir".</li>
+<li>Cannot add firewall rule in some cases.</li>
+<li>Not reload Prosody service after successfully requested or renewed ssl cert.</li>
+<li>DKIM verification failed due to Amavisd inserts disclaimer text after
+  milter signs DKIM signature. Disclaimer is disabled by default now.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>adminer v5.4.0</li>
+<li>mlmmjadmin 3.5.0</li>
+<li>Z-Push v2.7.6 (security fix)</li>
+<li>milter v1.1.0</li>
+</ul>
+</li>
+<li>
+<p>New translations:</p>
+<ul>
+<li>pl_PL (Polski). Thanks to Kordian Sawikowski.</li>
+<li>fr_FR (Français). Thanks to Monel Dossou.</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.4.0">v1.4.0, Jul 11, 2025</h2>
+<ul>
+<li>
+<p>New milter program.</p>
+<ul>
+<li>Currently only one plugin (<code>dkim</code>) is available.</li>
+<li>Plugin <code>dkim</code>: signing DKIM key on outbound messages. It stores DKIM
+  keys in SQL table <code>vmail.dkim</code>, admins can generate per-domain
+  key on EE web UI (the DNS modal window).</li>
+<li>Existing DKIM keys used by Amavisd will be migrated to SQL table
+  <code>vmail.dkim</code> automatically during upgrade.</li>
+<li>Admins can manage milter plugins on web UI (<code>Server Settings</code> -&gt; <code>Milter</code>).</li>
+</ul>
+</li>
+<li>
+<p>New features:</p>
+<ul>
+<li>Export managed domains and accounts (in Excel file format <code>.xlsx</code>).</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>More spam policy options (bypass, quarantine, discard).</li>
+<li>Improved layout of quarantined notification email.</li>
+<li>[LDAP] Disallow changing LDAP suffix.</li>
+<li>[LDAP] Add a checkbox to enable / disable mail forwarding on user profile
+  page.</li>
+<li>Add labels on user list page to indicate user has forwarding addresses
+  and member of certain mailing lists.</li>
+<li>Simplify error message of DNS query result.</li>
+<li>New option to keep software up to date during deployment.</li>
+<li>Simplify deployment modal window.</li>
+<li>EE now logs to <code>/var/log/iredmail/</code> instead of <code>/opt/iredmail/log/</code>.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>autoconfig and autodiscover didn't work in some cases.
+  Thanks Lance for the report.</li>
+<li>[LDAP] Not set password last change date for postmaster@ user.</li>
+<li>[LDAP] Not convert ldap suffix to lower cases.
+  Thanks Michael for the feedback.</li>
+<li>Display <code>weight</code> attribute in autoconfig and autodiscover DNS record.</li>
+<li>Not display user last login date while filtering by first character
+  of email address on user list page.
+  Thanks Robert for the feedback.</li>
+<li>Server uptime was not updated on Dashboard page.
+  Thanks Robert for the feedback.</li>
+<li>Not preserve Fail2ban whitelists while migrating from iRedMail Easy.
+  Thanks Robert for the feedback.</li>
+<li>User cannot login due to not removing deprecated sql columns in
+  <code>vmail.mailbox</code>.</li>
+<li>Fix endless loop while cleaning up deleted mailboxes.</li>
+<li>Not correctly enable IPv6 support in Postfix and Nginx.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>netdata v2.5.4</li>
+</ul>
+</li>
+<li>
+<p>New translation: th_TH (Thai).
+  Thanks to Anucha <achn.syps _at_ gmail.com>.</p>
+</li>
+</ul>
+<h2 id="v1.3.1">v1.3.1, Jun 3, 2025</h2>
+<ul>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>[PostgreSQL] Not set <code>NOT NULL</code> for SQL table <code>vmail.mailbox.employeeid</code>.</li>
+<li>Not remove Nginx config snippet files after disabled SOGo.</li>
+<li>Not properly expire cache of static files (js/css).</li>
+<li>Not generate file <code>/opt/iredmail/ssl/cert.pem</code> after successfully
+  requested ssl cert from Let's Encrypt.</li>
+<li>Not handle error if SOGo user profile is empty.</li>
+<li>Not upgrade required components while after upgraded EE binary.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>roundcube 1.6.11 (security fix)</li>
+<li>netdata v2.5.2</li>
+<li>iRedAPD 5.9.1</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.3.0">v1.3.0, May 22, 2025</h2>
+<ul>
+<li>
+<p>Supports new distribution releases:</p>
+<ul>
+<li>OpenBSD 7.7. Drops 7.5.</li>
+<li>CentOS Stream 10. Note: SOGo Groupware is not available on CentOS 10 yet.</li>
+</ul>
+</li>
+<li>
+<p>New features:</p>
+<ul>
+<li><a href="ee.cert.html">SSL certificate management</a>: Request free cert from Let's Encrypt with
+  multiple domain names support, renew the cert automatically.</li>
+<li>View all DNS records of an email domain. Click the "DNS" badge on domain
+  list page, or domain profile page.</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>Show a modal window to select ActiveSync server when enabling or
+  disabling SOGo and Z-Push component.</li>
+<li>Store Z-Push state in SQL db instead of plain files.</li>
+<li>Rotate Z-Push log file daily and keep for 90 copies (was weekly and 20 copies).</li>
+<li>Log enabled / disabled components.</li>
+<li>Able to delete all whitelists or blacklists.</li>
+<li>Display disk usage on Dashboard page.</li>
+<li>Always display login username on left sidebar.</li>
+<li>Cache static files (image / css / js files) for one day by default.</li>
+<li>Report error if custom locale (JSON) file has invalid format.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>Not set <code>Reply-To:</code> to mailing list address by default.</li>
+<li>Generate content in wrong format in <code>/etc/postfix/sasl_passwords</code>.
+  Thanks Fabian Santiago for the report.</li>
+<li>Not enable IPv6 support in Postfix, Dovecot and Nginx.
+  Thanks Fabian Santiago for the report.</li>
+<li>MariaDB may have improper row format on server upgraded from old OS release.</li>
+<li>[Amavisd] Do not quarantine detected spam by default.
+  If admin chooses to not quarantine detected spams, the setting in Amavisd
+  config file will overrides admin's spam policy stored in SQL db, which
+  causes improper result.
+  Thanks Fabian Santiago for the report.</li>
+<li>Query parameter <code>limit</code> was ignored in several API endpoints.</li>
+<li>Not correctly activate Z-Push as activesync server.
+  Thanks Fabian Santiago for the report.</li>
+<li>[self-service] Cannot whitelist sender on Quarantined Mails page.
+  Thanks Fabian Santiago for the report.</li>
+<li>Not redirect to correct URL while subscribing to or unsubscribing from
+  newsletter.</li>
+<li>[OpenLDAP] Not correctly update allocated quota size on domain list page.</li>
+<li>Whitelisted IPs are not written into Fail2ban config file.</li>
+<li>Not use correct password algorithm for OpenLDAP backend on RHEL-family OS.
+  Thanks Laurent DUPIRE for the report.</li>
+<li>Standalone admin was not recognized as global admin.
+  Thanks Stéphane for the feedback.</li>
+<li>Updating user and admin profiles with invalid password returns unexpected error.</li>
+</ul>
+</li>
+<li>
+<p>Updated translations:</p>
+<ul>
+<li>de_DE (German). Thanks to Jochen Häberle <jh _at_ networkerz.de>.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>adminer v5.3.0</li>
+<li>netdata v2.5.1</li>
+<li>mlmmjadmin v3.4.0</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.2.1">v1.2.1, Apr 4, 2025</h2>
+<ul>
+<li>Fixed issues:<ul>
+<li>[SQL backends] Not apply required SQL changes to <code>vmail.mailbox</code> table.</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.2.0">v1.2.0, Apr 2, 2025</h2>
+<ul>
+<li>
+<p>Breaking changes:</p>
+<ul>
+<li>
+<p>Storing IMAP metadata in file inside mailboxes instead of SQL database.</p>
+<p>If you have shared folders, or enabled http push notification, you
+have to reset ACL or re-enable http push notification.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>New features:</p>
+<ul>
+<li><a href="https://z-push.org">Z-Push</a> is now available as alternative ActiveSync server.<ul>
+<li>Fail2ban integration for activesync auth failure is enabled by default.</li>
+</ul>
+</li>
+<li><strong>Password recovery</strong>. Allow end user to reset password with a recovery email. Notes:<ul>
+<li>User must login to self-service and add recovery email first, so
+  that user can reset password with this recovery email.</li>
+<li>A SMTP Account is required to send emails while user requests to
+  reset password.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>[web] Add links to view per-domain, per-user mail activities.</li>
+<li>[web] Able to disable creating IMAP folder for email address extension.
+  When local user <code>user@domain.com</code> receives an email sent to
+  <code>user+ExT@domain.com</code>, do not create mailbox folder <code>ExT</code> and deliver
+  email to the folder.</li>
+<li>[web] Able to re-deploy backend database (MariaDB, PostgreSQL, OpenLDAP0.</li>
+<li>[server] Discard duplicate emails by default in global sieve rule.</li>
+<li>[server] Supports storing custom Postfix config snippets in
+  <code>/opt/iredmail/custom/postfix/append_main.cf</code> and <code>append_master.cf</code>.
+  Full content of these 2 files will be appended to the end of
+  <code>/etc/postfix/main.cf</code> and <code>master.cf</code>.</li>
+<li>[Fail2ban] Monitoring EE log file for login failures.</li>
+<li>[SOGo] Re-create SQL VIEW to display more contact info stored in
+  newly added SQL columns in <code>vmail.mailbox</code>.</li>
+<li>[SQL backends] Able to manage more info of a mail user: first name, last
+  name, mobile numbers, telphone numbers, birthday.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>[web] Updating <code>Server Settings</code> may lose some other settings.</li>
+<li>[web] Cannot re-upload custom logo image.</li>
+<li>[web] Typing 2FA security code doesn't work well with numeric keypad.</li>
+<li>[server] Incorrect firewall rules in some cases.</li>
+<li>[server] Incorrect sql column in SQL VIEW <code>sogo.users</code>.</li>
+<li>[server] Storing IMAP metadata in SQL is not working well, fallback to
+  store in file inside user mailbox instead.</li>
+<li>[server] Not sync mail attachment size with web upload file size.</li>
+<li>[server] Incorrect SQL column definitions in table <code>amavisd.msgs</code>.</li>
+<li>[server] Error while setting owner/permission of a lot DKIM keys.
+  Thanks subarticThrone@forum for the feedback.</li>
+</ul>
+</li>
+<li>
+<p>Updated translations:</p>
+<ul>
+<li>de_DE (German). Thanks to Jochen Häberle <jh _at_ networkerz.de>.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>adminer v5.1.1</li>
+<li>iRedAPD 5.9.0</li>
+<li>netdata 2.3.2</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.1.0">v1.1.0, Mar 11, 2025</h2>
+<ul>
+<li>
+<p>API:</p>
+<ul>
+<li>Parameter name changed:<ul>
+<li>User profile (<code>/api/user/{email}</code>): <code>employeeid</code> -&gt; <code>employee_id</code>.</li>
+</ul>
+</li>
+<li>URI changed:<ul>
+<li>Release quarantined mails: <code>/api/activities/msg/{mail_id}</code> -&gt;
+  <code>/api/activities/msg/{mail_id}</code>.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>New features:</p>
+<ul>
+<li>Self service. End users can login to EE to manage personal information,
+  whitelists / blacklists, spam policy and more. Defaults to URL
+  <code>https://&lt;your-server&gt;/self-service/</code>.</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>Amavisd: Create symbol link <code>/etc/amavisd.conf</code> on RHEL-family.</li>
+<li>netdata: Avoid the login page and splash screen, also disable cloud.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>[web] Failed in adding whitelisting or blacklisting addresses with leading
+  or ending whitespace.</li>
+<li>[web] Last Logins page may contain non-existing users.</li>
+<li>[server] Missing required Dovecot (sub-)package on Debian/Ubuntu. fixes #1153</li>
+<li>[server] Dovecot: Not eanble stats-writer. fixes #1154</li>
+<li>[server] SOGo: Add missing GroupObjectClasses for OpenLDAP backend. fixes #1155</li>
+<li>[server] netdata cannot load cloud config '/opt/netdata/var/lib/netdata/cloud.d/cloud.conf'.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>Adminer v5.0.2</li>
+<li>netdata v2.2.6</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0.2">v1.0.2, Feb 20, 2025</h2>
+<ul>
+<li>
+<p>New features:</p>
+<ul>
+<li>You can now customize branding on web UI directly (Server Settings -&gt;
+  Custom Branding), including short and full brand name, website link,
+  logo image and favicon icon.</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>[web] Able to enable LDAP over TLS and SSL.</li>
+<li>[web] Able to display more accounts on user list page. Defaults to 50.</li>
+<li>[web] On user list page, it's now able to sort by quota usage pacentage
+  or stored size.</li>
+<li>[web] On <code>Last Logins</code> page, it's now able to sort by either IMAP, POP3
+  or delivery.</li>
+<li>Improve performance while deleting multiple mailboxes at the same time.</li>
+<li>dovecot: Switch to old stats plugin so that netdata can collect metrics.</li>
+<li>netdata: Switch all Python plugins to Go for better performance.</li>
+</ul>
+</li>
+<li>
+<p>Fixed:</p>
+<ul>
+<li>[web] Not preserve address extension in forwarding address.
+  Thanks Jean-lou Schmidt for the feedback.</li>
+<li>[web] Filter of disabled domains is incorrect.</li>
+<li>[web] Normal admin was able to update domain quota and account limits.</li>
+<li>[web] Cannot save max retries and timeout while updating Push Notification
+  settings.</li>
+<li>[server] Amavisd cannot save mail subject longer than 255 characters.</li>
+<li>[server] Amavisd requires at least 2 child processes (was set to 1).</li>
+<li>[server] Netdata doesn't collect data for OpenLDAP server.</li>
+<li>Migrating from non-EE server may take too much time to update existing
+  Amavisd SQL tables.</li>
+<li>Succeeded deployment may be displayed as Aborted in some case.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>mlmmjadmin 3.3.1</li>
+<li>netdata 2.2.5</li>
+<li>roundcube 1.6.10</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0.1">v1.0.1, Jan 26, 2025</h2>
+<ul>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>[web] Able to allow users to add auxiliary IMAP accounts
+  (<code>SOGoMailAuxiliaryUserAccountsEnabled=YES</code>).</li>
+</ul>
+</li>
+<li>
+<p>Fixed:</p>
+<ul>
+<li>[web] Cannot save some checkbox status on <code>Server Settings</code> page.</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0.0">v1.0.0, Jan 24, 2025</h2>
+<ul>
+<li>
+<p>New features:</p>
+<ul>
+<li>HTTP Push notification. Send basic info of newly received email message
+  to your http endpoint. Note: it does not send full mail headers or body.
+  FYI <a href="https://doc.dovecot.org/main/core/plugins/push_notification.html">https://doc.dovecot.org/main/core/plugins/push_notification.html</a></li>
+<li>Enable doveadm http api. FYI
+  <a href="https://doc.dovecot.org/main/core/admin/doveadm.html">https://doc.dovecot.org/main/core/admin/doveadm.html</a></li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>[LDAP backend] Able to add and manage (old-style) mailing list account.</li>
+<li>Able to accept connections from certain source address to any port
+  while adding new firewall rule.
+  Thanks Ian for the feedback.</li>
+<li>Supports autoconfig, autodiscover and mobileconfig out of box. Component
+  <code>Autoconfig and Autodiscover</code> has been removed.</li>
+<li>[web] Able to filter events on Activities page.</li>
+<li>[web] Able to redirect to mail alias profile page from user profile page,
+  Membership tab.</li>
+</ul>
+</li>
+<li>
+<p>Fixed:</p>
+<ul>
+<li>[server] Not serve ACME challenge over HTTP directly.
+  Let's Encrypt cert renewal may fail with error <code>Connection refused</code> if
+  the HTTP request is redirected to HTTPS.</li>
+<li>[server] Incorrectly prefix <code>[Spam]</code> text in mail subject when option
+  <code>Always insert X-Spam-* headers</code> is enabled.</li>
+<li>[server] Not apply default firewall rules while upgrading from v1.0-beta8
+  when Firewall component is enabled.
+  Thanks Ian for the report.</li>
+<li>[server] Not install required package for FTS on Ubuntu 24.04.</li>
+<li>[server] Disable slow query log in mariadb to prevent large log file. 
+  Thanks Günther Pfannhauser for the report.</li>
+<li>[server] Upgrading from v1.0-beta7 or earlier releases fails.</li>
+<li>[server] Not restart cron job to load newly added tasks.</li>
+<li>[api] Cannot reset user password with a hashed password.
+  Thanks Michael Stamouli for the report.</li>
+<li>[api] Cannot use "-" (dash) in password.</li>
+<li>[web] <code>Statistics</code> on Dashboard does not reflect the log retention days.</li>
+<li>[web] <code>Delete All</code> button doesn't work on <code>Sent Mails</code> page.
+  Thanks Justin for the report.</li>
+<li>[web] OTP doesn't work. (#1037)
+  Thanks Sascha Linke for the report.</li>
+<li>[web] Several web UI minor fixes and tweaks.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>netdata 2.2.0</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0-beta9">v1.0-beta9, Dec 12, 2024</h2>
+<ul>
+<li>
+<p>Dropped distribution releases:</p>
+<ul>
+<li>Debian 10 (buster). Debian 12 is recommended.</li>
+<li>Ubuntu 18.04 (bionic). Ubuntu 24.04 LTS is recommended.</li>
+</ul>
+</li>
+<li>
+<p>New translation: de_DE (German).
+  Thanks to Leslie León Sinclair (leslie84 <em>at</em> nauta.cu).</p>
+</li>
+<li>
+<p>New features:</p>
+<ul>
+<li>Full OpenLDAP backend support.</li>
+<li>[web] Manage firewall rules on web UI.</li>
+<li>[web] Manage default MTA transport.</li>
+<li>[web] Email archiving software integration. Currently only Spider Email
+  Archiver <a href="https://spiderd.io">https://spiderd.io</a> is supported. Spider is developed by
+  iRedMail team.</li>
+<li>[server] Add cron job to remove mailboxes from disk after account was
+  deleted.</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>[server] Set SOGoDisableOrganizerEventCheck=YES in SOGo by default.</li>
+<li>[server] SOGo Groupware is now available on arm64 platform.</li>
+<li>[server] Increase Amavisd log line length to 2048 characters.</li>
+<li>[server] Improve SQL performance by extending <code>amavisd.msgs</code> table.</li>
+<li>[server] Block <code>.F</code>, <code>.melt</code>, <code>.fcat</code>, <code>.zoo</code> file extensions by default
+  in Amavisd due to no decode program available.</li>
+<li>[web] Able to filter mail alias and mailing lists accounts by first
+  char of email address.</li>
+<li>[web] Display banner on all pages when new version is available for upgrade.</li>
+<li>[migration] Migrating from iRedMail Easy is even easier now.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>[server] Not correctly save spam policy.</li>
+<li>[server] Do not set default mailbox quota in Dovecot config file.</li>
+<li>[server] SSL cert/key files have loose file permission. Set to 0400 now.</li>
+<li>[server] Not update iRedAPD config file to whitelist trusted clients.
+  Thanks to Peter Radig for the feedback.</li>
+<li>[server] Not correctly enable / disable per-domain greylisting service.</li>
+<li>[server] Not preserve display name and managed domains while renaming mail user.</li>
+<li>[api] Incorrect parameter value types while creating domain.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>mlmmjadmin 3.3.0</li>
+<li>netdata 2.0.3</li>
+<li>iRedAPD 5.8.1</li>
+<li>uwsgi 2.0.28 (OpenBSD only)</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0-beta8">v1.0-beta8, Sep 14, 2024</h2>
+<blockquote>
+<p>We're working hard to finish OpenLDAP support in next beta release, v1.0-beta9.</p>
+</blockquote>
+<ul>
+<li>[NEW] Able to manage global, per-domain and per-user whitelists and
+  blacklists on web UI or API interface.</li>
+<li>[NEW] <strong>Two-factor authentication (2FA)</strong> with TOTP.<ul>
+<li>[web] Global admin can enforce all domain admins to enable 2FA.</li>
+</ul>
+</li>
+<li>[NEW] New translation: es_ES (Español). Thanks to Leslie León Sinclair [leslie84 <em>at</em> nauta <em>dot</em> cub].</li>
+<li>Improvements:<ul>
+<li>[api] New parameter <code>maildir</code> used to customize mailbox path while
+  creating new user or updating user profile.</li>
+<li>[api][web] Optional: Remove data from other applications while removing
+  mailbox or domain. Defaults to keep the data.</li>
+<li>[api][web] No more max password length.</li>
+<li>[web] Able to disable 2FA for SOGo user.</li>
+<li>[web] Able to download deployment log.</li>
+<li>[web] 2 new cards on Dashboard page: <code>Top Senders</code>, <code>Top Recipients</code>.</li>
+<li>[web] Display 3 cards on top of domain profile page: <code>Statistics of
+  latest 24 hours</code>, <code>Top Senders</code>, <code>Top Recipients</code>.</li>
+<li>[web] Able to configure the notification of quarantined emails:
+  <code>Quarantined Mails</code> -&gt; <code>Quarantine Notify</code> (the small bell icon).</li>
+<li>[web] Able to abort the running deployment.</li>
+<li>[web] Able to subscribe to or unsubscribe from newsletter-style
+  mailing list on web UI.</li>
+<li>[web] Removed all optional settings in setup wizard. Please tune the
+  server after initial deployment.</li>
+<li>[web] Component <code>Firewall</code> is disabled during initial setup.
+  Setup will restart firewall at the end of deployment, it blocks the
+  network port used by setup and causes deployment failure. Feel free
+  to enable it after initial setup.</li>
+<li>[web] Able to filter user accounts by first character of email address.</li>
+<li>[web] Able to filter disabled user accounts.</li>
+<li>[server] Disable SpamAssassin rule <code>RCVD_IN_DNSWL_HI</code> (Sender listed at
+  http://www.dnswl.org/ with high trust) due to too many false positives.</li>
+</ul>
+</li>
+<li>Fixed issues:<ul>
+<li>[server] Not correctly wrap IPv6 addresses (saved in <code>Server Settings</code> -&gt;
+  <code>Trusted Clients</code>) in Postfix config file.
+  Thanks to Peter Radig for the feedback.</li>
+<li>[server] ClamAV can not scan emails due to permission issue.
+  Thanks to Peter Radig for the feedback.</li>
+<li>[api] Normal domain admin may be able to delete any domain via API calls.</li>
+<li>[web] Incorrect count while displaying disabled domains.</li>
+<li>Rotated log files (/opt/iredmail/log/*.log) were not compressed.</li>
+</ul>
+</li>
+<li>Updated packages:<ul>
+<li>Roundcube 1.6.9, 1.5.9</li>
+<li>netdata v1.47.1</li>
+<li>Fail2ban 1.1.0 (OpenBSD only)</li>
+<li>Adminer has been replaced by AdminerEvo and upgraded to v4.8.4.
+  Original Adminer project was abandoned, AdminerEvo is the successor.
+  https://github.com/adminerevo/adminerevo</li>
+</ul>
+</li>
+<li>Known issues:<ul>
+<li>Fail2ban cannot start on OpenBSD after system reboot.</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0-beta7">v1.0-beta7, Aug 2, 2024</h2>
+<ul>
+<li>[NEW] Full documentation of the RESTful API interface is now embedded and
+  accessible by clicking <code>API Doc</code> link on page foot after logged in as global
+  admin. It's also accessible online: https://www.iredmail.org/ee/api/index.html.</li>
+<li>
+<p>[NEW] Amavisd integration:</p>
+<ul>
+<li>View basic info of incoming and outgoing emails.</li>
+<li>Manage global, per-domain and per-user spam policy.</li>
+<li>View, release, delete quarantined emails.</li>
+<li>Add sender or recipient to whitelist or blacklist on different mail list pages.</li>
+<li>Show statistics of latest 24 hours on Dashboard page.</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>[server] User password is forced to be at least 8 characters for security concern.</li>
+<li>[server] Add 5 new columns in SQL table <code>amavisd.msgs</code> to simplify SQL
+  queries and better performance: <code>sender_domain</code>, <code>sender_mail</code>, <code>rid</code>,
+  <code>rcpt_domain</code>, <code>rcpt_mail</code>.</li>
+<li>[server] FTS is now available on CentOS / Rocky / AlmaLinux 9.
+  Defaults to disabled.</li>
+<li>[server] Track user last login date:<ul>
+<li>Store user last login time in PostgreSQL backend on Debian 12,
+  Ubuntu 22.04 and 24.04, CentOS / Rocky / AlmaLinux 9, OpenBSD 7.3 and later.
+  Note: MariaDB / OpenLDAP backends already have this feature.</li>
+<li>It's now enabled all backends by default if it's supported by Dovecot.</li>
+</ul>
+</li>
+<li>[web] Remove duplicate Enable / Disable options in user / list / alias
+  account list page.</li>
+<li>[web] Able to enable / disable account on mailing list and mail alias list
+  pages by clicking the account status icon.</li>
+<li>[web] Many minor UI improvements.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>[playbook] Postfix config is messed and not enable SMTP smuggling fix.
+  Thanks to Ian for the feedback.</li>
+<li>[web] Cannot update user's employee ID.</li>
+<li>[web] Cannot view mail alias accounts and mailing lists in SOGo address book.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>netdata v1.46.3</li>
+<li>Roundcube webmail -&gt; 1.6.8. It fixes 3 security vulnerabilities.
+  FYI https://roundcube.net/news/2024/08/04/security-updates-1.6.8-and-1.5.8</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0-beta6">v1.0-beta6, May 31, 2024</h2>
+<ul>
+<li>A valid license key is now required for installation.</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>[web] New search bar on top-left of all web pages. You can search
+  with domain name, email address, or display name, top 10 results are
+  displayed, click item to visit account profile page.</li>
+<li>[web] Removed component <code>iRedAdmin</code> since iRedMail Enterprise Edition
+  offers same features as iRedAdmin and iRedAdmin-Pro.</li>
+<li>[web] Able to set isolation level of the spam/ham auto-learning data.
+  Currently 3 options are available: per-user, per-domain or server wide.
+  Defaults to server wide (share learning data between all users).</li>
+<li>[server] If component <code>BIND DNS Server</code> is enabled, use localhost as
+  DNS server in systemd resolved service.</li>
+<li>[server] Not use Google DNS servers as default upstream anymore.
+  Spamhaus blocks queries from public/open DNS servers.</li>
+<li>[server] Set default max connections to 1024 for PostgreSQL.</li>
+<li>[server] Use systemd-timesyncd as ntp client on Ubuntu 24.04.</li>
+<li>[server] Fail2ban now stores banned IP addresses in SQL database by default.</li>
+<li>[server] Fail2ban now stores enabled jail names in SQL table <code>fail2ban.jails</code>.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>Roundcube 1.6.7</li>
+<li>Roundcube 1.5.7 (Ubuntu 18.04 only)</li>
+<li>netdata v1.45.5</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0-beta5">v1.0-beta5, May 8, 2024</h2>
+<ul>
+<li>
+<p>New: iRedAPD integration.</p>
+<ul>
+<li>Global, per-domain, per-user greylisting management.</li>
+<li>Global, per-domain, per-user throttling management.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>netdata v1.45.4</li>
+</ul>
+</li>
+</ul>
+<h2 id="v1.0-beta4">v1.0-beta4, April 26, 2024</h2>
+<ul>
+<li>
+<p>Supports new distribution releases:</p>
+<ul>
+<li>Ubuntu 24.04 LTS</li>
+<li>OpenBSD 7.5</li>
+</ul>
+</li>
+<li>
+<p>Improvements:</p>
+<ul>
+<li>Refactored Components page.</li>
+</ul>
+</li>
+<li>
+<p>Fixed issues:</p>
+<ul>
+<li>[web] Not return valid data after updated per-user alias addresses.</li>
+<li>[web] Can not toggle on/off password policies.</li>
+<li>Not set correct owner of SOGo PostgreSQL database.</li>
+<li>Can not set file permission on symbol link file.</li>
+<li>Some minor issues.</li>
+</ul>
+</li>
+<li>
+<p>Updated packages:</p>
+<ul>
+<li>iRedAPD v5.6.0</li>
+<li>netdata v1.45.3</li>
+</ul>
+</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

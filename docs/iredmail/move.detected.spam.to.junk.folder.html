@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Move detected spam to Junk folder</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="move-detected-spam-to-junk-folder">Move detected spam to Junk folder</h1>
+<p>To move detected spam to user's Junk folder, you need to enable global sieve
+script in Dovecot.</p>
+<p>You can find sample sieve rule file <code>/var/vmail/sieve/dovecot.sieve.sample</code>
+if you chose <code>/var/vmail</code> to store mailboxes during iRedMail installation.
+If you have a custom mailbox storage directory, the sample sieve rule file
+should be <code>sieve/dovecot.sieve.sample</code> under that directory. If you cannot
+find it, you can still download one from iRedMail project:
+<a href="https://github.com/iredmail/iRedMail/blob/1.0/samples/dovecot/dovecot.sieve">here</a>.</p>
+<p>This file must be owned by user <code>vmail</code> and group <code>vmail</code>, permission <code>0500</code>.</p>
+<p>Now open Dovecot config file <code>/etc/dovecot/dovecot.conf</code> (on Linux/OpenBSD)
+or <code>/usr/local/etc/dovecot/dovecot.conf</code> (FreeBSD), make sure you have setting
+like below:</p>
+<pre><code># Part of file: /etc/dovecot/dovecot.conf
+
+plugin {
+    ...
+    sieve_before = /var/vmail/sieve/dovecot.sieve
+    ...
+}
+</code></pre>
+<p>Restart Dovecot service to enable it.</p>
+<p>Note: we don't use <code>sieve_default =</code> for global sieve script, because it
+will be ignored if users have their own personal sieve rule files.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

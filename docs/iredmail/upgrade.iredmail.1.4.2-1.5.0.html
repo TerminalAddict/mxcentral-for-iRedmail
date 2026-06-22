@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 1.4.2 to 1.5.0</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-142-to-150">Upgrade iRedMail from 1.4.2 to 1.5.0</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#upgrade-iredmail-from-142-to-150">Upgrade iRedMail from 1.4.2 to 1.5.0</a><ul>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</a><ul>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-504">Upgrade iRedAPD (Postfix policy server) to the latest stable release (5.0.4)</a></li>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-16">Upgrade iRedAdmin (open source edition) to the latest stable release (1.6)</a></li>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#upgrade-mlmmjadmin-to-the-latest-stable-release-313">Upgrade mlmmjadmin to the latest stable release (3.1.3)</a></li>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#upgrade-roundcube-webmail-to-the-latest-stable-release-151">Upgrade Roundcube webmail to the latest stable release (1.5.1)</a></li>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#upgrade-netdata-to-the-latest-stable-release-1321">Upgrade netdata to the latest stable release (1.32.1)</a></li>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#nginx-several-improvements">Nginx: several improvements</a></li>
+<li><a href="upgrade.iredmail.1.4.2-1.5.0.html#dovecot-enable-a-new-ssl-cipher-and-remove-a-weak-one">Dovecot: enable a new ssl cipher and remove a weak one</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Dec 27, 2021: initial release.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code>1.5.0
+</code></pre>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-504">Upgrade iRedAPD (Postfix policy server) to the latest stable release (5.0.4)</h3>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<h3 id="upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-16">Upgrade iRedAdmin (open source edition) to the latest stable release (1.6)</h3>
+<p>Please follow below tutorial to upgrade iRedAdmin to the latest stable release:
+<a href="migrate.or.upgrade.iredadmin.html">Upgrade iRedAdmin to the latest stable release</a>.</p>
+<h3 id="upgrade-mlmmjadmin-to-the-latest-stable-release-313">Upgrade mlmmjadmin to the latest stable release (3.1.3)</h3>
+<p>Please follow below tutorial to upgrade mlmmjadmin to the latest stable release:
+<a href="upgrade.mlmmjadmin.html">Upgrade mlmmjadmin to the latest stable release</a></p>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release-151">Upgrade Roundcube webmail to the latest stable release (1.5.1)</h3>
+<div class="admonition warning">
+<p class="admonition-title">MySQL and MariaDB server tunning</p>
+<p>On CentOS 7, Debian 10 and Ubuntu 18.04, you must add 2 parameters in
+MySQL or MariaDB config file to avoid error
+<code>Specified key was too long; max key length is 767 bytes</code>:</p>
+<ul>
+<li>On CentOS 7: it's <code>/etc/my.cnf</code></li>
+<li>On Debian 10: it's <code>/etc/mysql/my.cnf</code></li>
+</ul>
+</div>
+<pre><code>[mysqld]
+innodb_large_prefix=ON
+innodb_file_format=Barracuda
+</code></pre>
+<p>Please follow Roundcube official tutorial to upgrade Roundcube webmail to the
+latest stable release:</p>
+<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</li>
+</ul>
+<h3 id="upgrade-netdata-to-the-latest-stable-release-1321">Upgrade netdata to the latest stable release (1.32.1)</h3>
+<p>If you have netdata installed, you can upgrade it by following this tutorial:
+<a href="upgrade.netdata.html">Upgrade netdata</a>.</p>
+<h3 id="nginx-several-improvements">Nginx: several improvements</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>All credit goes to GitHub user
+<a href="https://github.com/ludovicandrieux">@ludovicandrieux</a>, thanks for the
+contributions. See also:
+<a href="https://github.com/iredmail/iRedMail/issues/136">#136</a>, 
+<a href="https://github.com/iredmail/iRedMail/issues/137">#137</a>,
+<a href="https://github.com/iredmail/iRedMail/issues/138">#138</a>.</p>
+</div>
+<ul>
+<li>Enable TLSv1.3. WARNING: It requires Nginx 1.13 or later releases, which is
+  available on:<ul>
+<li>CentOS 7 and later</li>
+<li>Debian 10 and later</li>
+<li>Ubuntu 18.04 and later</li>
+<li>FreeBSD</li>
+<li>OpenBSD</li>
+</ul>
+</li>
+<li>Greatly improve the performance of http keep-alive connections over SSL by
+  enabling <code>ssl_session_cache</code> parameter. See also:<ul>
+<li><a href="https://vincent.bernat.ch/en/blog/2011-ssl-session-reuse-rfc5077">Speeding up TLS: enabling session reuse</a></li>
+<li><a href="https://www.peterbe.com/plog/ssl_session_cache-ab">ssl_session_cache in Nginx and the ab benchmark</a></li>
+</ul>
+</li>
+<li>Add new ssl cipher: <code>EECDH+CHACHA20</code>. It requires openssl 1.1.0, which is
+  available on:<ul>
+<li>CentOS 7 and later</li>
+<li>Debian 9 and later</li>
+<li>Ubuntu 18.04 and later</li>
+<li>FreeBSD</li>
+<li>OpenBSD</li>
+</ul>
+</li>
+<li>Remove weak ssl cipher: <code>AES256+EDH</code>.</li>
+</ul>
+<p>To apply these changes, please open file <code>/etc/nginx/templates/ssl.tmpl</code> with
+your favourite text editor, then:</p>
+<ul>
+<li>Append <code>TLSv1.3</code> in parameter <code>ssl_protocols</code>. For example:</li>
+</ul>
+<pre><code>ssl_protocols TLSv1.2 TLSv1.3;
+</code></pre>
+<ul>
+<li>Prepend <code>EECDH+CHACHA20</code> in parameter <code>ssl_ciphers</code>, also remove <code>AES256+EDH</code>.
+  For example:</li>
+</ul>
+<pre><code>ssl_ciphers EECDH+CHACHA20:EECDH+AESGCM:EDH+AESGCM:AES256+EECDH;
+</code></pre>
+<ul>
+<li>Add new parameter <code>ssl_session_cache</code> and optional comment lines:</li>
+</ul>
+<pre><code># Greatly improve the performance of keep-alive connections over SSL.
+# With this enabled, client is not necessary to do a full SSL-handshake for
+# every request, thus saving time and cpu-resources.
+ssl_session_cache shared:SSL:10m;
+</code></pre>
+<p>Restarting Nginx service is required.</p>
+<h3 id="dovecot-enable-a-new-ssl-cipher-and-remove-a-weak-one">Dovecot: enable a new ssl cipher and remove a weak one</h3>
+<p>Please open file <code>/etc/dovecot/dovecot.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot.conf</code> (FreeBSD), update parameter
+<code>ssl_cipher_list</code> to below value, it adds new cipher <code>EECDH+CHACHA20</code> and
+removes the weak one <code>AES256+EDH</code>:</p>
+<pre><code>ssl_cipher_list = EECDH+CHACHA20:EECDH+AESGCM:EDH+AESGCM:AES256+EECDH
+</code></pre>
+<p>Restarting Dovecot service is required.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

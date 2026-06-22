@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Turn on debug mode in Amavisd and SpamAssassin</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="debug.amavisd-nl_DU.html">Nederlands</a> / <a href="debug.amavisd-zh_CN.html">简体中文</a> /</p>
+</div>
+<h1 id="turn-on-debug-mode-in-amavisd-and-spamassassin">Turn on debug mode in Amavisd and SpamAssassin</h1>
+<p>In <a href="file.locations.html#amavisd">Amavisd config file</a>, change <code>$log_level</code>,
+then restart amavis service.</p>
+<pre><code>$log_level = 5;              # verbosity 0..5, -d
+</code></pre>
+<p>If you want to debug SpamAssassin, please update <code>$sa_debug</code> also:</p>
+<pre><code>$sa_debug = 1;
+</code></pre>
+<p>Amavisd is configured by iRedMail to log to <a href="file.locations.html#postfix">Postfix log file</a>.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

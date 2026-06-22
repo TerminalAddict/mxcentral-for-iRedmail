@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Setup DNS records for your iRedMail server (A, PTR, MX, SPF, DKIM, DMARC)</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="setup.dns-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="setup-dns-records-for-your-iredmail-server-a-ptr-mx-spf-dkim-dmarc">Setup DNS records for your iRedMail server (A, PTR, MX, SPF, DKIM, DMARC)</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="setup.dns.html#setup-dns-records-for-your-iredmail-server-a-ptr-mx-spf-dkim-dmarc">Setup DNS records for your iRedMail server (A, PTR, MX, SPF, DKIM, DMARC)</a><ul>
+<li><a href="setup.dns.html#a">A record for server hostname</a><ul>
+<li><a href="setup.dns.html#what-is-an-a-record">What is an A record</a></li>
+<li><a href="setup.dns.html#how-to-setup-an-a-record">How to setup an A Record</a></li>
+</ul>
+</li>
+<li><a href="setup.dns.html#ptr">Reverse PTR record for server IP address</a><ul>
+<li><a href="setup.dns.html#what-is-a-reverse-ptr-record">What is a reverse PTR record</a></li>
+<li><a href="setup.dns.html#why-do-you-need-a-reverse-ptr-record">Why do you need a reverse PTR record</a></li>
+<li><a href="setup.dns.html#how-to-setup-a-reverse-ptr-record">How to setup a Reverse PTR record</a></li>
+</ul>
+</li>
+<li><a href="setup.dns.html#mx">MX record for mail domain name</a><ul>
+<li><a href="setup.dns.html#what-is-a-mx-record">What is a MX record</a></li>
+<li><a href="setup.dns.html#how-to-setup-the-mx-record">How to setup the MX record</a></li>
+</ul>
+</li>
+<li><a href="setup.dns.html#autodiscover-for-your-domain">autodiscover for your domain</a><ul>
+<li><a href="setup.dns.html#what-is-an-autoconfigautodiscover-record">What is an autoconfig/autodiscover record</a></li>
+<li><a href="setup.dns.html#how-to-setup-the-autoconfigautodiscover-record">How to setup the autoconfig/autodiscover record</a></li>
+</ul>
+</li>
+<li><a href="setup.dns.html#spf">SPF record for the mail domain name</a><ul>
+<li><a href="setup.dns.html#what-is-a-spf-record">What is a SPF record</a></li>
+<li><a href="setup.dns.html#how-to-setup-the-spf-record">How to setup the SPF record</a></li>
+</ul>
+</li>
+<li><a href="setup.dns.html#dkim">DKIM record for the mail domain name</a><ul>
+<li><a href="setup.dns.html#what-is-a-dkim-record">What is a DKIM record</a></li>
+<li><a href="setup.dns.html#how-to-setup-the-dkim-record">How to setup the DKIM record</a></li>
+</ul>
+</li>
+<li><a href="setup.dns.html#dmarc">DMARC record for the mail domain name</a><ul>
+<li><a href="setup.dns.html#what-is-dmarc-and-how-does-it-combat-phishing">What is DMARC, and how does it combat phishing?</a></li>
+<li><a href="setup.dns.html#how-to-setup-the-dmarc-record">How to setup the DMARC record</a></li>
+</ul>
+</li>
+<li><a href="setup.dns.html#srv-record-for-jabberxmpp-service">SRV record for Jabber/XMPP service</a></li>
+<li><a href="setup.dns.html#register-your-mail-domain-in-google-postmaster-tools">Register your mail domain in Google Postmaster Tools</a></li>
+<li><a href="setup.dns.html#check-outlookcom-postmaster-site">Check Outlook.com Postmaster site</a></li>
+<li><a href="setup.dns.html#check-yahoo-deliverability-best-practises">Check Yahoo! Deliverability Best Practises</a></li>
+<li><a href="setup.dns.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>If you're running iRedMail Enterprise Edition ("EE" for short), you can
+login to EE as global admin, click the <code>DNS</code> badge on domain list page to
+check the DNS records of email domain.</p>
+</div>
+<p><strong>IMPORTANT NOTE</strong>: <code>A</code>, <code>MX</code> records are required, <code>Reverse PTR</code>, <code>SPF</code>,
+<code>DKIM</code> and <code>DMARC</code> are optional but <strong>HIGHLY</strong> recommended.</p>
+<h2 id="a"><code>A</code> record for server hostname</h2>
+<h3 id="what-is-an-a-record">What is an <code>A</code> record</h3>
+<p><code>A</code> records map a FQDN (fully qualified domain name) to an IP address. This is
+usually the most often used record type in any DNS system. This is the DNS
+record you should add if you want to point a domain name to a web server.</p>
+<h3 id="how-to-setup-an-a-record">How to setup an <code>A</code> Record</h3>
+<ul>
+<li>
+<p><code>Name</code>: This will be the host for your domain which is actually a computer
+  within your domain. Your domain name is automatically appended to your name.
+  If you are trying to make a record for the system <code>www.mydomain.com</code>. Then all
+  you enter in the textbox for the name value is <code>www</code>.</p>
+<p><strong>Note</strong>: If you leave the name field blank it will default to be the record
+for your base domain <code>mydomain.com</code>. The record for your base domain is
+called the root record or apex record.</p>
+</li>
+<li>
+<p><code>IP</code>: The IP address of your FQDN. An IP address can be thought of as
+the telephone number to your computer. It is how one computer knows how to
+reach another computer. Similar to the country codes, area codes, and phone
+number it is used to call someone.</p>
+</li>
+<li>
+<p><code>TTL</code>: The TTL (Time to Live) is the amount of time your record will stay
+in cache on systems requesting your record (resolving nameservers, browsers,
+etc.). The TTL is set in seconds, so 60 is one minute, 1800 is 30 minutes, etc.</p>
+</li>
+</ul>
+<p>Systems that have a static IP should usually have a TTL of 1800 or higher.
+Systems that have a dynamic IP should usually have a TTL of 1800 or less.</p>
+<p>The lower the TTL the more often a client will need to query the name servers
+for your host's (record's) IP address this will result in higher query traffic
+for your domain name. Where as a very high TTL can cause downtime when you
+need to switch your IPs quickly.</p>
+<p>Sample record:</p>
+<pre><code>NAME                TTL     TYPE    DATA
+
+www.mydomain.com.   1800    A       192.168.1.2
+mail.mydomain.com.  1800    A       192.168.1.5
+</code></pre>
+<p>The end result of this record is that <code>www.mydomain.com</code> points to
+<code>192.168.1.2</code>, and <code>mail.mydomain.com</code> points to <code>192.168.1.5</code>.</p>
+<h2 id="ptr">Reverse PTR record for server IP address</h2>
+<h3 id="what-is-a-reverse-ptr-record">What is a reverse PTR record</h3>
+<p>PTR record or more appropriately a reverse PTR record is a process of resolving
+an IP address to its associated hostname. This is the exact opposite of the
+process of resolving a hostname to an IP address (<code>A</code> record). Example, when you ping a
+name <code>mail.mydomain.com</code> it will get resolved to the ip address using the DNS
+to something like <code>192.168.1.5</code>. Reverse PTR record does the opposite; it looks
+up the hostname for the given IP address. In the example above the PTR record
+for IP address <code>192.168.1.5</code> will get resolved to <code>mail.mydomain.com</code>.</p>
+<h3 id="why-do-you-need-a-reverse-ptr-record">Why do you need a reverse PTR record</h3>
+<p>The most common use for looking up a PTR record is done by spam filters.
+Concept behind this idea is that fly by night spammers who send e-mails out
+using fake domains generally will not have the appropriate reverse PTR setup
+at the ISP DNS zone. This criterion is used by spam filters to detect spam. If
+your domain does not have an appropriate reverse PTR record setup then chances
+are email spam filtering software <strong>MIGHT</strong> block e-mails from your mail server.</p>
+<h3 id="how-to-setup-a-reverse-ptr-record">How to setup a Reverse PTR record</h3>
+<p>You would most likely need to contact your ISP and make a request to create a
+reverse PTR record for your mail server IP address. For example, if your mail
+server hostname is <code>mail.mydomain.com</code> then ask your ISP to setup a reverse
+PTR record <code>192.168.1.5</code> (your internet public IP address) in their reverse DNS
+zone. Reverse DNS zones are handled by your ISP even though you may have your
+own forward lookup DNS zone that you manage.</p>
+<h2 id="mx">MX record for mail domain name</h2>
+<h3 id="what-is-a-mx-record">What is a MX record</h3>
+<p>Mail Exchanger Record or more commonly known as MX record is an entry in the
+DNS server of your domain that tells other mail servers where your mail server
+is located. When someone sends an e-mail to a user that exists on your mail
+server from the internet, MX provides the location or IP address where to send
+that e-mail. MX record is the location of your mail server that you have
+provided to the outside world via the DNS.</p>
+<p>Most mail servers generally have more than one MX record, meaning you could
+have more than one mail server setup to receive e-mails. Each MX record has a
+priority number assigned to it in the DNS. The MX record with <strong>lowest number
+has the highest priority</strong> and that is considered your primary MX record or
+your main mail server. The next lowest mx number has the next highest primary
+and so on. You generally have more than one mail server, one being the primary
+and the others as backups, only one MX for mail server is OK too.</p>
+<h3 id="how-to-setup-the-mx-record">How to setup the MX record</h3>
+<p>If your ISP or domain name registrar is providing the DNS service, you can
+request them to set one up for you. If you manage your own DNS servers then
+you need to create the MX record(s) in your DNS zone yourself.</p>
+<p>Sample MX record:</p>
+<pre><code>NAME            PRIORITY    TYPE    DATA
+
+mydomain.com.   10          mx      mail.mydomain.com.
+</code></pre>
+<p>The end result of this record is, emails sent to <code>[user]@mydomain.com</code> will
+be delivered to server <code>mail.mydomain.com</code>.</p>
+<h2 id="autodiscover-for-your-domain">autodiscover for your domain</h2>
+<h3 id="what-is-an-autoconfigautodiscover-record">What is an autoconfig/autodiscover record</h3>
+<p>autoconfig/autodiscover records allow mail clients to fetch automatically the mail
+client configuration of a mailbox. If the mailbox to configure is <code>user@company.com</code> then
+it will automatically check <code>autodiscover.company.com</code> for the correct configuration.</p>
+<p>More information is available here:
+<a href="iredmail-easy.autoconfig.autodiscover.html">Setup DNS records for autoconfig and autodiscover</a>.</p>
+<h3 id="how-to-setup-the-autoconfigautodiscover-record">How to setup the autoconfig/autodiscover record</h3>
+<p>If your ISP or domain name registrar is providing the DNS service, you can
+request them to set one up for you. If you manage your own DNS servers then
+you need to create the autoconfig/autodiscover record(s) in your DNS zone yourself.</p>
+<p>Sample autoconfig/autodiscover record:</p>
+<pre><code>NAME            PRIORITY    TYPE    DATA
+
+autodiscover.mydomain.com.   10          A      mail.mydomain.com.
+autoconfig.mydomain.com.   10          A      mail.mydomain.com.
+</code></pre>
+<h2 id="spf">SPF record for the mail domain name</h2>
+<h3 id="what-is-a-spf-record">What is a SPF record</h3>
+<p>SPF is a spam and phishing fighting method which uses DNS SPF-records to
+define which hosts are permitted to send e-mails for a domain. For details on
+SPF, please check <a href="https://en.wikipedia.org/wiki/Sender_Policy_Framework">wikipedia</a>.</p>
+<p>This works by defining a DNS SPF-record for the e-mail domain name specifying
+which hosts (e-mail servers) are permitted to send e-mail from the domain name.</p>
+<p>Other e-mail servers can lookup this record when receiving an e-mail from this
+domain name to verify that sending e-mail server is connecting from a permitted
+IP address.</p>
+<h3 id="how-to-setup-the-spf-record">How to setup the SPF record</h3>
+<p>SPF is a TXT type DNS record, you can list IP address(es) or MX domains in it.
+For example:</p>
+<pre><code>mydomain.com.   3600    IN  TXT &quot;v=spf1 mx -all&quot;
+</code></pre>
+<p>This SPF record means emails sent from all servers defined in MX record of
+<code>mydomain.com</code> are permitted to send as <code>someone@mydomain.com</code>.</p>
+<p><code>-all</code> means prohibit emails sent from all other servers. If it's too strict
+for you, you can use <code>~all</code> instead which means soft fail (uncertain).</p>
+<p>You can specify IP address(es) directly too:</p>
+<pre><code>mydomain.com.   3600    IN  TXT &quot;v=spf1 mx ip4:111.111.111.222 -all&quot;
+</code></pre>
+<p>Of course you can have them both or more in same record:</p>
+<pre><code>mydomain.com.   3600    IN  TXT &quot;v=spf1 mx ip4:111.111.111.111 ip4:111.111.111.222 -all&quot;
+</code></pre>
+<p>There're more valid mechanisms available, please check
+<a href="https://en.wikipedia.org/wiki/Sender_Policy_Framework">wikipedia</a> for more details.</p>
+<h2 id="dkim">DKIM record for the mail domain name</h2>
+<h3 id="what-is-a-dkim-record">What is a DKIM record</h3>
+<p>DKIM allows an organization to take responsibility for a message in a way that
+can be verified by a recipient. The organization can be a direct handler of
+the message, such as the author's, the originating sending site's, or an
+intermediary's along the transit path. However, it can also be an indirect
+handler, such as an independent service that is providing assistance to a
+direct handler. DKIM defines a domain-level digital signature authentication
+framework for email through the use of public-key cryptography and using the
+domain name service as its key server technology
+(<a href="http://www.dkim.org/specs/rfc5585.html#RFC4871">RFC4871</a>). It permits
+verification of the signer of a message, as well as the integrity of its
+contents. DKIM will also provide a mechanism that permits potential email
+signers to publish information about their email signing practices; this will
+permit email receivers to make additional assessments of unsigned messages.
+DKIM's authentication of email identity can assist in the global control of
+"spam" and "phishing".</p>
+<p>A person or organization has an "identity" -- that is, a constellation of
+characteristics that distinguish them from any other identity. Associated
+with this abstraction can be a label used as a reference, or "identifier".
+This is the distinction between a thing and the name of the thing. DKIM uses
+a domain name as an identifier, to refer to the identity of a responsible
+person or organization. In DKIM, this identifier is called the Signing Domain
+IDentifier (SDID) and is contained in the DKIM-Signature header fields <code>d=</code>
+tag. Note that the same identity can have multiple identifiers.</p>
+<h3 id="how-to-setup-the-dkim-record">How to setup the DKIM record</h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you're running iRedMail Enterprise Edition ("EE" for short), you can
+manage DKIM keys on EE web ui. Please login to EE as global admin, click
+the <code>DNS</code> badge on domain list page to check the DNS records of email
+domain, including DKIM key.</p>
+</div>
+<ul>
+<li>
+<p>Run command in terminal to show your DKIM keys:</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>On some Linux/BSD distribution, you should use command <code>amavisd-new</code>
+  instead of <code>amavisd</code>.</li>
+<li>On CentOS, if it complains <code>/etc/amavisd.conf not found</code>, please
+  run the command with path to its config file. For example:</li>
+</ul>
+<p><code>amavisd -c /etc/amavisd/amavisd.conf showkeys</code></p>
+</div>
+</li>
+</ul>
+<pre><code class="language-bash"># amavisd showkeys
+dkim._domainkey.mydomain.com.   3600 TXT (
+  &quot;v=DKIM1; p=&quot;
+  &quot;MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDYArsr2BKbdhv9efugByf7LhaK&quot;
+  &quot;txFUt0ec5+1dWmcDv0WH0qZLFK711sibNN5LutvnaiuH+w3Kr8Ylbw8gq2j0UBok&quot;
+  &quot;FcMycUvOBd7nsYn/TUrOua3Nns+qKSJBy88IWSh2zHaGbjRYujyWSTjlPELJ0H+5&quot;
+  &quot;EV711qseo/omquskkwIDAQAB&quot;)
+</code></pre>
+<ul>
+<li>Copy output of command above into one line like below, remove all quotes, but
+  keep <code>;</code>. <strong>we just need strings inside the <code>()</code> block</strong>, it's the value of
+  DKIM DNS record.</li>
+</ul>
+<pre><code>v=DKIM1; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDYArsr2BKbdhv9efugBy...
+</code></pre>
+<p><strong>Note</strong>: BIND (<a href="http://www.isc.org/downloads/bind/">The most widely used Name Server Software</a>)
+can handle this kind of multi-line format, so you can paste it in your domain
+zone file directly.</p>
+<ul>
+<li>
+<p>Add <code>TXT</code> type DNS record for domain name <code>dkim._domainkey.mydomain.com</code>,
+  set value to the line you copied above: <code>v=DKIM1; p=...</code>.</p>
+<blockquote>
+<p>WARNING: A usual mistake is adding this DKIM record to domain name
+<code>mydomain.com</code>, this is wrong. Please make sure you added to domain name
+<code>dkim._domainkey.mydomain.com</code>.</p>
+</blockquote>
+</li>
+<li>
+<p>After you added this in DNS, verify it with <code>dig</code> or <code>nslookup</code>:</p>
+</li>
+</ul>
+<pre><code>$ dig -t txt dkim._domainkey.mydomain.com
+
+$ nslookup -type=txt dkim._domainkey.foodmall.com
+</code></pre>
+<p>Sample output:</p>
+<pre><code>dkim._domainkey.mydomain.com. 600 IN TXT    &quot;v=DKIM1\;p=...&quot;
+
+</code></pre>
+<p>And verify it with Amavisd:</p>
+<pre><code class="language-shell"># amavisd testkeys
+TESTING: dkim._domainkey.mydomain.com       =&gt; pass
+</code></pre>
+<p>If it shows <code>pass</code>, it works.</p>
+<p><strong>Note</strong>: If you use DNS service provided by ISP, new DNS record might take
+some hours to be available.</p>
+<p>If you want to re-generate DKIM key, or need to generate one for new mail
+domain, please check our another tutorial:
+<a href="sign.dkim.signature.for.new.domain.html">Sign DKIM signature on outgoing emails for new mail domain</a>.</p>
+<h2 id="dmarc">DMARC record for the mail domain name</h2>
+<h3 id="what-is-dmarc-and-how-does-it-combat-phishing">What is DMARC, and how does it combat phishing?</h3>
+<p>Quote from <a href="https://dmarc.org/wiki/FAQ">FAQ page on dmarc.org website</a> (it's
+strongly recommended to read the full FAQ page):</p>
+<blockquote>
+<p>DMARC is a way to make it easier for email senders and receivers to determine
+whether or not a given message is legitimately from the sender, and what to
+do if it isn’t. This makes it easier to identify spam and phishing messages,
+and keep them out of peoples’ inboxes.</p>
+<p>DMARC is a proposed standard that allows email senders and receivers to
+cooperate in sharing information about the email they send to each other.
+This information helps senders improve the mail authentication infrastructure
+so that all their mail can be authenticated. It also gives the legitimate
+owner of an Internet domain a way to request that illegitimate messages –
+spoofed spam, phishing – be put directly in the spam folder or rejected
+outright.</p>
+</blockquote>
+<p>Some useful documents from <a href="https://dmarc.org">https://dmarc.org</a>:</p>
+<ul>
+<li><a href="https://dmarc.org/wiki/FAQ">DMARC FAQ</a><ul>
+<li><a href="https://dmarc.org/wiki/FAQ#Why_is_DMARC_important.3F">Why is DMARC Important?</a></li>
+</ul>
+</li>
+<li><a href="https://dmarc.org/overview/">How Does DMARC Work?</a></li>
+<li><a href="https://dmarc.org/resources/specification/">Specifications</a></li>
+</ul>
+<h3 id="how-to-setup-the-dmarc-record">How to setup the DMARC record</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>DMARC heavily relies on SPF and DKIM records, please make sure you have
+correct and up to date SPF and DKIM records published.</p>
+</div>
+<p>DMARC record is a TXT type DNS record.</p>
+<p>A simplified record looks like this:</p>
+<pre><code>v=DMARC1; p=none; rua=mailto:dmarc@mydomain.com
+</code></pre>
+<p>A detailed sample record looks like this:</p>
+<pre><code>v=DMARC1; p=reject; sp=none; adkim=s; aspf=s; rua=mailto:dmarc@mydomain.com; ruf=mailto:dmarc@mydomain.com
+</code></pre>
+<ul>
+<li><code>v=DMARC1</code> identifies the DMARC protocol version, currently only <code>DMARC1</code> is
+  available, and <code>v=DMARC1</code> must appear first in a DMARC record.</li>
+<li><code>adkim</code> specifies alignment mode for DKIM. 2 options are available:<ul>
+<li><code>r</code>: relax mode (<code>adkim=r</code>)</li>
+<li><code>s</code>: strict mode (<code>adkim=s</code>)</li>
+</ul>
+</li>
+<li><code>aspf</code> specifies alignment mode for SPF. 2 options are available:<ul>
+<li><code>r</code>: relax mode (<code>aspf=r</code>)</li>
+<li><code>s</code>: strict mode (<code>aspf=s</code>)</li>
+</ul>
+</li>
+<li>
+<p><code>p</code> specifies the policy for organizational domain. It tells the recipient
+  server what to do if received email fails DMARC mechanism check. 3 options
+  are available:</p>
+<ul>
+<li><code>none</code> (<code>p=none</code>): The domain owner requests no specific action be taken regarding
+  delivery of messages.</li>
+<li><code>quarantine</code> (<code>p=quarantine</code>): The domain owner wishes to have email that fails the DMARC
+  mechanism check be treated by Mail Receivers as suspicious. Depending on
+  the capabilities of the Mail Receiver, this can mean "place into spam
+  folder", "flag as suspicious", or "quarantine toe email somewhere", maybe more.</li>
+<li><code>reject</code> (<code>p=reject</code>): The domain owner wishes for Mail Receivers to reject
+  email that fails the DMARC mechanism check during the SMTP transaction.</li>
+</ul>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>If you're sure all your emails are sent by the server(s) listed in SPF
+  record, or have correct DKIM signature signed, <code>p=reject</code> is strongly
+  recommended.</li>
+<li>According to <a href="https://tools.ietf.org/html/rfc7489#section-6.3">RFC 7489</a>,
+  <strong>the "v" and "p" tags MUST be present and MUST appear in that order.</strong>
+  so please always place "p" tag immediately follow the "v" tag. e.g.
+  <code>v=DMARC1; p=reject; aspf=s; ...</code> is ok, but not <code>v=DMARC1; aspf=s; p=reject; ...</code>.</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code>sp</code> specifies policy for all subdomains. This is optional. Available options
+  are same as <code>p</code>.</p>
+</li>
+<li><code>rua</code> specifies a transport mechanism to deliver aggregate feedback. Currently
+  only <code>mailto:</code> is supported. This is optional.</li>
+<li><code>ruf</code> specifies a transport mechanism which message-specific failure
+  information is to be reported. Currently only <code>mailto:</code> is supported. This is
+  optional.</li>
+</ul>
+<h2 id="srv-record-for-jabberxmpp-service">SRV record for Jabber/XMPP service</h2>
+<p>If you install Prosody (with iRedMail Easy platform) as Jabber/XMPP server,
+2 SRV records are required.</p>
+<p>If your mail domain name is <code>mydomain.com</code> and server hostname is
+<code>mail.mydomain.com</code>, you should add 2 SRV type DNS records:</p>
+<ul>
+<li><code>_xmpp-client._tcp.mydomain.com</code></li>
+<li><code>_xmpp-server._tcp.mydomain.com</code></li>
+</ul>
+<p>Sample records:</p>
+<pre><code>_xmpp-client._tcp.mydomain.com 18000 IN SRV 0 5 5222 mail.mydomain.com
+_xmpp-server._tcp.example.com. 18000 IN SRV 0 5 5269 mail.mydomain.com
+</code></pre>
+<p>The target domain <code>mail.mydomain.com</code> <strong>MUST</strong> be an existing A record, it
+cannot be an IP address or a CNAME record.</p>
+<h2 id="register-your-mail-domain-in-google-postmaster-tools">Register your mail domain in Google Postmaster Tools</h2>
+<p>This step is <strong>optional</strong>, but <strong>highly recommended</strong>.</p>
+<p>Google Postmaster Tools web site: <a href="https://postmaster.google.com">https://postmaster.google.com</a>, and
+<a href="https://support.google.com/mail/answer/6258950">Postmaster Tools FAQs</a>.</p>
+<p>It's very simple: just register your mail domain there, and they'll give you a
+text record for your DNS so that they can validate the ownership of the domain.</p>
+<p>Why use Google Postmaster Tools? Quote from
+<a href="https://support.google.com/mail/answer/6227174">Google Postmaster Tools help page</a>:</p>
+<blockquote>
+<p>If you send a large volume of emails to Gmail users, you can use Postmaster Tools to see:</p>
+<ul>
+<li>If users are marking your emails as spam</li>
+<li>Whether you’re following Gmail's best practices</li>
+<li>Why your emails might not be delivered</li>
+<li>If your emails are being sent securely</li>
+</ul>
+</blockquote>
+<p>It <em><strong>MIGHT</strong></em> also help to get you out of the <code>Junk</code> mailbox.</p>
+<p>If you have trouble in sending email to Gmail (or Google Apps), Google offers
+some information on best practices to ensure that their mail is delivered to
+Gmail users: <a href="https://support.google.com/mail/answer/81126?hl=en">Bulk Senders Guidelines</a>.</p>
+<p>You may also submit this form to contact Google:
+<a href="https://support.google.com/mail/contact/bulk_send_new?rd=1">Bulk Sender Contact Form</a></p>
+<h2 id="check-outlookcom-postmaster-site">Check Outlook.com Postmaster site</h2>
+<p>Outlook Postmaster site provides some useful information for mail server
+administrators, if the email you sent to Outlook.com is marked as spam, please
+take a look:</p>
+<ul>
+<li><a href="https://sendersupport.olc.protection.outlook.com/pm/">Outlook.com Postmaster</a></li>
+<li><a href="https://sendersupport.olc.protection.outlook.com/snds/">Smart Network Data Service</a></li>
+</ul>
+<h2 id="check-yahoo-deliverability-best-practises">Check Yahoo! Deliverability Best Practises</h2>
+<ul>
+<li><a href="https://senders.yahooinc.com/best-practices/">Deliverability</a></li>
+</ul>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="https://support.google.com/a/answer/81126">(Gmail) Email sender guidelines</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Sender_Policy_Framework">wikipedia: Sender Policy Framework</a></li>
+<li><a href="http://www.dkim.org/">http://www.dkim.org/</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

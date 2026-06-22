@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Restrict mail user to login from specified IP addresses or networks</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="restrict-mail-user-to-login-from-specified-ip-addresses-or-networks">Restrict mail user to login from specified IP addresses or networks</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="restrict.mail.user.to.login.from.specified.ip.or.networks.html#restrict-mail-user-to-login-from-specified-ip-addresses-or-networks">Restrict mail user to login from specified IP addresses or networks</a><ul>
+<li><a href="restrict.mail.user.to.login.from.specified.ip.or.networks.html#manage-with-iredadmin-pro">Manage with iRedAdmin-Pro</a></li>
+<li><a href="restrict.mail.user.to.login.from.specified.ip.or.networks.html#manage-with-sql-command-line-for-sql-backends">Manage with SQL command line for SQL backends</a></li>
+<li><a href="restrict.mail.user.to.login.from.specified.ip.or.networks.html#manage-with-ldap-command-line-for-ldap-backends">Manage with LDAP command line for LDAP backends</a></li>
+</ul>
+</li>
+<li><a href="restrict.mail.user.to.login.from.specified.ip.or.networks.html#references">References</a></li>
+</ul>
+</div>
+<p>Since iRedMail-0.9.1, it's able to restrict mail users to login from specified
+IP addresses or networks.</p>
+<p>Allowed IP/networks must be separated by comma. If the user tries to log in
+elsewhere, the authentication will fail the same way as if a wrong password
+was given.</p>
+<p>Below sample usage shows how to restrict mail user <code>user@domaim.com</code> to login
+from only IP address <code>172.16.244.1</code> or network <code>192.168.1.0/24</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If webmail is running on same server, and you want to allow user to login
+from webmail, please allow IP <code>127.0.0.1</code> too.</p>
+</div>
+<h2 id="manage-with-iredadmin-pro">Manage with iRedAdmin-Pro</h2>
+<p>With iRedAdmin-Pro, please go to user profile page, click tab <code>Advanced</code>,
+you will find setting <code>Restrict to login from specified addresses</code> like below:</p>
+<p><img alt="" src="images/iredadmin/user_profile_advanced.png" width="1000px" /></p>
+<h2 id="manage-with-sql-command-line-for-sql-backends">Manage with SQL command line for SQL backends</h2>
+<pre><code>sql&gt; USE vmail;
+sql&gt; UPDATE mailbox SET allow_nets='172.16.244.1,192.168.1.0/24' WHERE username='user@domain.com';
+</code></pre>
+<p>To remove this restriction (allow to login from anywhere), just set
+value of SQL column <code>mailbox.allow_nets</code> to NULL. WARNING: It must be NULL,
+not empty string.</p>
+<h2 id="manage-with-ldap-command-line-for-ldap-backends">Manage with LDAP command line for LDAP backends</h2>
+<p>To allow user <code>user@domain.com</code> to login from IP <code>172.16.244.1</code> and network
+<code>192.168.1.0/24</code>, please add new attribute <code>allowNets</code> to this user:</p>
+<pre><code>allowNets: 192.168.1.10,192.168.1.0/24
+</code></pre>
+<p>To remove this restriction, just remove attribute <code>allowNets</code> for this user.</p>
+<h1 id="references">References</h1>
+<ul>
+<li>
+<p>This feature is implemented in iRedMail-0.9.1, and mentioned in iRedMail
+  <a href="upgrade.iredmail.0.9.0-0.9.1.html">upgrade tutorial for iRedMail-0.9.0</a></p>
+</li>
+<li>
+<p>Dovecot document: <a href="http://wiki2.dovecot.org/PasswordDatabase/ExtraFields/AllowNets">AllowNets</a></p>
+</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

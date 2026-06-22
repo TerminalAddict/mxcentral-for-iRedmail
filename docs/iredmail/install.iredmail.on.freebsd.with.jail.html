@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Install iRedMail on FreeBSD inside Jail (with ezjail)</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="install.iredmail.on.freebsd.with.jail-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="install-iredmail-on-freebsd-inside-jail-with-ezjail">Install iRedMail on FreeBSD inside Jail (with ezjail)</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#install-iredmail-on-freebsd-inside-jail-with-ezjail">Install iRedMail on FreeBSD inside Jail (with ezjail)</a><ul>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#summary">Summary</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#system-requirements">System Requirements</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#preparations">Preparations</a><ul>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#install-sysutilsezjail-and-add-required-settings">Install sysutils/ezjail and add required settings</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#create-jail">Create Jail</a></li>
+</ul>
+</li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#install-iredmail">Install iRedMail</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#start-iredmail-installer">Start iRedMail installer</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#screenshots-of-installation">Screenshots of installation:</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#important-things-you-must-know-after-installation">Important things you MUST know after installation</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#access-webmail-and-other-web-applications">Access webmail and other web applications</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#get-technical-support">Get technical support</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#some-tips-for-freebsd-jail">Some Tips for FreeBSD Jail</a><ul>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#allow-ping-in-jail">Allow ping in Jail</a></li>
+<li><a href="install.iredmail.on.freebsd.with.jail.html#share-usrportsdistfiles-with-jail">Share /usr/ports/distfiles with Jail</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="summary">Summary</h2>
+<ul>
+<li>This tutorial describes how to create a FreeBSD Jail with ezjail, then
+  install the latest iRedMail in Jail.</li>
+<li>We use hostname <code>mx.example.com</code> and IP address <code>172.16.244.254</code> for our Jail server.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>This tutorial was tested with FreeBSD 10 and the latest ports tree, but it
+  should work on FreeBSD 9 and other releases.</li>
+<li>All backends available in iRedMail (OpenLDAP, MySQL/MariaDB, PostgreSQL) were
+  tested, work like a charm. :)</li>
+<li>For more details about ezjail, please check FreeBSD Handbook:
+  <a href="https://www.freebsd.org/doc/handbook/jails-ezjail.html">Managing Jails with ezjail</a>.</li>
+</ul>
+<h2 id="system-requirements">System Requirements</h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<ul>
+<li>iRedMail is designed to be deployed on a <strong>FRESH</strong> server system, which
+  means your server does <strong>NOT</strong> have mail related components installed,
+  e.g. MySQL, OpenLDAP, Postfix, Dovecot, Amavisd, etc. iRedMail will install
+  and configure them for you automatically. Otherwise it may override your
+  existing files/configurations although it will backup files before
+  modifying, and it may not be working as expected.</li>
+<li>
+<p><strong>Network port 25 MUST be open.</strong> Port 25 is used for communication between mail
+  servers, it must be open to send to or received from other mail servers.
+  Many ISPs block it by default:</p>
+<ul>
+<li>Linode. Explained in the <a href="https://www.linode.com/blog/linode/a-new-policy-to-help-fight-spam/">blog post</a>,
+    you can open a support ticket to ask the Linode team to open it. If you <a href="https://www.linode.com/?r=b4d04083428fb99ce452d84b57253d11692a0850">sign up to Linode with our reference</a>, iRedMail Team's Linode account will receive a credit of $15-20.00. Thanks.</li>
+<li>Vultr: <a href="https://www.vultr.com/docs/what-ports-are-blocked/">Port 25 is blocked</a>.</li>
+<li>Amazon AWS EC2. Request to <a href="https://aws.amazon.com/premiumsupport/knowledge-center/ec2-port-25-throttle/">remove the throttle on port 25</a>.</li>
+<li>Google Cloud Platform.</li>
+<li>Microsoft Azure.</li>
+<li>DigitalOcean. According to <a href="https://www.digitalocean.com/community/questions/port-25-465-is-blocked-how-can-i-enable-it">a post in their community</a>, <strong>SEEMS</strong> impossible to unblock port 25, that means you can <strong>NOT</strong> run mail server on DigitalOcean VPS.</li>
+</ul>
+</li>
+</ul>
+</div>
+<ul>
+<li>The latest stable release of iRedMail. You can download it here: <a href="https://www.iredmail.org/download.html">https://www.iredmail.org/download.html</a></li>
+<li>Port <code>sysutils/ezjail</code> for FreeBSD.</li>
+<li>Make sure 3 UID/GID are not used by other user/group: 2000, 2001, 2002.</li>
+</ul>
+<h2 id="preparations">Preparations</h2>
+<h3 id="install-sysutilsezjail-and-add-required-settings">Install sysutils/ezjail and add required settings</h3>
+<ul>
+<li>Install ezjail with ports tree:</li>
+</ul>
+<pre><code># cd /usr/ports/sysutils/ezjail/
+# make install clean
+</code></pre>
+<ul>
+<li>Enable ezjail service and sysvipc by appending lines below to <code>/etc/rc.conf</code>:</li>
+</ul>
+<pre><code># Start ezjail while system start up
+ezjail_enable=&quot;YES&quot;
+
+# Enable sysvipc. Required by PostgreSQL.
+jail_sysvipc_allow=&quot;YES&quot;
+</code></pre>
+<ul>
+<li>Add parameter in <code>/etc/sysctl.conf</code>, this is required if you're
+  going to install iRedMail with PostgreSQL backend.</li>
+</ul>
+<pre><code>security.jail.sysvipc_allowed=1
+</code></pre>
+<ul>
+<li>Rebooting system is required after changing <code>/etc/rc.conf</code>.</li>
+</ul>
+<pre><code># reboot
+</code></pre>
+<h3 id="create-jail">Create Jail</h3>
+<ul>
+<li>After server reboot, populate the Jail with FreeBSD-RELEASE</li>
+</ul>
+<pre><code># ezjail-admin install -p
+</code></pre>
+<ul>
+<li>
+<p>Create a new jail</p>
+<ul>
+<li>hostname <code>mx.example.com</code></li>
+<li>bound IP address <code>172.16.244.254</code> to network interface <code>em0</code></li>
+<li>Jail is placed under <code>/jails/mx.example.com</code></li>
+</ul>
+</li>
+</ul>
+<pre><code># ezjail-admin create -r /jails/mx.example.com mx.example.com 'em0|172.16.244.254'
+</code></pre>
+<ul>
+<li>Start Jail.</li>
+</ul>
+<pre><code># service ezjail restart
+</code></pre>
+<ul>
+<li>List all Jails:</li>
+</ul>
+<pre><code># ezjail-admin list
+STA JID  IP               Hostname                          Root Directory
+--- ---- ---------------- --------------------------------- ------------------------
+DS  1    172.16.244.254   mx.example.com                    /jails/mx.example.com
+</code></pre>
+<h2 id="install-iredmail">Install iRedMail</h2>
+<p>We can now enter this Jail with below command:</p>
+<pre><code># ezjail-admin console mx.example.com
+</code></pre>
+<ul>
+<li>In Jail, update <code>/etc/resolv.conf</code> with valid DNS server address(es). For example:</li>
+</ul>
+<pre><code># File: /etc/resolv.conf
+nameserver 172.16.244.2
+</code></pre>
+<ul>
+<li>In Jail, install binary package <code>bash-static</code>, it's required by iRedMail.</li>
+</ul>
+<pre><code># pkg install bash-static
+</code></pre>
+<h2 id="start-iredmail-installer">Start iRedMail installer</h2>
+<p>It's now ready to start iRedMail installer inside Jail, it will ask you several simple
+questions, that's all required to setup a full-featured mail server.</p>
+<pre><code># bash          # &lt;- start bash shell, REQUIRED
+# cd /root/iRedMail/
+# LOCAL_ADDRESS='172.16.244.254' bash iRedMail.sh
+</code></pre>
+<h2 id="screenshots-of-installation">Screenshots of installation:</h2>
+<ul>
+<li>Welcome and thanks for your use</li>
+</ul>
+<p><img alt="" src="images/installation/welcome.png" width="700px" /></p>
+<ul>
+<li>Specify location to store all mailboxes. Default is <code>/var/vmail/</code>.</li>
+</ul>
+<p><img alt="" src="images/installation/mail_storage.png" width="700px" /></p>
+<ul>
+<li>Choose backend used to store mail accounts. You can manage mail accounts
+with iRedAdmin, our web-based iRedMail admin panel.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>There's no big difference between available backends, so
+it's strongly recommended to choose the one you're familiar with for easier
+management and maintenance after installation.</p>
+</div>
+<p><img alt="" src="images/installation/backends.png" width="700px" /></p>
+<ul>
+<li>If you choose to store mail accounts in OpenLDAP, iRedMail installer will
+  ask to set the LDAP suffix.</li>
+</ul>
+<p><img alt="" src="images/installation/ldap_suffix.png" width="700px" /></p>
+<div class="admonition note">
+<p class="admonition-title">To MySQL/MariaDB/PostgreSQL users</p>
+<p>If you choose to store mail accounts in MySQL/MariaDB/PostgreSQL, iRedMail
+installer will generate a random, strong password for you. You can find it
+in file <code>iRedMail.tips</code>.</p>
+</div>
+<ul>
+<li>Add your first mail domain name</li>
+</ul>
+<p><img alt="" src="images/installation/first_domain.png" width="700px" /></p>
+<ul>
+<li>Set password of admin account of your first mail domain.</li>
+</ul>
+<p><strong>Note</strong>: This account is an admin account and a mail user. That means you can
+login to webmail and admin panel (iRedAdmin) with this account, login username
+is full email address.</p>
+<p><img alt="" src="images/installation/admin_pw.png" width="700px" /></p>
+<ul>
+<li>
+<p>Choose optional components</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p><strong>Which webmail should you choose?</strong> Roundcube or SOGo?</p>
+<ul>
+<li>Roundcube is a fast and lightweight webmail, and webmail only.
+  If all you need is a webmail to access mailbox and manage mail
+  filters, then Roundcube is the best option.</li>
+<li>SOGo offers webmail, calendar (CalDAV), contacts (CardDAV) and
+  ActiveSync. If you need calendar and contacts support, also syncing
+  them to mobile or PC mail client applications, then SOGo is the one
+  to go. Note: If you have many ActiveSync clients, it requires a lot RAM.</li>
+<li>It's ok to install both, but you can only manage mail filters with
+  Roundcube in this case, because the filter rules generated by
+  Roundcube and SOGo are not compatible. You can <a href="why.no.sieve.support.in.sogo.html">force to enable it in
+  SOGo</a>, but please inform end
+  users and ask them to stick to one of them for managing mail filters.</li>
+</ul>
+</div>
+</li>
+</ul>
+<p><img alt="" src="images/installation/optional_components.png" width="700px" /></p>
+<p>After answered above questions, iRedMail installer will ask you to review and
+confirm to start installation. It will install and configure required packages
+automatically. Type <code>y</code> or <code>Y</code> and press <code>Enter</code> to start.</p>
+<p><img alt="" src="images/installation/review.png" width="700px" /></p>
+<h2 id="important-things-you-must-know-after-installation">Important things you <strong>MUST</strong> know after installation</h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The weakest part of a mail server is user's weak password. Spammers don't
+want to hack your server, they just want to send spam from your server.
+Please <strong>ALWAYS ALWAYS ALWAYS</strong> force users to use a strong password.</p>
+</div>
+<ul>
+<li>
+<p>Read file <code>/root/iRedMail-x.y.z/iRedMail.tips</code> first, it contains:</p>
+<ul>
+<li>URLs, usernames and passwords of web-based applications</li>
+<li>Location of mail service related software configuration files. You can
+  also check this tutorial instead:
+  <a href="file.locations.html">Locations of configuration and log files of major components</a>.</li>
+<li>Some other important and sensitive information</li>
+</ul>
+</li>
+<li>
+<p><a href="setup.dns.html">Setup DNS records for your mail server</a></p>
+</li>
+<li><a href="index.html#configure-mail-client-applications">How to configure your mail clients</a></li>
+<li><a href="file.locations.html">Locations of configuration and log files of major components</a></li>
+<li>It's highly recommended to get a SSL cert to avoid annonying warning
+  message in web browser or mail clients when accessing mailbox via
+  HTTPS/IMAPS/POP3/SMTPS. <a href="https://letsencrypt.org">Let's Encrypt offers <strong>FREE</strong> SSL certificate</a>.
+  We have a document for you to
+  <a href="use.a.bought.ssl.certificate.html">use a SSL certificate</a>.</li>
+<li>If you need to bulk create mail users, check our document for
+  <a href="ldap.bulk.create.mail.users.html">OpenLDAP</a> and
+  <a href="sql.bulk.create.mail.users.html">MySQL/MariaDB/PostgreSQL</a>.</li>
+<li>If you're running a busy mail server, we have <a href="performance.tuning.html">some suggestions for better
+  performance</a>.</li>
+</ul>
+<h2 id="access-webmail-and-other-web-applications">Access webmail and other web applications</h2>
+<p>After installation successfully completed, you can access web-based programs
+if you choose to install them. Replace <code>your_server</code> below by your real server
+hostname or IP address.</p>
+<ul>
+<li><strong>Roundcube webmail</strong>: <a href="https://your_server/mail/">https://your_server/mail/</a></li>
+<li><strong>SOGo Groupware</strong>: <a href="https://your_server/SOGo">https://your_server/SOGo</a></li>
+<li><strong>Web admin panel (iRedAdmin)</strong>: <a href="https://your_server/iredadmin/">https://your_server/iredadmin/</a></li>
+</ul>
+<h2 id="get-technical-support">Get technical support</h2>
+<p>Please post all issues, feedbacks, feature requests, suggestions in our <a href="https://forum.iredmail.org/">online
+support forum</a>, it's more responsible than you
+expected.</p>
+<h2 id="some-tips-for-freebsd-jail">Some Tips for FreeBSD Jail</h2>
+<h3 id="allow-ping-in-jail">Allow <code>ping</code> in Jail</h3>
+<ul>
+<li>Append below line in <code>/etc/sysctl.conf</code> to allow to use <code>ping</code> command
+  inside Jail:</li>
+</ul>
+<pre><code>security.jail.allow_raw_sockets=1
+</code></pre>
+<ul>
+<li>Update <code>/usr/local/etc/ezjail/mx_example_com</code> to allow <code>ping</code> inside Jail:</li>
+</ul>
+<pre><code>export jail_mx_example_com_parameters=&quot;allow.raw_sockets=1&quot;
+</code></pre>
+<h3 id="share-usrportsdistfiles-with-jail">Share <code>/usr/ports/distfiles</code> with Jail</h3>
+<p>To share <code>/usr/ports/distfiles/</code> with Jail, please append below line in
+  <code>/etc/fstab.mx_example_com</code>:</p>
+<blockquote>
+<p>Jail will set ports tree directory to <code>/var/ports</code> instead of
+<code>/usr/ports</code> in <code>/jails/mx.example.com/etc/make.conf</code> by default, you can
+either use this default setting or change it to <code>/usr/ports</code>.</p>
+</blockquote>
+<pre><code># Part of file: /etc/fstab.mx_example.com
+/usr/ports/distfiles /jails/mx.example.com/basejail/var/ports/distfiles nullfs rw 0 0
+</code></pre>
+<p>Create directory <code>/usr/jails/basejail/var/ports/distfiles</code>:</p>
+<pre><code># mkdir /usr/jails/basejail/var/ports/distfiles
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

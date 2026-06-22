@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Perform silent/unattended iRedMail installation</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="unattended.iredmail.installation-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="perform-silentunattended-iredmail-installation">Perform silent/unattended iRedMail installation</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="unattended.iredmail.installation.html#perform-silentunattended-iredmail-installation">Perform silent/unattended iRedMail installation</a><ul>
+<li><a href="unattended.iredmail.installation.html#summary">Summary</a></li>
+<li><a href="unattended.iredmail.installation.html#generate-a-sample-config-file">Generate a sample config file</a></li>
+<li><a href="unattended.iredmail.installation.html#deploy-a-new-server-with-a-prepared-config-file">Deploy a new server with a prepared config file</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="summary">Summary</h2>
+<p>iRedMail installer stores its own configrations in file named <code>config</code> during
+installation. For example, if you downloaded iRedMail-1.2 under <code>/root</code>, then
+then file path is <code>/root/iRedMail-1.2/config</code>.</p>
+<p>While launching the iRedMail installer, it detects whether there's an existing
+config file, and asks for your confirmation to use it if found one. You can use
+this procedure to perform unattended iRedMail installation.</p>
+<h2 id="generate-a-sample-config-file">Generate a sample config file</h2>
+<p>To generate a sample config file, just run the installer:</p>
+<pre><code class="language-bash">bash iRedMail.sh
+</code></pre>
+<p>After finished the configuration dialog, iRedMail installer prints your
+configuration and ask for your confirmation to perform the actual installation.
+You should abort it here since you just want to generate a sample config file.</p>
+<p>Feel free to open this <code>config</code> file, change the settings to match your real
+deployment if you want.</p>
+<h2 id="deploy-a-new-server-with-a-prepared-config-file">Deploy a new server with a prepared config file</h2>
+<p>To deploy a new server with a prepared config file:</p>
+<ul>
+<li>Download iRedMail installer from website: <a href="https://www.iredmail.org/download.html">Download</a>.</li>
+<li>Upload iRedMail installer to new server and uncompress it. We assume the
+  uncompress directory is <code>/root/iRedMail-1.2/</code>.</li>
+<li>Upload the prepared config file to <code>/root/iRedMail-1.2/config</code> on new server.</li>
+<li>Now launch iRedMail installer with some environment variables:</li>
+</ul>
+<pre><code class="language-bash">AUTO_USE_EXISTING_CONFIG_FILE=y \
+    AUTO_INSTALL_WITHOUT_CONFIRM=y \
+    AUTO_CLEANUP_REMOVE_SENDMAIL=y \
+    AUTO_CLEANUP_REPLACE_FIREWALL_RULES=y \
+    AUTO_CLEANUP_RESTART_FIREWALL=y \
+    AUTO_CLEANUP_REPLACE_MYSQL_CONFIG=y \
+    bash iRedMail.sh
+</code></pre>
+<p>It's easy to understand what the variable names are used for:</p>
+<ul>
+<li><code>AUTO_USE_EXISTING_CONFIG_FILE=y</code>: Use existing <code>config</code> file without asking for confirmation.</li>
+<li><code>AUTO_INSTALL_WITHOUT_CONFIRM=y</code>: Start the installation without asking for confirmation.</li>
+<li><code>AUTO_CLEANUP_REMOVE_SENDMAIL=y</code>: Remove <code>sendmail</code> package without asking for confirmation.</li>
+<li><code>AUTO_CLEANUP_REPLACE_FIREWALL_RULES=y</code>: Copy and use the firewall rules shipped in iRedMail installer.</li>
+<li><code>AUTO_CLEANUP_RESTART_FIREWALL=y</code>: Restart firewall service without asking for confirmation.</li>
+<li><code>AUTO_CLEANUP_REPLACE_MYSQL_CONFIG=y</code>: Copy and use the MySQL (server) config file shipped in iRedMail installer.</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

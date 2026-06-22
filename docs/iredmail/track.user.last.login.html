@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Track user last login time</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="track-user-last-login-time">Track user last login time</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="track.user.last.login.html#track-user-last-login-time">Track user last login time</a><ul>
+<li><a href="track.user.last.login.html#changelog">ChangeLog</a></li>
+<li><a href="track.user.last.login.html#summary">Summary</a></li>
+<li><a href="track.user.last.login.html#create-required-sql-table-to-store-last-login-info">Create required SQL table to store last login info</a></li>
+<li><a href="track.user.last.login.html#configure-dovecot">Configure Dovecot</a></li>
+<li><a href="track.user.last.login.html#test">Test</a></li>
+<li><a href="track.user.last.login.html#references">References</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>This feature is not available for PostgreSQL backend until Dovecot-2.3.16,
+  because old Dovecot didn't support updating existing SQL record on
+  conflict primary key (a.k.a. UPSERT). References: <a href="https://marc.info/?t=155411531600001&amp;r=1&amp;w=2">1</a>, <a href="https://marc.info/?t=155826327900001&amp;r=1&amp;w=2">2</a>, <a href="https://dovecot.org/mailman3/hyperkitty/list/dovecot-news@dovecot.org/thread/6P7GRJEIFSBXJWEC7UP24O7UQ4OROZLA/">3</a>. Earliest distros: Debian 12, Ubuntu 22.04, CentOS / Rocky / AlmaLinux 9, OpenBSD 7.3.</li>
+<li>This tutorial has been updated to support tracking last login time of
+  both IMAP and POP3, which is implemented in iRedMail-1.2, you can find
+  the difference in upgrade tutorial for iRedMail-1.2 here: <a href="upgrade.iredmail.1.1-1.2.html#improved-last-login-track">For LDAP backend</a>, <a href="upgrade.iredmail.1.1-1.2.html#improved-last-login-track_1">For SQL backends</a>.</li>
+</ul>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Jun 13, 2024: Add PostgreSQL support.</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>Dovecot ships a <code>last_login</code> plugin since Dovecot-2.2.14, it can be used to
+easily save and update user's last-login timestamp in SQL database.</p>
+<p>For MySQL/MariaDB backends, this plugin works on:</p>
+<ul>
+<li>CentOS 7 (Dovecot-2.2.36), 8 (Dovecot-2.2.36)</li>
+<li>Debian 9 (Dovecot-2.2.27)</li>
+<li>Ubuntu 16.04 (Dovecot-2.2.22)</li>
+<li>Ubuntu 18.04 (Dovecot-2.2.33)</li>
+<li>OpenBSD 6.4 (Dovecot-2.2.36), 6.5, 6.6</li>
+<li>FreeBSD (Dovecot-2.3.x in ports tree)</li>
+</ul>
+<p>For PostgreSQL backend, this plugin works on:</p>
+<ul>
+<li>Debian 12</li>
+<li>Ubuntu 22.04 and later releases</li>
+<li>CentOS / Rocky / AlmaLinux 9</li>
+<li>OpenBSD 7.3 and later releases</li>
+</ul>
+<h2 id="create-required-sql-table-to-store-last-login-info">Create required SQL table to store last login info</h2>
+<p>We need to create a sql table to store the user last login info.</p>
+<ul>
+<li>For MySQL/MariaDB/PostgreSQL backends, we create the sql table in database <code>vmail</code>.</li>
+<li>For OpenLDAP backend, since it doesn't have <code>vmail</code> SQL database, so we
+  create it in <code>iredadmin</code> instead, it will be easier for iRedAdmin(-Pro) to
+  read this info.</li>
+</ul>
+<p>SQL statement for MySQL/MariaDB:</p>
+<pre><code>CREATE TABLE IF NOT EXISTS `last_login` (
+    `username` VARCHAR(255) NOT NULL DEFAULT '',
+    `domain` VARCHAR(255) NOT NULL DEFAULT '',
+    `imap` INT(11) DEFAULT NULL,
+    `pop3` INT(11) DEFAULT NULL,
+    `lda` INT(11) DEFAULT NULL,
+    PRIMARY KEY (`username`),
+    INDEX (`domain`),
+    INDEX (`imap`),
+    INDEX (`pop3`),
+    INDEX (`lda`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+</code></pre>
+<p>SQL statement for PostgreSQL:</p>
+<pre><code>CREATE TABLE last_login (
+    username VARCHAR(255) NOT NULL DEFAULT '',
+    domain VARCHAR(255) NOT NULL DEFAULT '',
+    imap BIGINT DEFAULT NULL,
+    pop3 BIGINT DEFAULT NULL,
+    lda  BIGINT DEFAULT NULL,
+    PRIMARY KEY (username, domain)
+);
+CREATE INDEX idx_last_login_domain ON last_login (domain);
+CREATE INDEX idx_last_login_imap   ON last_login (imap);
+CREATE INDEX idx_last_login_pop3   ON last_login (pop3);
+CREATE INDEX idx_last_login_lda    ON last_login (lda);
+
+ALTER TABLE last_login OWNER TO vmailadmin;
+</code></pre>
+<h2 id="configure-dovecot">Configure Dovecot</h2>
+<p>Open Dovecot config file <code>/etc/dovecot/dovecot.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot.conf</code> (FreeBSD), enable <code>last_login</code> plugin
+for POP3 and IMAP services by appending plugin name to its <code>mail_plugins</code>
+parameter like below, and add extra required settings. Note: we use <code>...</code> below
+as a placeholder for your existing settings.</p>
+<pre><code>protocol lda {
+    # Append plugin name `last_login` here
+    mail_plugins = ... last_login
+    ...
+}
+
+protocol lmtp {
+    # Append plugin name `last_login` here
+    mail_plugins = ... last_login
+    ...
+}
+
+protocol imap {
+    # Append plugin name `last_login` here
+    mail_plugins = ... last_login
+    ...
+}
+
+protocol pop3 {
+    # Append plugin name `last_login` here
+    mail_plugins = ... last_login
+    ...
+}
+
+dict {
+    ...
+
+    # Add this line. For FreeBSD, please replace the path by
+    # /usr/local/etc/dovecot/dovecot-last-login.conf
+    lastlogin = mysql:/etc/dovecot/dovecot-last-login.conf
+}
+
+plugin {
+    ...
+
+    # Add 2 lines
+    last_login_dict = proxy::lastlogin
+    last_login_key = last-login/%s/%u/%d
+}
+</code></pre>
+<p>Create file <code>/etc/dovecot/dovecot-last-login.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot-last-login.conf</code> (FreeBSD) with content below:</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>For MySQL/MariaDB/PostgreSQL backends, please replace <code>my_secret_password</code>
+  by the real password of SQL user <code>vmailadmin</code>.</li>
+<li>For OpenLDAP backend:<ul>
+<li>replace <code>dbname=vmail</code> by <code>dbname=iredadmin</code></li>
+<li>replace <code>user=vmailadmin</code> by <code>user=iredadmin</code></li>
+<li>replace <code>my_secret_password</code> by the real password of SQL user <code>iredadmin</code></li>
+</ul>
+</li>
+</ul>
+</div>
+<pre><code>connect = host=127.0.0.1 port=3306 dbname=vmail user=vmailadmin password=my_secret_password
+
+map {
+    pattern = shared/last-login/imap/$user/$domain
+    table = last_login
+    value_field = imap
+    value_type = uint
+
+    fields {
+        username = $user
+        domain = $domain
+    }
+}
+
+map {
+    pattern = shared/last-login/pop3/$user/$domain
+    table = last_login
+    value_field = pop3
+    value_type = uint
+
+    fields {
+        username = $user
+        domain = $domain
+    }
+}
+
+# Track the time of last email delivered to mailbox via LDA.
+# Please enable `last_login` plugin in the `protocol lda {}` block in dovecot.conf.
+map {
+    pattern = shared/last-login/lda/$user/$domain
+    table = last_login
+    value_field = lda
+    value_type = uint
+
+    fields {
+        username = $user
+        domain = $domain
+    }
+}
+
+# Track the time of last email delivered to mailbox via LMTP,
+# Please enable `last_login` plugin in the `protocol lmtp {}` block in dovecot.conf.
+# We treat lmtp as lda, store the time in sql column `lda`.
+map {
+    pattern = shared/last-login/lmtp/$user/$domain
+    table = last_login
+    value_field = lda
+    value_type = uint
+
+    fields {
+        username = $user
+        domain = $domain
+    }
+}
+</code></pre>
+<p>Since this file contain SQL username and password, we must protect it with
+proper owner/group and permission (we use Linux/BSD for example below):</p>
+<pre><code>chown dovecot:dovecot /etc/dovecot/dovecot-last-login.conf
+chmod 0400 /etc/dovecot/dovecot-last-login.conf
+</code></pre>
+<p>Now it's ok to restart Dovecot service.</p>
+<h2 id="test">Test</h2>
+<p>After restarted Dovecot service, please monitor its log file
+<code>/var/log/dovecot/dovecot.log</code>, if there's something wrong, Dovecot will log
+the error message to this file.</p>
+<p>Try to access your mailbox with webmail or MUA like Outlook/Thunderbird, you
+should see the time has been updated in SQL table <code>vmail.last_login</code>
+(MySQL/MariaDB backends) or <code>iredadmin.last_login</code> (OpenLDAP backend). For
+example:</p>
+<pre><code>sql&gt; USE vmail;
+sql&gt; SELECT * FROM last_login;
++-----------------+--------+------------+------+------+
+| username        | domain | imap       | pop3 | lda  |
++-----------------+--------+------------+------+------+
+| postmaster@a.io | a.io   | 1554172329 | NULL | NULL |
++-----------------+--------+------------+------+------+
+1 row in set (0.01 sec)
+</code></pre>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://doc.dovecot.org/2.3/configuration_manual/lastlogin_plugin/">Dovecot plugin: last_login</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Mac OS X: Add calendar (CalDAV) and task (Reminders) service in iCalendar.app</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="mac-os-x-add-calendar-caldav-and-task-reminders-service-in-icalendarapp">Mac OS X: Add calendar (CalDAV) and task (Reminders) service in iCalendar.app</h1>
+<div class="admonition note">
+<p class="admonition-title">Important Notes</p>
+<ul>
+<li>SOGo provides <strong>EAS (Exchange ActiveSync)</strong> support, but not <strong>EWS
+  (Exchange Web Service)</strong>.</li>
+<li>Outlook 2013 for Windows works well with EAS.</li>
+<li>Below mobile devices works well with EAS, they will sync mails, calendars,
+  contacts, tasks, memos/notes.<ul>
+<li>BlackBerry 10 devices</li>
+<li>iOS devices (iPad, iPhone). Tested with iOS 8.1.3.</li>
+<li>Android devices. Tested with OS v4.0.</li>
+</ul>
+</li>
+<li>Apple Mail.app, and Outlook for Mac support EWS. But not EAS.</li>
+<li>Outlook 2010 for Windows supports MAPI.</li>
+<li>iRedMail doesn't integrate <a href="http://www.openchange.org">OpenChange</a> and
+  <a href="http://www.samba.org">Samba4</a> for native MAPI support, so SOGo groupware
+  in iRedMail doesn't provide full support for Microsoft Outlook clients,
+  Mac OS X Mail.app and all iOS devices, don't try to add your mail account
+  as an <code>Exchange</code> account in these mail clients. You have to add separate
+  POP3/IMAP account, caldav/carddav account instead.</li>
+</ul>
+</div>
+<h2 id="requirements">Requirements</h2>
+<ul>
+<li>iRedMail-0.9.0 or later releases is required.</li>
+<li>To use calendar and task service, you must choose to install SOGo groupware
+  during iRedMail installation.</li>
+</ul>
+<h2 id="step-by-step-configuration">Step-by-step configuration</h2>
+<p>1: Open application <code>System Preferences</code>:</p>
+<p><img alt="" src="images/sogo/macosx.system.preferences.png" /></p>
+<p>2: Click <code>Internet Accounts</code>:</p>
+<p><img alt="" src="images/sogo/macosx.internet.accounts.png" /></p>
+<p>3: on right panel, click <code>Add Other Account</code> at the bottom</p>
+<p><img alt="" src="images/sogo/macosx.add.other.account.png" width="700px" /></p>
+<p>4: choose <code>Add a CalDAV account</code> in popup window</p>
+<p><img alt="" src="images/sogo/macosx.choose.account.type.caldav.png" width="700px" /></p>
+<p>5: Fill up the form with your server address and email account credential</p>
+<ul>
+<li>Account Type: <code>Advanced</code></li>
+<li>User Name: <code>your full email address</code></li>
+<li>Password: <code>password of your email account</code></li>
+<li>Server Address: <code>server name or IP address</code></li>
+<li>Server Path: <code>/SOGo/dav/[your full email address]</code></li>
+<li>Port: <code>443</code></li>
+<li>Use SSL: checked</li>
+</ul>
+<p><img alt="" src="images/sogo/macosx.add.caldav.account.png" width="700px" /></p>
+<p>6: Click <code>Create</code> button to create account. You can also enable Reminders (task
+   service) if you want.</p>
+<p><img alt="" src="images/sogo/macosx.add.reminder.png" width="700px" /></p>
+<p>That's all.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

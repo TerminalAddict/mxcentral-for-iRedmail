@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>共享邮箱（将 IMAP 目录共享给其他用户）</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="mailbox.sharing.html">English</a> /</p>
+</div>
+<h1 id="imap">共享邮箱（将 IMAP 目录共享给其他用户）</h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>自 iRedMail-<code>0.9.0</code>版起，共享邮箱功能默认开启，用户不需要任何额外的配置。</li>
+<li>
+<p>自 iRedMail-<code>0.7.0</code> 版起，Dovecot 已包含共享邮箱的相关设置，但没有启用。
+  只需要按照以下文档中启用 <code>acl</code> 插件的步骤即可启用该功能。</p>
+</li>
+<li>
+<p>请勿混淆<code>共享邮箱</code>和<code>公共邮箱</code>。用户在共享邮箱时必须选择要共享的目录并
+  指定共享给谁。</p>
+</li>
+</ul>
+</div>
+<h2 id="_1">共享邮箱</h2>
+<p>要开启邮箱共享功能，请确保 <code>acl</code> 插件已在Dovecot 的配置文件
+<code>/etc/dovecot/dovecot.conf</code> 里启用。以下是配置示例：</p>
+<ul>
+<li>Dovecot-1.2 版：</li>
+</ul>
+<pre><code># Part of file: /etc/dovecot/dovecot.conf
+
+protocol lda {
+    mail_plugins = ... acl
+}
+
+protocol imap {
+    mail_plugins = ... acl imap_acl
+}
+</code></pre>
+<ul>
+<li>Dovecot-2.x 版：</li>
+</ul>
+<pre><code># Part of file: /etc/dovecot/dovecot.conf
+
+mail_plugins = ... acl
+
+protocol imap {
+    mail_plugins = ... imap_acl
+}
+</code></pre>
+<p>修改后需重启 Dovecot 服务，以使配置生效。</p>
+<h2 id="_2">测试共享目录</h2>
+<p>示例：将用户 <code>from@domain.ltd</code> 的 <code>Sent</code> 目录共享给用户 <code>testing@domain.ltd</code> 。</p>
+<blockquote>
+<p>注意：不要遗漏 IMAP 命令前面的点 <code>.</code> 号。</p>
+</blockquote>
+<pre><code># telnet localhost 143                # &lt;- 输入此命令
+* OK [...] Dovecot ready.
+
+. login from@domain.ltd passwd        # &lt;- 输入此命令
+                                      # 使用完整邮件地址和密码登陆
+. OK [... ACL ..] Logged in
+
+. SETACL Sent testing@domain.ltd rli  # &lt;- 输入此命令
+                                      # 将 Sent 目录共享给 testing@domain.ltd，
+                                      # 具体权限为：读(r, read)，查询(l, lookup)，插入新邮件(i, insert)。
+. OK Setacl complete.
+
+^]                                    # &lt;- 按 `Ctrl + ]` 组合键退出 telnet 程序。
+telnet&gt; quit
+</code></pre>
+<p>以用户 <code>testing@domain.ltd</code> 身份登录 Roundcube 或 SOGo webmail，即可看到共享的目录。</p>
+<p>额外信息：</p>
+<ul>
+<li>
+<p>使用 <code>SETACL</code> 命令共享目录后， Dovecot 会在 MySQL 数据库中插入一条记录。</p>
+<ul>
+<li>对于采用 OpenLDAP 后端的用户，此记录保存在 SQL 表 <code>iredadmin.share_folder</code> 中。</li>
+<li>对于采用 MySQL/MariaDB/PostgreSQL 后端的用户，此记录保存在 <code>vmail.share_folder</code> 中。</li>
+</ul>
+</li>
+</ul>
+<pre><code># mysql -uroot -p
+mysql&gt; USE vmail;
+mysql&gt; SELECT * FROM share_folder;
++-----------------+--------------------+-------+
+| from_user       | to_user            | dummy |
++-----------------+--------------------+-------+
+| from@domain.ltd | testing@domain.ltd | 1     |
++-----------------+--------------------+-------+
+</code></pre>
+<h2 id="_3">参考资料</h2>
+<ul>
+<li>
+<p>Dovecot wiki：</p>
+<ul>
+<li><a href="http://wiki2.dovecot.org/SharedMailboxes/Shared">共享邮箱 (v2.0+)</a></li>
+<li><a href="http://wiki.dovecot.org/SharedMailboxes/Shared">共享邮箱 (v1.2+)</a></li>
+</ul>
+</li>
+<li>
+<p>Roundcubemail 有官方插件 <code>acl</code> 用来管理邮箱共享。</p>
+</li>
+<li>SOGo 邮箱组件默认支持邮箱共享：右击 IMAP 文件夹，选择 <code>Sharing</code> 。</li>
+<li>Thunderbird 客户端可以使用 <a href="https://addons.mozilla.org/en-US/thunderbird/addon/imap-acl-extension/">Imap-ACL-Extension 插件</a>管理共享邮箱</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

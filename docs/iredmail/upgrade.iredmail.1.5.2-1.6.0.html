@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 1.5.2 to 1.6.0</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-152-to-160">Upgrade iRedMail from 1.5.2 to 1.6.0</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#upgrade-iredmail-from-152-to-160">Upgrade iRedMail from 1.5.2 to 1.6.0</a><ul>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</a><ul>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#upgrade-mlmmjadmin-to-the-latest-stable-release-315">Upgrade mlmmjadmin to the latest stable release (3.1.5)</a></li>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-17">Upgrade iRedAdmin (open source edition) to the latest stable release (1.7)</a></li>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#upgrade-netdata-to-the-latest-stable-release-1341">Upgrade netdata to the latest stable release (1.34.1)</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#for-postgresql-backend">For PostgreSQL backend</a><ul>
+<li><a href="upgrade.iredmail.1.5.2-1.6.0.html#move-sql-view-sogousers-to-vmail-database">Move SQL view sogo.users to vmail database</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Jun 5, 2022: Add mlmmjadmin upgrade tutorial.</li>
+<li>May 20, 2022: initial release.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code>1.6.0
+</code></pre>
+<h3 id="upgrade-mlmmjadmin-to-the-latest-stable-release-315">Upgrade mlmmjadmin to the latest stable release (3.1.5)</h3>
+<p>Please follow below tutorial to upgrade mlmmjadmin to the latest stable release:
+<a href="upgrade.mlmmjadmin.html">Upgrade mlmmjadmin to the latest stable release</a></p>
+<h3 id="upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-17">Upgrade iRedAdmin (open source edition) to the latest stable release (1.7)</h3>
+<p>Please follow below tutorial to upgrade iRedAdmin to the latest stable release:
+<a href="migrate.or.upgrade.iredadmin.html">Upgrade iRedAdmin to the latest stable release</a>.</p>
+<h3 id="upgrade-netdata-to-the-latest-stable-release-1341">Upgrade netdata to the latest stable release (1.34.1)</h3>
+<p>If you have netdata installed, you can upgrade it by following this tutorial:
+<a href="upgrade.netdata.html">Upgrade netdata</a>.</p>
+<h2 id="for-postgresql-backend">For PostgreSQL backend</h2>
+<h3 id="move-sql-view-sogousers-to-vmail-database">Move SQL view <code>sogo.users</code> to <code>vmail</code> database</h3>
+<p>In iRedMail-1.5.2 and early releases, we create SQL view <code>users</code> in <code>sogo</code>
+database, it invokes PostgreSQL extension <code>dblink</code> to query <code>vmail</code> database,
+this causes end users can not change passwords in SOGo webmail.</p>
+<p>With steps below, we create SQL view <code>sogo_users</code> in <code>vmail</code> database, so that
+end users can change their own passwords.</p>
+<p>Download plain SQL file used to update SQL table:</p>
+<pre><code>wget -O /tmp/sogo_view.pgsql https://github.com/iredmail/iRedMail/raw/1.6.0/update/1.6.0/sogo_view.pgsql
+chmod +r /tmp/sogo_view.pgsql
+</code></pre>
+<ul>
+<li>Connect to PostgreSQL server as <code>postgres</code> user and import the SQL file:<ul>
+<li>on Linux, it's <code>postgres</code> user</li>
+<li>on FreeBSD, it's <code>pgsql</code> user</li>
+<li>on OpenBSD, it's <code>_postgresql</code> user</li>
+</ul>
+</li>
+</ul>
+<pre><code>su - postgres
+psql -d vmail &lt; /tmp/sogo_view.pgsql
+</code></pre>
+<ul>
+<li>Remove downloaded file:</li>
+</ul>
+<pre><code>rm -f /tmp/sogo_view.pgsql
+</code></pre>
+<p>Now we need to update SOGo config file to use this new SQL view.</p>
+<ul>
+<li>Open file <code>/etc/sogo/sogo.conf</code> (on Linux/OpenBSD) or
+  <code>/usr/local/etc/sogo/sogo.conf</code> (on FreeBSD), find block
+  <code>SOGoUserSources = ()</code> like below:</li>
+</ul>
+<pre><code>    SOGoUserSources = (
+        {
+            type = sql;
+            id = users;
+            viewURL = &quot;postgresql://...@127.0.0.1:5432/sogo/users&quot;;
+            canAuthenticate = YES;
+            ...
+        },
+    );
+</code></pre>
+<ul>
+<li>Update the <code>viewURL =</code> line:<ul>
+<li>Replace the SQL database name <code>sogo</code> by <code>vmail</code></li>
+<li>Replace the SQL table name <code>users</code> by <code>sogo_users</code></li>
+</ul>
+</li>
+</ul>
+<pre><code>            viewURL = &quot;postgresql://...@127.0.0.1:5432/vmail/sogo_users&quot;;
+</code></pre>
+<ul>
+<li>Restart memcached and SOGo service (Note: on CentOS, the service name is
+  <code>sogod</code>, not <code>sogo</code>):</li>
+</ul>
+<pre><code>service memcached restart
+service sogo restart
+</code></pre>
+<ul>
+<li>Connect to PostgreSQL server as <code>postgres</code> user and drop old SQL view, it's not used anymore.<ul>
+<li>on Linux, it's <code>postgres</code> user</li>
+<li>on FreeBSD, it's <code>pgsql</code> user</li>
+<li>on OpenBSD, it's <code>_postgresql</code> user</li>
+</ul>
+</li>
+</ul>
+<pre><code>su - postgres
+psql -d sogo -c &quot;DROP VIEW users&quot;
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

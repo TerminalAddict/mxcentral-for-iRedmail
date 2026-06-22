@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>LDAP: Add a (unsubscribeable) mailing list</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="ldap-add-a-unsubscribeable-mailing-list">LDAP: Add a (unsubscribeable) mailing list</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="ldap.add.mail.list.html#ldap-add-a-unsubscribeable-mailing-list">LDAP: Add a (unsubscribeable) mailing list</a><ul>
+<li><a href="ldap.add.mail.list.html#add-mail-list-with-iredadmin-pro">Add mail list with iRedAdmin-Pro</a></li>
+<li><a href="ldap.add.mail.list.html#add-mail-list-with-phpldapadmin">Add mail list with phpLDAPadmin</a></li>
+<li><a href="ldap.add.mail.list.html#mail-list-access-policies">Mail list access policies</a></li>
+<li><a href="ldap.add.mail.list.html#see-also">See also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The mailing list account mentioned in this tutorial is not subscribealbe.
+For subscribeable mailing list, please read tutorial
+<a href="manage.subscribeable.mailing.lists.html">Manage subscribeable mailing lists</a>.</p>
+</div>
+<h2 id="add-mail-list-with-iredadmin-pro">Add mail list with iRedAdmin-Pro</h2>
+<p>With iRedAdmin-Pro, you can easily add mail list account by click menu:
+<code>Add -&gt; Mail List</code> in main navigation bar.</p>
+<p><img alt="" src="images/iredadmin/maillist_create.png" /></p>
+<h2 id="add-mail-list-with-phpldapadmin">Add mail list with phpLDAPadmin</h2>
+<ul>
+<li>Login to phpLDAPadmin (<code>https://[your_server]/phpldapadmin/</code>)</li>
+<li>Expand LDAP tree in left panel, find <code>ou=Groups</code> under your domain dn.</li>
+<li>Click <code>ou=Groups</code> in left panel, then click <code>Create a child entry</code> in right
+  panel.</li>
+<li>Choose <code>mailList</code> in <code>ObjectClasses</code> list, then click <code>Proceed</code>.</li>
+<li>Select <code>mail</code> as RDN, fill necessary values of attributes:</li>
+</ul>
+<pre><code>dn: mail=demolist@mydomain.com,ou=Groups,domainName=mydomain.com,o=domains,dc=iredmail,dc=org
+accountStatus: active
+cn: demolist
+enabledService: mail
+enabledService: deliver
+enabledService: displayedInGlobalAddressBook
+mail: demolist@mydomain.com
+objectClass: mailList
+</code></pre>
+<p>Now switch to <code>ou=Users</code> under you domain LDAP dn in left panel.</p>
+<ul>
+<li>Expand <code>ou=Users</code> in left panel.</li>
+<li>Find user account which you want to assign to new mail list we created above.</li>
+<li>Click user account in left panel.</li>
+<li>If attribute <code>memberOfGroup</code> exists in right panel:<ul>
+<li>click <code>Add value</code> under it and fill mail address of our new mail list. For example: <code>demolist@mydomain.com</code></li>
+<li>Click <code>Update Object</code> to save settings.</li>
+</ul>
+</li>
+<li>If attribute <code>memberOfGroup</code> doesn't exist in right panel:<ul>
+<li>Click <code>Add new attribute</code> in right panel</li>
+<li>Choose <code>memberOfGroup</code> in drop-down list.</li>
+<li>Fill mail address of our new mail list.</li>
+<li>Click <code>Update Object</code> to save settings.</li>
+</ul>
+</li>
+</ul>
+<p>You can add as many <code>memberOfGroup=xxx</code> as you want, which means this user is assigned to many mail lists.</p>
+<p>Here's sample to add external users as mail list members:</p>
+<pre><code>dn: memberOfGroup=demolist@mydomain.com,ou=Externals,domainName=mydomain.com,o=domains,dc=iredmail,dc=org
+accountstatus: active
+enabledservice: mail
+enabledservice: deliver
+mail: user01@external.com
+mail: user02@external.com
+memberofgroup: demolist@mydomain.com
+objectclass: mailExternalUser
+</code></pre>
+<p><strong>IMPORTANT NOTE</strong>: If you don't have any mail list member, Postfix will report error like below:</p>
+<pre><code>Aug  1 15:45:42 mail postfix/smtpd[6024]: NOQUEUE: reject: RCPT from unknown[1.1.1.1]: 550 5.1.1
+&lt;it@domain1.ru&gt;: Recipient address rejected: User unknown in virtual mailbox table; from=&lt;test@domain1.ru&gt;
+ to=&lt;it@domain1.ru&gt; proto=ESMTP helo=&lt;[2.2.2.2]&gt;
+</code></pre>
+<h2 id="mail-list-access-policies">Mail list access policies</h2>
+<p>You can restrict who can send email to this mailing list by adding LDAP attribute <code>accessPolicy</code>. For example:</p>
+<pre><code>dn: mail=demolist@mydomain.com,ou=Groups,domainName=mydomain.com,o=domains,dc=iredmail,dc=org
+accesspolicy: domain
+...
+</code></pre>
+<p>Available access policies are:</p>
+<ul>
+<li><code>public</code>: no restrictions.</li>
+<li><code>domain</code>: all users under same domain are allowed to send email to this mail list.</li>
+<li><code>subdomain</code>: all users under same domain and sub-domains are allowed to send email to this mail list.</li>
+<li><code>membersonly</code>: only members of this mail list are allowd.</li>
+<li><code>moderatorsonly</code>: only moderators of this mail list are allowed. Moderators
+  are email addresses stored in SQL column <code>alias.moderators</code>. With iRedAPD-1.4.5,
+  it's ok to use <code>*@domain.com</code> as (one of) moderator for all users under
+  mail domain 'domain.com'.</li>
+<li><code>membersandmoderatorsonly</code>: only members and moderators of this mail list are allowed.</li>
+</ul>
+<p>Access restriction is implemented in iRedAPD (a simple Postfix policy server),
+iRedMail has it enabled by default. You'd better check its config file
+<code>/opt/iredapd/settings.py</code> to make sure plugin <code>ldap_maillist_access_policy</code> is
+enabled in parameter <code>plugins = []</code>.</p>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="sql.create.mail.alias.html">Create mailing list (mail alias account) for SQL backend (MySQL/MariaDB/PostgreSQL)</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

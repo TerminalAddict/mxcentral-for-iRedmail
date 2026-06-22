@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Integrate Microsoft Active Directory for user authentication and address book</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="integrate-microsoft-active-directory-for-user-authentication-and-address-book">Integrate Microsoft Active Directory for user authentication and address book</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="active.directory.html#integrate-microsoft-active-directory-for-user-authentication-and-address-book">Integrate Microsoft Active Directory for user authentication and address book</a><ul>
+<li><a href="active.directory.html#summary">Summary</a></li>
+<li><a href="active.directory.html#requirements">Requirements</a></li>
+<li><a href="active.directory.html#install-iredmail">Install iRedMail</a></li>
+<li><a href="active.directory.html#integrate-microsoft-active-directory-with-postfix">Integrate Microsoft Active Directory with Postfix</a><ul>
+<li><a href="active.directory.html#create-user-account-in-ad-used-for-ldap-query">Create user account in AD, used for LDAP query</a></li>
+<li><a href="active.directory.html#enable-ldap-query-with-ad-in-postfix">Enable LDAP query with AD in Postfix</a></li>
+<li><a href="active.directory.html#verify-ldap-query-with-ad-in-postfix">Verify LDAP query with AD in Postfix</a></li>
+<li><a href="active.directory.html#remove-iredapd-integration-in-postfix">Remove iRedAPD integration in Postfix</a></li>
+</ul>
+</li>
+<li><a href="active.directory.html#enable-active-directory-integration-in-dovecot">Enable Active Directory integration in Dovecot</a></li>
+<li><a href="active.directory.html#enable-active-directory-integration-in-roundcube-webmail-for-global-ldap-address-book">Enable Active Directory integration in Roundcube webmail for Global LDAP Address Book</a></li>
+<li><a href="active.directory.html#enable-active-directory-integration-in-sogo-groupware">Enable Active Directory integration in SOGo Groupware</a></li>
+<li><a href="active.directory.html#additions-documents">Additions documents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>iRedMail Enterprise Edition supports replicating user and group accounts
+from Active Directory. <a href="ee.ad.html">Tutorial</a></p>
+</div>
+<p><strong>NOTES</strong>:</p>
+<ul>
+<li>
+<p>iRedAdmin-Pro doesn't work with Active Directory, so if you choose to
+  authenticate mail users against Active Directory, you have to manage mail
+  accounts with Active Directory management tools.</p>
+</li>
+<li>
+<p>This tutorial has been verified on Windows Server 2000, 2003, 2008, 2012,
+  2016, 2019, if you tested it on other versions and works well, please let us
+  know. <a href="https://www.iredmail.org/contact.html">Contact us</a></p>
+</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>With Active Directory (AD) integration, you can get below features:</p>
+<ul>
+<li>User authentication against Windows Active Directory. You can now manage mail
+  user accounts, mail lists with AD.</li>
+<li>Mail list support with group in AD.</li>
+<li>Global LDAP Address Book with AD in Roundcube Webmail.</li>
+<li>Account status support. Disable user in AD will cause this account disabled
+  in iRedMail.</li>
+</ul>
+<p>Since AD uses different LDAP schema, you will lose some iRedMail special features. e.g.</p>
+<ul>
+<li>Per-user, per-domain service control with LDAP (e.g. enable/disable
+  POP3/IMAP/SMTP services).</li>
+<li>Advanced mail polices implemented by iRedAPD which relies on iRedMail
+  LDAP scheme.</li>
+</ul>
+<h2 id="requirements">Requirements</h2>
+<p>To integrate Microsoft Active Directory with iRedMail, you should have:</p>
+<ul>
+<li>A working Linux/BSD server with iRedMail (OpenLDAP backend) installed.</li>
+<li>
+<p>A working Microsoft Windows (2000/2003) server, with Active Directory
+  installed and working properly, listen on port <code>389</code> (ldap://) or <code>636</code>
+  (ldaps://), and allow LDAP connections from iRedMail server.</p>
+<ul>
+<li>
+<p>If you need to enable LDAP over SSL, please read
+  <a href="https://support.microsoft.com/en-us/help/321051/how-to-enable-ldap-over-ssl-with-a-third-party-certification-authority">this tutorial</a>.</p>
+</li>
+<li>
+<p>If connecting to <code>389</code> doesn't work, try port <code>3268</code> instead.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="install-iredmail">Install iRedMail</h2>
+<p>Please follow <a href="index.html">iRedMail installaion guides</a>
+to install iRedMail on Linux/BSD with OpenLDAP backend first, we will
+achieve this AD integration by simply modifying some configure files.</p>
+<h2 id="integrate-microsoft-active-directory-with-postfix">Integrate Microsoft Active Directory with Postfix</h2>
+<p>We assume:</p>
+<ul>
+<li>
+<p>Hostname of your AD server is <code>ad.example.com</code>, listen on port <code>389</code>. And it's
+  accessible from iRedMail server.</p>
+<ul>
+<li>We will use this hostname below, you can replace it by IP address of this
+   AD server if you want.</li>
+<li>If you want to force LDAP connection with LDAPS, use port <code>636</code> instead.</li>
+</ul>
+</li>
+<li>
+<p>Base dn in AD is <code>dc=example,dc=com</code>, email addresses of all users end with
+  <code>@example.com</code> (Your mail domain is <code>example.com</code>).</p>
+</li>
+<li>All user accounts and mail list accounts are placed under dn
+  <code>cn=Users,dc=example,dc=com</code>. <strong>Note:</strong> LDAP dn is case-insensitive.</li>
+<li>For ldap connection, protocol version <code>3</code> is recommended.</li>
+<li>
+<p>Store all mails on Linux/BSD servers, not on AD server.</p>
+<ul>
+<li>Storage directory is <code>/var/vmail/vmail1</code>, same as default in iRedMail.</li>
+<li>Mailbox of user <code>support@example.com</code> will be
+   <code>/var/vmail/vmail1/example.com/support/Maildir/</code> (Maildir format).</li>
+</ul>
+</li>
+</ul>
+<h3 id="create-user-account-in-ad-used-for-ldap-query">Create user account in AD, used for LDAP query</h3>
+<p>With iRedMail (OpenLDAP backend), we have a low-privileged account
+<code>cn=vmail,dc=xxx,dc=xxx</code> with read-only privilege. And we suggest you create a
+same account <code>vmail</code> in AD, with strong and complex password.</p>
+<p><strong>NOTES</strong>:</p>
+<ul>
+<li>Dovecot treats characters as comment after a inline <code>#</code>, please don't use
+  <code>#</code> in password.</li>
+<li>Seems Windows Server 2019 doesn't like user id without domain part by
+  default, please create the <code>vmail</code> user with your domain name instead. for
+  example, <code>vmail@domain.com</code> (replace <code>domain.com</code> by your real domain name).</li>
+</ul>
+<p>Make sure this newly created user is able to connect to AD server with
+below command on iRedMail server:</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p><code>-h</code> is deprecated in new OpenLDAP, please use <code>-H</code> instead. For example,
+<code>-H ldap://ad.example.com</code>, <code>-H ldap://ad.example.com:389</code>,
+<code>-H ldaps://ad.example.com:636</code>.</p>
+</div>
+<pre><code class="language-shell"># ldapsearch -x -h ad.example.com -D 'vmail' -W -b 'cn=users,dc=example,dc=com'
+Enter password: password_of_vmail
+</code></pre>
+<p>If it prints all users stored in AD server, then it's working as expected.</p>
+<p>If you're using LDAPS, replace <code>-h ad.example.com</code> by
+<code>-H ldaps://ad.example.com:636</code> instead:</p>
+<pre><code class="language-shell"># ldapsearch -x -H ldaps://ad.example.com:636 -D 'vmail' -W -b 'cn=users,dc=example,dc=com'
+Enter password: password_of_vmail
+</code></pre>
+<p>If LDAPS doesn't work, you may need to update parameter <code>TLS_CACERT</code> in
+<code>/etc/openldap/ldap.conf</code> (RHEL/CentOS) or <code>/etc/ldap/ldap.conf</code> to use correct CA
+certificate. For example:</p>
+<ul>
+<li>on CentOS: use <code>/etc/pki/tls/certs/ca-bundle.trust.crt</code>:</li>
+</ul>
+<pre><code>TLS_CACERT /etc/pki/tls/certs/ca-bundle.trust.crt
+</code></pre>
+<ul>
+<li>on Debian/Ubuntu, use <code>/etc/ssl/certs/ca-certificates.crt</code>:</li>
+</ul>
+<pre><code>TLS_CACERT /etc/ssl/certs/ca-certificates.crt
+</code></pre>
+<h3 id="enable-ldap-query-with-ad-in-postfix">Enable LDAP query with AD in Postfix</h3>
+<p>Disable unused iRedMail special settings:</p>
+<pre><code class="language-shell">postconf -e virtual_alias_maps=''
+postconf -e sender_bcc_maps=''
+postconf -e recipient_bcc_maps=''
+postconf -e relay_domains=''
+postconf -e relay_recipient_maps=''
+postconf -e sender_dependent_relayhost_maps=''
+</code></pre>
+<p>Add your mail domain name in <code>smtpd_sasl_local_domain</code> and <code>virtual_mailbox_domains</code>:</p>
+<pre><code class="language-shell">postconf -e smtpd_sasl_local_domain='example.com'
+postconf -e virtual_mailbox_domains='example.com'
+</code></pre>
+<p>Change transport maps setting:</p>
+<pre><code>postconf -e transport_maps='hash:/etc/postfix/transport'
+</code></pre>
+<p>Enable AD query. <strong>Note</strong>: We will create these 3 files later.</p>
+<ul>
+<li>Verify SMTP senders</li>
+</ul>
+<pre><code class="language-shell">postconf -e smtpd_sender_login_maps='proxy:ldap:/etc/postfix/ad_sender_login_maps.cf'
+</code></pre>
+<ul>
+<li>Verify local mail users</li>
+</ul>
+<pre><code class="language-shell">postconf -e virtual_mailbox_maps='proxy:ldap:/etc/postfix/ad_virtual_mailbox_maps.cf'
+</code></pre>
+<ul>
+<li>Verify local mail lists/groups.</li>
+</ul>
+<pre><code>postconf -e virtual_alias_maps='proxy:ldap:/etc/postfix/ad_virtual_group_maps.cf'
+</code></pre>
+<ul>
+<li>Create/edit file: <code>/etc/postfix/transport</code>.</li>
+</ul>
+<pre><code>example.com dovecot
+</code></pre>
+<p><strong>Note</strong>: the name <code>dovecot</code> used here is a Postfix transport defined in
+<code>/etc/postfix/master.cf</code>, used to deliver received emails to local user mailboxes.</p>
+<p>Run <code>postmap</code> so that postfix can read it:</p>
+<pre><code># postmap hash:/etc/postfix/transport
+</code></pre>
+<ul>
+<li>Create file: <code>/etc/postfix/ad_sender_login_maps.cf</code>:</li>
+</ul>
+<pre><code>server_host     = ad.example.com
+server_port     = 389
+version         = 3
+bind            = yes
+start_tls       = no
+bind_dn         = vmail
+bind_pw         = password_of_vmail
+search_base     = cn=users,dc=example,dc=com
+scope           = sub
+query_filter    = (&amp;(userPrincipalName=%s)(objectClass=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))
+result_attribute= userPrincipalName
+debuglevel      = 0
+</code></pre>
+<ul>
+<li>Create file: <code>/etc/postfix/ad_virtual_mailbox_maps.cf</code>:</li>
+</ul>
+<pre><code>server_host     = ad.example.com
+server_port     = 389
+version         = 3
+bind            = yes
+start_tls       = no
+bind_dn         = vmail
+bind_pw         = passwd_of_vmail
+search_base     = cn=users,dc=example,dc=com
+scope           = sub
+query_filter    = (&amp;(objectclass=person)(userPrincipalName=%s))
+result_attribute= userPrincipalName
+result_format   = %d/%u/Maildir/
+debuglevel      = 0
+</code></pre>
+<p><strong>Note</strong>: We hard-code user's mailbox path in <code>result_format =</code> parameter, it
+will be something like <code>example.com/username/Maildir/</code>.</p>
+<ul>
+<li>Create file: <code>/etc/postfix/ad_virtual_group_maps.cf</code>:</li>
+</ul>
+<pre><code>server_host     = ad.example.com
+server_port     = 389
+version         = 3
+bind            = yes
+start_tls       = no
+bind_dn         = vmail
+bind_pw         = password_of_vmail
+search_base     = cn=users,dc=example,dc=com
+scope           = sub
+query_filter    = (&amp;(objectClass=group)(mail=%s))
+special_result_attribute = member
+leaf_result_attribute = mail
+result_attribute= userPrincipalName
+debuglevel      = 0
+</code></pre>
+<p><strong>Notes</strong>:</p>
+<ul>
+<li>If your user have email address in both <code>mail</code> and <code>userPrincipalName</code>, you
+  will get duplicate result. Comment out <code>leaf_result_attribute</code> line will fix it.</li>
+<li>If your mail group account doesn't contain attribute <code>mail</code> and
+  <code>userPrincipalName</code>, please try <code>query_filter = (&amp;(objectClass=group)(sAMAccountName=%u))</code> instead.</li>
+</ul>
+<p>Also, we need to remove iRedAPD related settings in Postfix:</p>
+<ol>
+<li>Open Postfix config file <code>/etc/postfix/main.cf</code></li>
+<li>Remove setting <code>check_policy_service inet:127.0.0.1:7777</code>.</li>
+</ol>
+<h3 id="verify-ldap-query-with-ad-in-postfix">Verify LDAP query with AD in Postfix</h3>
+<p>We can now use command line tool <code>postmap</code>  to verify AD integration in postfix.
+Before testing, we have to create two testing mail accounts first:</p>
+<ol>
+<li>Create a mail user in AD. e.g. <code>user@example.com</code>.</li>
+<li>Create a mail group in AD. e.g. <code>testgroup@example.com</code>, then assign mail
+   user <code>user@example.com</code> as group member.</li>
+<li>Query mail user account with below command:</li>
+</ol>
+<pre><code class="language-shell"># postmap -q user@example.com ldap:/etc/postfix/ad_virtual_mailbox_maps.cf
+example.com/user/Maildir/
+</code></pre>
+<p>If nothing returned by the command, it means LDAP query doesn't get expected
+result. Please set <code>debuglevel = 1</code> file <code>/etc/postfix/ad_virtual_mailbox_maps.cf</code>,
+then query again, it now will print detailed debug message. If you're not
+familiar with LDAP related info, please post the debug message in our
+<a href="https://forum.iredmail.org/">online support forum</a> to get help.</p>
+<p>Verify sender login check:</p>
+<pre><code># postmap -q user@example.com ldap:/etc/postfix/ad_sender_login_maps.cf
+user@example.com
+</code></pre>
+<p>Verify mail group</p>
+<pre><code># postmap -q testgroup@example.com ldap:/etc/postfix/ad_virtual_group_maps.cf
+user@example.com
+</code></pre>
+<p><strong>NOTE</strong>: <code>postmap</code> return nothing if:</p>
+<ol>
+<li>mail group doesn't exist</li>
+<li>mail group doesn't have any members</li>
+</ol>
+<h3 id="remove-iredapd-integration-in-postfix">Remove iRedAPD integration in Postfix</h3>
+<p>iRedAPD relies on iRedMail LDAP scheme, so it's useless if you integrate
+iRedMail with Active Directory. We should remove the integration in Postfix
+to save some system resource.</p>
+<p>To disable iRedAPD, please read tutorial: <a href="manage.iredapd.html">Manage iRedAPD</a>.</p>
+<h2 id="enable-active-directory-integration-in-dovecot">Enable Active Directory integration in Dovecot</h2>
+<p>To query AD instead of local LDAP server, we have to modify Dovecot config file
+<code>/etc/dovecot/dovecot-ldap.conf</code> like below:</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>If you use LDAPS and <code>hosts =</code> doesn't work, please replace it by <code>uris =</code>
+instead. Check
+<a href="https://doc.dovecot.org/2.3/configuration_manual/authentication/ldap/">Dovecot tutorial</a>
+for more details.</p>
+</div>
+<pre><code>hosts           = ad.example.com:389
+ldap_version    = 3
+auth_bind       = yes
+dn              = vmail
+dnpass          = passwd_of_vmail
+base            = cn=users,dc=example,dc=com
+scope           = subtree
+deref           = never
+
+# Below two are required by command 'doveadm mailbox ...'
+iterate_attrs   = userPrincipalName=user
+iterate_filter  = (&amp;(userPrincipalName=*)(objectClass=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))
+
+user_filter     = (&amp;(userPrincipalName=%u)(objectClass=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))
+pass_filter     = (&amp;(userPrincipalName=%u)(objectClass=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))
+pass_attrs      = userPassword=password
+default_pass_scheme = CRYPT
+user_attrs      = mail=master_user,mail=user,=home=/var/vmail/vmail1/%Ld/%Ln/,=mail=maildir:~/Maildir/
+</code></pre>
+<p>Restart dovecot service to make it work.</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>We don't have per-user quota limit here, you can set a hard-coded
+quota for all users in <code>/etc/dovecot/dovecot.conf</code>. For example:</p>
+<pre><code>plugin {
+    [... omit other settings here ...]
+
+    # Format: integer number + M/G/T (M -&gt; MB, G -&gt; GB, T -&gt; TB).
+    quota_rule = *:storage=1G
+}
+</code></pre>
+<p>You can also modify the <code>user_attrs =</code> line to get per-user quota from a
+LDAP attribute in AD. For example, query per-user quota limit from
+attribute <code>postOfficeBox</code> which contain an integer number and treated as
+number of gigabytes:</p>
+<pre><code>user_attrs      = =home=/var/vmail/vmail1/%Ld/%Ln/,=mail=maildir:~/Maildir/,postOfficeBox=quota_rule=*:storage=%{ldap:postOfficeBox}G
+</code></pre>
+<p>Note: This per-user quota will override the one hard-coded in dovecot.conf.</p>
+</div>
+<p>Now use command <code>telnet</code> to verify AD query after restarted Dovecot service:</p>
+<pre><code># telnet localhost 143                     # &lt;- Type this
+* OK [...] Dovecot ready.
+
+. login user@example.com password_of_user  # &lt;- Type this. Do not miss the dot in the beginning
+. OK [...] Logged in
+
+^]                                         # &lt;- Quit telnet with &quot;Ctrl+]&quot;, then type 'quit'.
+</code></pre>
+<p>Note: Do NOT miss the dot character before <code>login</code> command. if it returns
+<code>Logged in</code>, then dovecot + AD works.</p>
+<h2 id="enable-active-directory-integration-in-roundcube-webmail-for-global-ldap-address-book">Enable Active Directory integration in Roundcube webmail for Global LDAP Address Book</h2>
+<p>Edit roundcube config file <code>config/config.inc.php</code>, comment out the LDAP
+address book setting added by iRedMail, and add new setting for AD like below:</p>
+<ul>
+<li>on RHEL/CentOS/Debian/Ubuntu and OpenBSD: it's <code>/opt/www/roundcubemail/config/config.inc.php</code></li>
+<li>on FreeBSD: it's <code>/usr/local/www/roundcubemail/config/config.inc.php</code></li>
+</ul>
+<pre><code class="language-php">#
+# &quot;sql&quot; is personal address book stored in roundcube database.
+# &quot;global_ldap_abook&quot; is the new LDAP address book for AD, we will create it below.
+#
+$config['autocomplete_addressbooks'] = array(&quot;sql&quot;, &quot;global_ldap_abook&quot;);
+
+# Enable setting below if Roundcube returns 'user@127.0.0.1' as email address
+#$config['mail_domain'] = '%d';
+
+#
+# Global LDAP Address Book with AD.
+#
+$config['ldap_public'][&quot;global_ldap_abook&quot;] = array(
+    'name'          =&gt; 'Global Address Book',
+    'hosts'         =&gt; array(&quot;ad.example.com&quot;), // &lt;- Set AD hostname or IP address here.
+    'port'          =&gt; 389,
+    'use_tls'       =&gt; false,   // &lt;- Set to true if you want to use LDAP over TLS.
+    'ldap_version'  =&gt; '3',
+    'network_timeout' =&gt; 10,
+    'user_specific' =&gt; false,
+
+    'base_dn'       =&gt; &quot;cn=users,dc=example,dc=com&quot;, // &lt;- Set base dn in AD
+    'bind_dn'       =&gt; &quot;vmail&quot;,             // &lt;- bind dn
+    'bind_pass'     =&gt; &quot;password_of_vmail&quot;, // &lt;- bind password
+    'writable'      =&gt; false,               // &lt;- Do not allow mail user write data back to AD.
+
+    'search_fields' =&gt; array('mail', 'cn', 'sAMAccountName', 'displayname', 'sn', 'givenName'),
+
+    // mapping of contact fields to directory attributes
+    'fieldmap' =&gt; array(
+        'name'          =&gt; 'cn',
+        'displayname'   =&gt; 'displayName',
+        'surname'       =&gt; 'sn',
+        'firstname'     =&gt; 'givenName',
+        'jobtitle'      =&gt; 'title',
+        'department'    =&gt; 'department',
+        'company'       =&gt; 'company',
+        'email'         =&gt; 'mail:*',
+        'phone:work'    =&gt; 'telephoneNumber',
+        'phone:home'    =&gt; 'homePhone',
+        'phone:mobile'  =&gt; 'mobile',
+        'phone:workfax' =&gt; 'facsimileTelephoneNumber',
+        'phone:pager'   =&gt; 'pager',
+        'phone:other'   =&gt; 'ipPhone',
+        'street:work'   =&gt; 'streetAddress',
+        'zipcode:work'  =&gt; 'postalCode',
+        'locality:work' =&gt; 'l',
+        'region:work'   =&gt; 'st',
+        'country:work'  =&gt; 'c',
+        'notes'         =&gt; 'description',
+        'photo'         =&gt; 'jpegPhoto',   // Might be 'thumbnailPhoto' for
+                                          // compatibility with some other
+                                          // Microsoft software
+        'website'       =&gt; 'wWWHomePage',
+    ),
+    'sort'          =&gt; 'cn',
+    'scope'         =&gt; 'sub',
+    'filter'        =&gt; &quot;(&amp;(|(objectclass=person)(objectclass=group))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))&quot;,
+    'fuzzy_search'  =&gt; true,
+    'vlv'           =&gt; false,   // Enable Virtual List View to more
+                                // efficiently fetch paginated data
+                                // (if server supports it)
+    'sizelimit'     =&gt; '0',     // Enables you to limit the count of
+                                // entries fetched. Setting this to 0
+                                // means no limit.
+    'timelimit'     =&gt; '0',     // Sets the number of seconds how long
+                                // is spend on the search. Setting this
+                                // to 0 means no limit.
+    'referrals'     =&gt; false,   // Sets the LDAP_OPT_REFERRALS option.
+                                // Mostly used in multi-domain Active
+                                // Directory setups
+);
+</code></pre>
+<h2 id="enable-active-directory-integration-in-sogo-groupware">Enable Active Directory integration in SOGo Groupware</h2>
+<p>Edit SOGo config file <code>/etc/sogo/sogo.conf</code>, comment out the LDAP address book
+setting added by iRedMail, and add new setting for AD like below:</p>
+<pre><code>    SOGoUserSources = (
+        {
+            // Used for user authentication
+            type = ldap;
+            id = users;
+            canAuthenticate = YES;
+            isAddressBook = NO;
+            displayName = &quot;LDAP Authentication&quot;;
+
+            hostname = &quot;ldap://ad.example.com:389&quot;;   // &lt;- Set to ldaps://ad.example.com:636 for LDAPS.
+            baseDN = &quot;cn=users,dc=example,dc=com&quot;;
+            bindDN = &quot;vmail&quot;;
+            bindPassword = &quot;password_of_vmail&quot;;
+            filter = &quot;objectClass=person AND userPrincipalName='*' AND (NOT userAccountControl:1.2.840.113556.1.4.803:=2)&quot;;
+            scope = SUB;
+
+            // always keep binding to the LDAP server using the DN of the
+            // currently authenticated user. bindDN and bindPassword are still
+            // required to find DN of the user.
+            // Note: with default LDAP acl configured by iRedMail, user doesn't
+            //       have privilege to query o=domains,dc=delmsgs,dc=freeddns,dc=org.
+            //       so this doesn't work.
+            bindAsCurrentUser = YES;
+
+            // The algorithm used for password encryption when changing
+            // passwords without Password Policies enabled.
+            // Possible values are: plain, crypt, md5-crypt, ssha, ssha512.
+            userPasswordAlgorithm = ssha512;
+
+            CNFieldName = cn;
+            IDFieldName = userPrincipalName;
+            // value of UIDFieldName must be unique on entire server
+            UIDFieldName = userPrincipalName;
+            IMAPLoginFieldName = userPrincipalName;
+            MailFieldNames = (userPrincipalName);
+            bindFields = (userPrincipalName);
+        },
+        {
+            // Used for global address book
+            type = ldap;
+            id = global_addressbook;
+            canAuthenticate = NO;
+            isAddressBook = YES;
+            displayName = &quot;Global Address Book&quot;;
+            bindAsCurrentUser = YES;
+
+            // Listing of this LDAP source is only possible when performing a
+            // search (respecting the SOGoSearchMinimumWordLength parameter)
+            // or when explicitely typing a single dot.
+            // Defaults to YES when unset.
+            //
+            // WARNING: if you have many accounts in this address book, it may
+            //          reach server-side query size limit, or cause
+            //          performance issue.
+            listRequiresDot = NO;
+
+           // Set to ldaps://ad.example.com:636 for LDAPS.
+            hostname = &quot;ldap://ad.example.com:389&quot;;
+            baseDN = &quot;cn=users,dc=example,dc=com&quot;;
+            bindDN = &quot;vmail&quot;;
+            bindPassword = &quot;password_of_vmail&quot;;
+            filter = &quot;(objectClass=person OR (objectClass=group AND mail='*')) AND (NOT userAccountControl:1.2.840.113556.1.4.803:=2)&quot;;
+            scope = SUB;
+
+            IDFieldName = userPrincipalName;
+            bindFields = (userPrincipalName);
+            // value of UID field must be unique on whole server.
+            UIDFieldName = userPrincipalName;
+            IMAPLoginFieldName = userPrincipalName;
+
+            CNFieldName = cn;
+            SearchFieldNames = (mail, cn, sAMAccountName, displayName, sn, givenName);
+
+            mapping = {
+              ou = (&quot;department&quot;, &quot;ou&quot;);
+              street = (&quot;streetAddress&quot;, &quot;street&quot;);
+              mozillaworkurl = (&quot;wWWHomePage&quot;, &quot;mozillaworkurl&quot;);
+              description = (&quot;info&quot;, &quot;description&quot;);
+            };
+        }
+    );
+</code></pre>
+<h2 id="additions-documents">Additions documents</h2>
+<ul>
+<li>If your mail domain name is different than Windows Active Directory domain: <a href="https://forum.iredmail.org/topic3165-integration-with-windows-domain.html">https://forum.iredmail.org/topic3165-integration-with-windows-domain.html</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

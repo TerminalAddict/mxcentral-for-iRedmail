@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Amavisd: attiva polixy di ricerca per destinatario</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="amavisd.per-recipient.policy.lookup.html">English</a> /</p>
+</div>
+<h1 id="amavisd-attiva-polixy-di-ricerca-per-destinatario">Amavisd: attiva polixy di ricerca per destinatario</h1>
+<p>Con la policy di ricerca per destinatario, potete archiviare whitelist/blacklist per destinatario, preferenze di base per spamassassin etc. Le configurazioni sono disponibili come configurazioni globali, o per dominio o per utente. iRedMail usa queste configurazioni per rigettare mittenti in blacklist e far passare mittenti in whitelist durante la sessione smtp, il tutto per risparmiare risorse di sistema (il tutto implementato dal plugin <code>amavisd_wblist</code>, nuovo dalla versione 1.4.4 si iRedAPD).</p>
+<p>iRedMail ha, nella configurazione di Amavisd, <code>@storage_sql_dsn</code>m abilitato di default, per cui è molto facile abilitare la policy per destinatario. Aggiungete semplicemente una linea dopo <code>@storage_sql_dsn</code>, come sotto riportato:</p>
+<pre><code># Part of file: amavisd.conf
+
+@storage_sql_dsn = [...]
+@lookup_sql_dsn = @storage_sql_dsn;
+</code></pre>
+<p>Acqueo punto riavviate il servizio Amavisd.</p>
+<p>Se non sapete dove sia il file di configurazione di Amavisd, fate riferimento a questo documento: <a href="file.locations.html#amavisd">Posizione dei file di configurazione e log dei componenti maggiori</a></p>
+<h2 id="referenze">Referenze:</h2>
+<ul>
+<li><a href="http://www.ijs.si/software/amavisd/README.sql.txt">Documentazione Amavisd : Usare SQL per ricerche, log/rapporti e messa in quarantena</a></li>
+<li><a href="http://www.ijs.si/software/amavisd/README.lookups.txt">Documentazione Amavisd: Mappa delle ricerche (hash, SQL) e spiegazione della lista di accesso</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

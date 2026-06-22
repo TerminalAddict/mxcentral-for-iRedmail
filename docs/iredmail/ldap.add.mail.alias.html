@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>LDAP: Add a mail alias account</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="ldap-add-a-mail-alias-account">LDAP: Add a mail alias account</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="ldap.add.mail.alias.html#ldap-add-a-mail-alias-account">LDAP: Add a mail alias account</a><ul>
+<li><a href="ldap.add.mail.alias.html#add-mail-alias-with-iredadmin-pro">Add mail alias with iRedAdmin-Pro</a></li>
+<li><a href="ldap.add.mail.alias.html#add-mail-alias-with-phpldapadmin">Add mail alias with phpLDAPadmin</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="add-mail-alias-with-iredadmin-pro">Add mail alias with iRedAdmin-Pro</h2>
+<p>With iRedAdmin-Pro, please click menu in main navigation bar: `Add -&gt; Mail Alias'.
+Screenshot:</p>
+<p><img alt="" src="images/iredadmin/alias_create.png" /></p>
+<h2 id="add-mail-alias-with-phpldapadmin">Add mail alias with phpLDAPadmin</h2>
+<ul>
+<li>Log into phpLDAPadmin as LDAP root dn <code>cn=Manager</code> or <code>cn=vmailadmin</code>.</li>
+<li>Expand LDAP tree in left panel, click <code>Create new entry here</code> under
+  <code>ou=Aliases</code> of your domain, and select <code>Default</code> in right panel.</li>
+<li>Select object class <code>mailAlias</code> in right panel.</li>
+<li>Input required fields of mail alias account.</li>
+</ul>
+<p><strong>WARNING</strong>: Attribute <code>enabledService</code> requires two values: <code>mail</code>, <code>deliver</code>.</p>
+<ul>
+<li>Confirm to create.</li>
+<li>Add missing value for attribute <code>enabledService</code>:  <code>mail</code>, <code>deliver</code>.</li>
+<li>Add new attribute <code>accountStatus</code> with value <code>active</code>. This is required.</li>
+<li>Add alias members (full email address) in attribute <code>mailForwardingAddress</code>.
+  You can add as many members as you want.</li>
+</ul>
+<p>Full LDIF data of a sample mail alias account:</p>
+<pre><code>dn: mail=myalias@mydomain.com,ou=Aliases,domainName=mydomain.com,o=domains,dc=iredmail,dc=org
+objectClass: mailAlias
+accountStatus: active
+cn: Test Name
+enabledService: mail
+enabledService: deliver
+mail: myalias@mydomain.com
+mailForwardingAddress: user1@mydomain.com
+mailForwardingAddress: someone@gmail.com
+mailForwardingAddress: someone@hotmail.com
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

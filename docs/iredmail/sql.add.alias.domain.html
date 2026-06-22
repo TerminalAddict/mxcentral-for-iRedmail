@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>SQL: Add an alias domain</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="sql-add-an-alias-domain">SQL: Add an alias domain</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="sql.add.alias.domain.html#sql-add-an-alias-domain">SQL: Add an alias domain</a><ul>
+<li><a href="sql.add.alias.domain.html#what-is-an-alias-domain-used-for">What is an alias domain used for?</a></li>
+<li><a href="sql.add.alias.domain.html#add-alias-domain-with-iredadmin-pro">Add alias domain with iRedAdmin-Pro</a></li>
+<li><a href="sql.add.alias.domain.html#how-to-add-an-alias-domain-with-sql-commands">How to add an alias domain with SQL commands</a></li>
+<li><a href="sql.add.alias.domain.html#see-also">See also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="what-is-an-alias-domain-used-for">What is an alias domain used for?</h2>
+<p>Let's say you have a mail domain <code>example.com</code> hosted on your iRedMail server,
+if you add domain name <code>domain.ltd</code> as an alias domain of <code>example.com</code>, all
+emails sent to <code>username@domain.ltd</code> will be delivered to user
+<code>username@example.com</code>'s mailbox.</p>
+<h2 id="add-alias-domain-with-iredadmin-pro">Add alias domain with iRedAdmin-Pro</h2>
+<p>With iRedAdmin-Pro, you can simply add alias domain name in domain profile page,
+under tab <code>Aliases</code>.</p>
+<p>Screenshot:</p>
+<p><img alt="" src="images/iredadmin/domain_profile_alias.png" /></p>
+<h2 id="how-to-add-an-alias-domain-with-sql-commands">How to add an alias domain with SQL commands</h2>
+<p>Adding alias domain is as simple as inserting one SQL record. Let's create two
+alias domains (<code>alias-1.com</code>, <code>alias-2.com</code>) for the primary domain
+<code>example.com</code> with SQL commands below (Note: we use MySQL for example, but
+PostgreSQL uses exactly same <code>INSERT</code> commands):</p>
+<pre><code>-- Connect to `vmail` database.
+sql&gt; USE vmail;
+
+-- Create alias domain `alias-1.com`
+sql&gt; INSERT INTO alias_domain (alias_domain, target_domain) VALUES ('alias-1.com', 'example.com');
+
+-- Create alias domain `alias-2.com`
+sql&gt; INSERT INTO alias_domain (alias_domain, target_domain) VALUES ('alias-2.com', 'example.com');
+</code></pre>
+<p>That's all.</p>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="ldap.add.alias.domain.html">LDAP: Add an alias domain</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

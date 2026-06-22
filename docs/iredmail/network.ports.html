@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Which network ports are open by iRedMail</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="network.ports-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="which-network-ports-are-open-by-iredmail">Which network ports are open by iRedMail</h1>
+<table>
+<thead>
+<tr>
+<th>Port</th>
+<th>Service</th>
+<th>Software</th>
+<th>Comment</th>
+<th>Allow Public Access?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>25</td>
+<td>smtp</td>
+<td>Postfix</td>
+<td>Used for communication betweem mail servers. <strong>WARNING</strong>: This port <strong>MUST</strong> be open, otherwise you cannot receive email sent by other mail servers.</td>
+<td><strong class="red">YES (REQUIRED)</strong></td>
+</tr>
+<tr>
+<td>587</td>
+<td>submission</td>
+<td>Postfix</td>
+<td>SMTP over TLS. Used by end users to send/submit email.</td>
+<td>YES (open to your end users)</td>
+</tr>
+<tr>
+<td>110</td>
+<td>pop3</td>
+<td>Dovecot</td>
+<td>Used by end users to retrieve emails via POP3 protocol, secure connection over STARTTLS is enforced by default.</td>
+<td>YES (open to your end users)</td>
+</tr>
+<tr>
+<td>995</td>
+<td>pop3s</td>
+<td>Dovecot</td>
+<td>Used by end users to retrieve emails via POP3 protocol over SSL.</td>
+<td>YES (open to your end users)</td>
+</tr>
+<tr>
+<td>143</td>
+<td>imap</td>
+<td>Dovecot</td>
+<td>Used by end users to retrieve emails via IMAP protocol, secure connection over STARTTLS is enforced by default.</td>
+<td>YES (open to your end users)</td>
+</tr>
+<tr>
+<td>993</td>
+<td>imaps</td>
+<td>Dovecot</td>
+<td>Used by end users to retrieve emails via IMAP protocol over SSL.</td>
+<td>YES (open to your end users)</td>
+</tr>
+<tr>
+<td>24</td>
+<td>lmtp</td>
+<td>Dovecot</td>
+<td>Used to deliver email to local mailboxes via LMTP protocol.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>4190</td>
+<td>managesieve</td>
+<td>Dovecot</td>
+<td>Sieve service used by end users to manage mail filters. Note: in old iRedMail releases, it's port 2000 (deprecated and not even listed in <code>/etc/services</code> file).</td>
+<td>NO (disabled by default and users are forced to manage mail filters with webmail)</td>
+</tr>
+<tr>
+<td>80</td>
+<td>http</td>
+<td>Apache/Nginx</td>
+<td>Web service. Redirect to https by default.</td>
+<td>YES (open to your webmail users)</td>
+</tr>
+<tr>
+<td>443</td>
+<td>https</td>
+<td>Apache/Nginx</td>
+<td>Web service over over SSL, secure connection.</td>
+<td>YES (open to your webmail and ActiveSync users)</td>
+</tr>
+<tr>
+<td>3306</td>
+<td>mysql</td>
+<td>MySQL/MariaDB</td>
+<td>MySQL/MariaDB database service</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>5432</td>
+<td>postgresql</td>
+<td>PostgreSQL</td>
+<td>PostgreSQL database service</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>389</td>
+<td>ldap</td>
+<td>OpenLDAP (or OpenBSD ldapd)</td>
+<td>LDAP service, STARTTLS is available for secure connection.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>636</td>
+<td>ldaps</td>
+<td>OpenLDAP (or OpenBSD ldapd)</td>
+<td>LDAP service over SSL. Deprecated, port 389 with STARTTLS is recommended.</td>
+<td>NO (Not enabled by default)</td>
+</tr>
+<tr>
+<td>10024</td>
+<td></td>
+<td>Amavisd-new</td>
+<td>Used to scan inbound messages, includes spam/virus scanning, DKIM verification, applying spam policy.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>10025</td>
+<td>smtp</td>
+<td>Postfix</td>
+<td>Used by Amavisd to inject scanned emails back to Postfix queue.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>10026</td>
+<td></td>
+<td>Amavisd-new</td>
+<td>Used to scan outbound messages, includes spam/virus scanning, DKIM signing, applying spam policy.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>10027</td>
+<td></td>
+<td>Amavisd-new</td>
+<td>Used by mlmmj mailing list manager, it bypasses spam/virus/header/banned checks by default, but have DKIM signing enabled.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>10028</td>
+<td></td>
+<td>Postfix</td>
+<td>Used by Amavisd-new to handle email message sent by mlmmj mailing list manager. Introduced in iRedMail-0.9.9.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>9998</td>
+<td></td>
+<td>Amavisd-new</td>
+<td>Used to manage quarantined emails.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>7777</td>
+<td></td>
+<td>iRedAPD</td>
+<td>Postfix policy service for greylisting, whitelisting, blacklists, throttling, etc</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>7778</td>
+<td></td>
+<td>iRedAPD</td>
+<td><a href="https://en.wikipedia.org/wiki/Sender_Rewriting_Scheme">SRS</a> sender address rewritting.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>7779</td>
+<td></td>
+<td>iRedAPD</td>
+<td><a href="https://en.wikipedia.org/wiki/Sender_Rewriting_Scheme">SRS</a> recipient address rewritting.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>7790</td>
+<td>http</td>
+<td>mlmmjadmin</td>
+<td>RESTful API server used to manage mlmmj mailing lists. Introduced in iRedMail-0.9.8.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>7791</td>
+<td>http</td>
+<td>iredadmin</td>
+<td>iRedAdmin (standalone uwsgi instance). Introduced in iRedMail-0.9.9.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>20000</td>
+<td></td>
+<td>SOGo</td>
+<td>SOGo groupware</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>11211</td>
+<td></td>
+<td>Memcached</td>
+<td>A distributed, high performance memory object caching system. Currently used by only SOGo Groupware.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>12340</td>
+<td></td>
+<td>Dovecot</td>
+<td>Dovecot quota status. Introduced in iRedMail-1.0.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>24242</td>
+<td></td>
+<td>Dovecot</td>
+<td>Dovecot service status. Introduced in iRedMail-0.9.8.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+<tr>
+<td>19999</td>
+<td></td>
+<td>Netdata</td>
+<td>Netdata monitor. Introduced in iRedMail-0.9.8.</td>
+<td>NO (listen on <code>127.0.0.1</code> by default)</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>
+<p>In iRedMail-0.9.2 and earlier releases, Policyd or Cluebringer listens on
+  port 10031. They have been removed in iRedMail-0.9.3, and replaced by
+  iRedAPD.</p>
+</li>
+<li>
+<p>Port 465, a.k.a. SMTP over SSL, has been deprecated for years. Please use
+  port 587 instead.</p>
+</li>
+</ul>
+</div><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

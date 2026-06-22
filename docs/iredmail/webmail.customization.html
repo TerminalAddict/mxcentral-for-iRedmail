@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Webmail customization</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="webmail-customization">Webmail customization</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="webmail.customization.html#webmail-customization">Webmail customization</a><ul>
+<li><a href="webmail.customization.html#roundcube-webmail">Roundcube webmail</a></li>
+<li><a href="webmail.customization.html#sogo-groupware">SOGo Groupware</a><ul>
+<li><a href="webmail.customization.html#html-templates">HTML templates</a></li>
+<li><a href="webmail.customization.html#logo-image">Logo image</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="roundcube-webmail">Roundcube webmail</h2>
+<ul>
+<li>The text <code>Roundcube Webmail</code> under login screen can be replaced by updating
+  parameter <code>product_name</code> in <a href="file.locations.html#roundcube">Roundcube config file</a>.</li>
+<li>Logo image can be customized with parameter <code>skin_logo</code> in Roundcube config
+  file</li>
+</ul>
+<pre><code>$config['product_name'] = 'My Company Name';
+$config['skin_logo'] = '...';   // Please read the comment lines in
+                                // /opt/www/roundcubemail/config/defaults.inc.php
+                                // for more details
+</code></pre>
+<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/wiki/Skins">Styling the Roundcube Frontend</a></li>
+</ul>
+<h2 id="sogo-groupware">SOGo Groupware</h2>
+<h3 id="html-templates">HTML templates</h3>
+<p><a href="https://sogo.nu/support/faq/how-to-customize-the-html.html">How to customize the HTML</a></p>
+<h3 id="logo-image">Logo image</h3>
+<p>You can set custom logo image displayed on the login page of SOGo by replacing
+file <code>sogo-full.svg</code>, but it will be overridden each time you upgrade SOGo
+packages:</p>
+<ul>
+<li>On RHEL/CentOS: <code>/usr/lib64/GNUstep/SOGo/WebServerResources/img/sogo-full.svg</code></li>
+<li>On Debian/Ubuntu, it's <code>/usr/lib/GNUstep/SOGo/WebServerResources/img/sogo-full.svg</code></li>
+<li>On FreeBSD, it's <code>/usr/local/GNUstep/Local/Library/SOGo/WebServerResources/img/sogo-full.svg</code>.</li>
+<li>On OpenBSD, it's <code>/usr/local/lib/GNUstep/SOGo/WebServerResources/img/sogo-full.svg</code>.</li>
+</ul>
+<p>Another way to customize Nginx config file to handle http request to this
+logo image.</p>
+<p>Edit file <code>/etc/nginx/templates/sogo.tmpl</code>, add these lines at the beginning:</p>
+<pre><code>location = /SOGo.woa/WebServerResources/img/sogo-full.svg {
+    return 301 https://myhost.com/sogo-full.svg;
+}
+</code></pre>
+<p>You can even use different logo images for each web domain:</p>
+<pre><code>location = /SOGo.woa/WebServerResources/img/sogo-full.svg {
+    if ($host = &quot;domain1.com&quot;) {
+        return 301 https://myhost.com/sogo-full-domain1.com.svg;
+    }
+
+    if ($host = &quot;domain2.com&quot;) {
+        return 301 https://myhost.com/sogo-full-domain2.com.svg;
+    }
+
+    return 404;
+}
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

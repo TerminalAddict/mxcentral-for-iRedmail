@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 1.6.0 to 1.6.1</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-160-to-161">Upgrade iRedMail from 1.6.0 to 1.6.1</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#upgrade-iredmail-from-160-to-161">Upgrade iRedMail from 1.6.0 to 1.6.1</a><ul>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</a><ul>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-51">Upgrade iRedAPD (Postfix policy server) to the latest stable release (5.1)</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-18">Upgrade iRedAdmin (open source edition) to the latest stable release (1.8)</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#upgrade-netdata-to-the-latest-stable-release-1361">Upgrade netdata to the latest stable release (1.36.1)</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#upgrade-roundcube-webmail-to-the-latest-stable-release-153">Upgrade Roundcube webmail to the latest stable release (1.5.3)</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#postfix-bypass-more-facebook-helo-hostnames">Postfix: Bypass more facebook HELO hostnames</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#roundcube-replace-default-value-of-parameter-auto_create_user">Roundcube: replace default value of parameter auto_create_user</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#sogo-new-yum-apt-repository-sites-new-gpg-signing-key">SOGo: New yum / apt repository sites, new GPG signing key</a><ul>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#centos-centos-stream-rocky-linux">CentOS, CentOS Stream, Rocky Linux</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#debian-ubuntu">Debian, Ubuntu</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#for-openldap-backend">For OpenLDAP backend</a><ul>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#fixed-sogo-not-expand-mailing-list-members-while-inviting-a-mailing-list-in-event">Fixed: SOGo: Not expand mailing list members while inviting a mailing list in event</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#for-mysql-mariadb-backends">For MySQL / MariaDB backends</a><ul>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#enable-iredapd-plugin-for-mailing-list-access-control">Enable iRedAPD plugin for mailing list access control</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#for-postgresql-backend">For PostgreSQL backend</a><ul>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#enable-iredapd-plugin-for-mailing-list-access-control_1">Enable iRedAPD plugin for mailing list access control</a></li>
+<li><a href="upgrade.iredmail.1.6.0-1.6.1.html#sogo-fix-incorrect-sql-database-and-table-names">SOGo: Fix incorrect SQL database and table names</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Aug 23, 2022: Roundcube: replace default value of parameter <code>auto_create_user</code></li>
+<li>Aug 22, 2022: initial publish.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code>1.6.1
+</code></pre>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-51">Upgrade iRedAPD (Postfix policy server) to the latest stable release (5.1)</h3>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<h3 id="upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-18">Upgrade iRedAdmin (open source edition) to the latest stable release (1.8)</h3>
+<p>Please follow below tutorial to upgrade iRedAdmin to the latest stable release:
+<a href="migrate.or.upgrade.iredadmin.html">Upgrade iRedAdmin to the latest stable release</a>.</p>
+<h3 id="upgrade-netdata-to-the-latest-stable-release-1361">Upgrade netdata to the latest stable release (1.36.1)</h3>
+<p>If you have netdata installed, you can upgrade it by following this tutorial:
+<a href="upgrade.netdata.html">Upgrade netdata</a>.</p>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release-153">Upgrade Roundcube webmail to the latest stable release (1.5.3)</h3>
+<div class="admonition warning">
+<p class="admonition-title">CentOS 7: please stick to Roundcube 1.5.2</p>
+<p>If you're running CentOS 7, please upgrade to Roundcube 1.5.2 instead.
+Roundcube 1.5.3 requires PHP-7, but CentOS 7 ships PHP-5.4 which is not
+supported by Roundcube 1.5.3 (and the latest 1.6.0).</p>
+<p>It's time to leave your comfort zone and upgrade this server to CentOS
+Stream 8 or <a href="https://docs.rockylinux.org/guides/migrate2rocky/">Rocky Linux 8</a>.</p>
+</div>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Latest Roundcube release is 1.6.0, but it still has some compatibility
+issues with PHP-8 (Ubuntu 22.04 ships PHP-8.1), so we suggest wait for
+next new release, e.g. Roundcube 1.6.1 or even 1.6.2.</p>
+</div>
+<p>Please follow Roundcube official tutorial to upgrade Roundcube webmail to the
+latest stable release:</p>
+<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</li>
+</ul>
+<h3 id="postfix-bypass-more-facebook-helo-hostnames">Postfix: Bypass more facebook HELO hostnames</h3>
+<p>Find below line in <code>/etc/postfix/helo_access.pcre</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/postfix/helo_access.pcre</code> (FreeBSD):</p>
+<pre><code>/^\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3}\.mail-(mail|campmail)\.facebook\.com$/ OK
+</code></pre>
+<p>Replace it by:</p>
+<pre><code>/^\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3}\.mail-.*\.facebook\.com$/ OK
+</code></pre>
+<p>Reloading or restarting postfix service is required.</p>
+<h3 id="roundcube-replace-default-value-of-parameter-auto_create_user">Roundcube: replace default value of parameter <code>auto_create_user</code></h3>
+<p>Since Roundcube 1.6.0, it sets <code>auto_create_user</code> to false, which causes newly
+created mail users can not login to Roundcube. Please overwrite this parameter
+no matter you already upgraded to Roundcube 1.6.0 or not.</p>
+<p>Open Roundcube config file <code>/opt/www/roundcubemail/config/config.inc.php</code>,
+find existing parameter or add it:</p>
+<pre><code class="language-php">$config[&quot;auto_create_user&quot;] = true;
+</code></pre>
+<p>No need to restart any service.</p>
+<h3 id="sogo-new-yum-apt-repository-sites-new-gpg-signing-key">SOGo: New yum / apt repository sites, new GPG signing key</h3>
+<p>SOGo team <a href="https://www.mail-archive.com/users@sogo.nu/msg31386.html">announced</a>
+that the SOGo groupware was acquired by Alinto on 16 May 2022, and <a href="https://www.mail-archive.com/users@sogo.nu/msg31614.html">officially
+transferred</a> since
+08 Aug 2022. New yum and apt repository site replaces old one, so all users
+must update the yum / apt repo config file for updating packages.</p>
+<h4 id="centos-centos-stream-rocky-linux">CentOS, CentOS Stream, Rocky Linux</h4>
+<ul>
+<li>Replace all content in file <code>/etc/yum.repos.d/sogo.repo</code> by content below:</li>
+</ul>
+<pre><code>[SOGo]
+name=SOGo Groupware
+baseurl=https://packages.sogo.nu/nightly/5/rhel/$releasever/$basearch
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/sogo-nightly
+</code></pre>
+<ul>
+<li>Run commands to download GPG key, refresh yum repo metadata and (optionally)
+  update sogo packages:</li>
+</ul>
+<pre><code>wget \
+    -O /etc/pki/rpm-gpg/sogo-nightly \
+    https://keys.openpgp.org/vks/v1/by-fingerprint/74FFC6D72B925A34B5D356BDF8A27B36A6E2EAE9
+yum clean metadata
+yum update -y 'sogo*' '*sope*'
+</code></pre>
+<h4 id="debian-ubuntu">Debian, Ubuntu</h4>
+<ul>
+<li>Import GPG key with command below (run as <code>root</code> user):</li>
+</ul>
+<pre><code>wget -O- &quot;https://keys.openpgp.org/vks/v1/by-fingerprint/74FFC6D72B925A34B5D356BDF8A27B36A6E2EAE9&quot; | gpg --dearmor | apt-key add -
+</code></pre>
+<ul>
+<li>
+<p>Open file <code>/etc/apt/sources.list.d/sogo-nightly.list</code>, replace URL
+  <code>https://packages.inverse.ca/SOGo/</code> by <code>https://packages.sogo.nu/</code>.</p>
+</li>
+<li>
+<p>Refresh the repository metadata:</p>
+</li>
+</ul>
+<pre><code>apt-get update
+</code></pre>
+<h2 id="for-openldap-backend">For OpenLDAP backend</h2>
+<h3 id="fixed-sogo-not-expand-mailing-list-members-while-inviting-a-mailing-list-in-event">Fixed: SOGo: Not expand mailing list members while inviting a mailing list in event</h3>
+<p>Please open SOGo config file <code>/etc/sogo/sogo.conf</code> (on Linux/OpenBSD) or
+<code>/usr/local/etc/sogo/sogo.conf</code> (on FreeBSD), find the <code>SOGoUserSources</code>
+parameter like below:</p>
+<pre><code>    SOGoUserSources = (
+        {
+            // Used for user authentication
+            type = ldap;
+            id = users;
+            canAuthenticate = YES;
+
+            // ... omit other lines ...
+        },
+</code></pre>
+<p>Add new parameter <code>GroupObjectClasses</code> like below:</p>
+<pre><code>    SOGoUserSources = (
+        {
+            // Used for user authentication
+            type = ldap;
+            id = users;
+            canAuthenticate = YES;
+
+            // ... omit other lines ...
+
+            GroupObjectClasses = (
+                &quot;mailList&quot;,
+                &quot;group&quot;,
+                &quot;groupOfNames&quot;,
+                &quot;groupOfUniqueNames&quot;,
+                &quot;posixgroup&quot;
+            );
+        },
+</code></pre>
+<p>Restarting SOGo service is required.</p>
+<h2 id="for-mysql-mariadb-backends">For MySQL / MariaDB backends</h2>
+<h3 id="enable-iredapd-plugin-for-mailing-list-access-control">Enable iRedAPD plugin for mailing list access control</h3>
+<p>iRedMail-1.6.0 and earlier releases didn't enable plugin <code>sql_ml_access_policy</code>
+by default, this causes some confusion, and not stop unauthorized emails to
+certain mailing lists.</p>
+<p>Please open file <code>/opt/iredapd/settings.py</code>, find parameter <code>plugins =</code> like
+below:</p>
+<pre><code>plugins = [..., &quot;sql_alias_access_policy&quot;]
+</code></pre>
+<p>Append the plugin name <code>sql_ml_access_policy</code> like below:</p>
+<pre><code>plugins = [..., &quot;sql_alias_access_policy&quot;, &quot;sql_ml_access_policy&quot;]
+</code></pre>
+<p>Restarting <code>iredapd</code> service is required.</p>
+<h2 id="for-postgresql-backend">For PostgreSQL backend</h2>
+<h3 id="enable-iredapd-plugin-for-mailing-list-access-control_1">Enable iRedAPD plugin for mailing list access control</h3>
+<p>iRedMail-1.6.0 and earlier releases didn't enable plugin <code>sql_ml_access_policy</code>
+by default, this causes some confusion, and not stop unauthorized emails to
+certain mailing lists.</p>
+<p>Please open file <code>/opt/iredapd/settings.py</code>, find parameter <code>plugins =</code> like
+below:</p>
+<pre><code>plugins = [..., &quot;sql_alias_access_policy&quot;]
+</code></pre>
+<p>Append the plugin name <code>sql_ml_access_policy</code> like below:</p>
+<pre><code>plugins = [..., &quot;sql_alias_access_policy&quot;, &quot;sql_ml_access_policy&quot;]
+</code></pre>
+<p>Restarting <code>iredapd</code> service is required.</p>
+<h3 id="sogo-fix-incorrect-sql-database-and-table-names">SOGo: Fix incorrect SQL database and table names</h3>
+<p>Since iRedMail-1.6.0, we create SQL VIEW in <code>vmail</code> database directly for
+user authentication in SOGo Groupware, but its config file was configured with
+wrong SQL database and table names.</p>
+<ul>
+<li>Open file <code>/etc/sogo/sogo.conf</code> (on Linux/OpenBSD) or
+  <code>/usr/local/etc/sogo/sogo.conf</code> (on FreeBSD), find <strong>ALL</strong> <code>viewURL =</code>
+  parameters like below:</li>
+</ul>
+<pre><code>            viewURL = &quot;postgresql://.../sogo/users&quot;;
+</code></pre>
+<ul>
+<li>Replace the database name <code>sogo</code> and <code>users</code>:</li>
+</ul>
+<pre><code>            viewURL = &quot;postgresql://.../vmail/sogo_users&quot;;
+</code></pre>
+<ul>
+<li>Restart memcached and SOGo service (Note: on CentOS, the service name is
+  <code>sogod</code>, not <code>sogo</code>):</li>
+</ul>
+<pre><code>service memcached restart
+service sogo restart
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

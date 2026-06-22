@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>修改服务器主机名</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="change.server.hostname.html">English</a> /</p>
+</div>
+<h1 id="_1">修改服务器主机名</h1>
+<p>要在安装 iRedMail 后修改服务器的主机名，请将以下文件中的旧主机名改为新主机名：</p>
+<h2 id="_2">系统配置文件</h2>
+<ul>
+<li>
+<p><code>/etc/hosts</code></p>
+</li>
+<li>
+<p>Debian/Ubuntu: <code>/etc/hostname</code></p>
+</li>
+<li>Debian/Ubuntu: <code>/etc/mailname</code></li>
+</ul>
+<h2 id="postfix">Postfix</h2>
+<ul>
+<li><code>/var/spool/postfix/etc/hosts</code></li>
+<li><code>/etc/postfix/main.cf</code> (Linux/OpenBSD) 或者 <code>/usr/local/etc/postfix/main.cf</code> (FreeBSD)</li>
+</ul>
+<h2 id="awstats">Awstats</h2>
+<ul>
+<li><code>/etc/awstats/awstats.web.conf</code></li>
+<li><code>/etc/awstats/awstats.smtp.conf</code></li>
+</ul>
+<h2 id="apache">Apache</h2>
+<ul>
+<li>RHEL/CentOS: <code>/etc/httpd/conf/httpd.conf</code></li>
+<li>Debian/Ubuntu: <code>/etc/apache2/apache.conf</code></li>
+</ul>
+<h2 id="amavisd">Amavisd</h2>
+<ul>
+<li>RHEL/CentOS, OpenBSD: <code>/etc/amavisd/amavisd.conf</code></li>
+<li>Debian/Ubuntu: <code>/etc/amavis/conf.d/50-user</code></li>
+<li>FreeBSD: <code>/usr/local/etc/amavisd.conf</code></li>
+</ul>
+<h2 id="sogo">SOGO</h2>
+<ul>
+<li><code>/etc/httpd/conf.d/SOGo.conf</code></li>
+<li><code>/etc/apache2/conf.d/SOGo.conf</code></li>
+<li><code>/etc/apache2/conf-available/SOGo.conf</code></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

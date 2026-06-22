@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Completely disable Amavisd + ClamAV + SpamAssassin</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="completely.disable.amavisd.clamav.spamassassin-it_IT.html">Italiano</a> /</p>
+</div>
+<h1 id="completely-disable-amavisd-clamav-spamassassin">Completely disable Amavisd + ClamAV + SpamAssassin</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="completely.disable.amavisd.clamav.spamassassin.html#completely-disable-amavisd-clamav-spamassassin">Completely disable Amavisd + ClamAV + SpamAssassin</a><ul>
+<li><a href="completely.disable.amavisd.clamav.spamassassin.html#stop-virusspam-scanning-keep-dkim-signingverification-and-disclaimer">Stop virus/spam scanning, keep DKIM signing/verification and Disclaimer</a></li>
+<li><a href="completely.disable.amavisd.clamav.spamassassin.html#completely-disable-all-features">Completely disable all features</a><ul>
+<li><a href="completely.disable.amavisd.clamav.spamassassin.html#update-mailing-list-settings">Update mailing list settings</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<p>In iRedMail, Amavisd provides below features:</p>
+<ul>
+<li>content-based spam scanning (invoke SpamAssassin)</li>
+<li>Virus scanning (invoke ClamAV)</li>
+<li>DKIM signing</li>
+<li>DKIM verification (through SpamAssassin + Perl module)</li>
+<li>SPF verification (through SpamAssassin + Perl module)</li>
+<li>Disclaimer (throught AlterMIME)</li>
+</ul>
+<h3 id="stop-virusspam-scanning-keep-dkim-signingverification-and-disclaimer">Stop virus/spam scanning, keep DKIM signing/verification and Disclaimer</h3>
+<p>If you want to disable virus and spam scanning, but keep DKIM signing and disclaimer, please try this:</p>
+<ul>
+<li>
+<p>Keep <code>content_filter = smtp-amavis:[127.0.0.1]:10024</code> in Postfix config file <code>/etc/postfix/main.cf</code>.</p>
+</li>
+<li>
+<p>Find below lines in Amavisd config file, uncomment below lines (by removing
+  the leading <code>#</code> char of each line):</p>
+<ul>
+<li>On RHEL/CentOS, it's <code>/etc/amavisd/amavisd.conf</code></li>
+<li>On Debian/Ubuntu, it's <code>/etc/amavis/conf.d/50-user</code></li>
+<li>On FreeBSD, it's <code>/usr/local/etc/amavisd.conf</code></li>
+<li>On OpenBSD, it's <code>/etc/amavisd.conf</code></li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-perl"># @bypass_virus_checks_maps = (1);  # controls running of anti-virus code
+# @bypass_spam_checks_maps  = (1);  # controls running of anti-spam code
+</code></pre>
+<ul>
+<li>
+<p>Disable storage used to save breif info of in/out emails by comment out
+  <code>@storage_sql_dsn</code> line in Amavisd config file:</p>
+<p>Note: Please copy value of <code>@storage_sql_dsn</code> to <code>@lookup_sql_dsn</code> to keep
+spam policy lookup working (it queries SQL db, but not save data related to
+each processed email).</p>
+</li>
+</ul>
+<pre><code class="language-perl">@storage_sql_dsn = ...
+</code></pre>
+<p>You may want to stop and disable ClamAV service, then remove clamav packages
+since it's not called by Amavisd or other programs anymore:</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>On Linux system with systemd support, you can keep the packages but <code>mask</code>
+the clamav service to prevent it started by other applications with command
+below:</p>
+<pre><code># CentOS
+systemctl mask clamd@amavisd
+
+# Debian/Ubuntu
+systemctl mask clamav-daemon clamav-freshclam
+</code></pre>
+</div>
+<pre><code># CentOS
+systemctl disable --now clamd@amavisd
+systemctl restart amavisd
+yum remove clamav clamav-lib
+
+# Debian/Ubuntu
+systemctl disable --now clamav-daemon
+systemctl restart amavis
+apt remove clamav-base
+
+# FreeBSD
+sysrc -f /etc/rc.conf.local clamd=no
+service restart amavisd
+pkg remove clamav
+
+# OpenBSD
+rcctl disable clamd
+rcctl restart amavisd
+pkg_delete clamav
+</code></pre>
+<h3 id="completely-disable-all-features">Completely disable all features</h3>
+<p>If you want to completely disable spam and virus scanning services, steps:</p>
+<ul>
+<li>Comment out below two lines in Postfix config file <code>/etc/postfix/main.cf</code>:</li>
+</ul>
+<pre><code class="language-cfg">content_filter = smtp-amavis:[127.0.0.1]:10024
+receive_override_options = no_address_mappings  # &lt;- it's ok if you don't have this line
+</code></pre>
+<ul>
+<li>Comment out below line in Postfix config file <code>/etc/postfix/master.cf</code>,</li>
+</ul>
+<pre><code class="language-cfg">  -o content_filter=smtp-amavis:[127.0.0.1]:10026
+</code></pre>
+<ul>
+<li>Restarting Postfix service is required.</li>
+<li>Disable network services: Amavisd, ClamAV.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>ClamAV and SpamAssassin will be invoked by Amavisd, so if you disable Amavisd, those two are disabled too.</li>
+<li>SpamAssassin doesn't have daemon service running in iRedMail solution, so there's no need to stop SpamAssassin service.</li>
+</ul>
+<h4 id="update-mailing-list-settings">Update mailing list settings</h4>
+<p>mlmmj is configured to connect to port <code>10027</code> which is served by Amavisd for
+spam/virus scanning, you should update config files to tell mlmmj not to
+connect to this port anymore.</p>
+<ul>
+<li>
+<p>Comment out below line in <code>/opt/mlmmjadmin/settings.py</code> and restart
+  <code>mlmmjadmin</code> service.</p>
+<p>Note: it affects newly created mailing lists.</p>
+</li>
+</ul>
+<pre><code>MLMMJ_DEFAULT_PROFILE_SETTINGS.update({'smtp_port': 10027})
+</code></pre>
+<ul>
+<li>
+<p>Remove all <code>control/smtpport</code> file under <code>/var/vmail/mlmmj/&lt;domain&gt;/&lt;list-name&gt;/</code>.
+  For example, for mailing list <code>mygroup@domain.com</code>, the file is
+  <code>/var/vmail/mlmmj/domain.com/mygroup/control/smtpport</code>.</p>
+<p>Note: it affects all existing mailing lists.</p>
+</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

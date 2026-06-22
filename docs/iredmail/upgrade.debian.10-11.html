@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Fixes you need after upgrading Debian from 10 to 11</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="fixes-you-need-after-upgrading-debian-from-10-to-11">Fixes you need after upgrading Debian from 10 to 11</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.debian.10-11.html#fixes-you-need-after-upgrading-debian-from-10-to-11">Fixes you need after upgrading Debian from 10 to 11</a><ul>
+<li><a href="upgrade.debian.10-11.html#dovecot">Dovecot</a></li>
+<li><a href="upgrade.debian.10-11.html#iredapd-and-iredadmin-pro">iRedAPD and iRedAdmin(-Pro)</a></li>
+<li><a href="upgrade.debian.10-11.html#php-fpm">php-fpm</a></li>
+<li><a href="upgrade.debian.10-11.html#sogo-groupware">SOGo Groupware</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This is still a DRAFT document, it may miss some other important changes.</p>
+</div>
+<h2 id="dovecot">Dovecot</h2>
+<p>Please remove these lines from <code>/etc/dovecot/dovecot.conf</code>:</p>
+<pre><code>metric imap_command_finished {
+    event_name = imap_command_finished
+}
+</code></pre>
+<p>The newer Dovecot release uses a different syntax for this metric. Since
+netdata doesn't yet support Dovecot 2.3, we've removed it for now.</p>
+<h2 id="iredapd-and-iredadmin-pro">iRedAPD and iRedAdmin(-Pro)</h2>
+<p>Because Debian 11 offers a newer Python release, a few Python modules must be
+re-installed:</p>
+<pre><code>pip3 install -U web.py
+</code></pre>
+<p>These services must be restarted:</p>
+<pre><code>service iredapd restart
+service iredadmin restart
+</code></pre>
+<h2 id="php-fpm">php-fpm</h2>
+<p>Debian 11 ships with php 7.4, while Debian 10 ships with php 7.3.
+Although Debian 11 starts the <code>php7.4-fpm</code> service by default after an OS
+upgrade, you still need to copy the old php-fpm config file and restart
+the php7.4-fpm service, so that php7.4-fpm listens on same network address
+(<code>127.0.0.1:9999</code>) and Nginx can communicate with php7.4-fpm:</p>
+<pre><code>cp /etc/php/7.3/fpm/pool.d/www.conf /etc/php/7.4/fpm/pool.d/www.conf
+service php7.4-fpm restart
+</code></pre>
+<h2 id="sogo-groupware">SOGo Groupware</h2>
+<p>Please update <code>/etc/apt/sources.list.d/sogo.nightly.list</code> to use the correct
+URL for Debian 11 (bullseye):</p>
+<pre><code>deb https://packages.inverse.ca/SOGo/nightly/5/debian/ bullseye bullseye
+</code></pre>
+<p>To update SOGo packages, please run commands below as root user:</p>
+<pre><code>apt update
+apt --only-upgrade install &quot;sogo*&quot; &quot;*sope*&quot;
+</code></pre>
+<p>Note: SOGo package may override its config file <code>/etc/sogo/sogo.conf</code> after
+upgraded, in this case you should be able to find backup file under <code>/etc/sogo/</code>,
+double check its content and copy to <code>/etc/sogo/sogo.conf</code>, then restart SOGo
+service.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

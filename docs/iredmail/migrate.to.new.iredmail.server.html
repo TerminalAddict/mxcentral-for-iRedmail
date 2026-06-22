@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Migrate old iRedMail server to the latest stable release</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="migrate-old-iredmail-server-to-the-latest-stable-release">Migrate old iRedMail server to the latest stable release</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="migrate.to.new.iredmail.server.html#migrate-old-iredmail-server-to-the-latest-stable-release">Migrate old iRedMail server to the latest stable release</a><ul>
+<li><a href="migrate.to.new.iredmail.server.html#client-settings-outlook-thunderbird">Client settings (Outlook, Thunderbird)</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#ldap-migrate-mail-accounts">LDAP: migrate mail accounts</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#mysqlmariadbpostgresql-migrate-mail-accounts">MySQL/MariaDB/PostgreSQL: Migrate mail accounts</a><ul>
+<li><a href="migrate.to.new.iredmail.server.html#mysqlmariadb-inside-freebsd-jail">MySQL/MariaDB inside FreeBSD Jail</a></li>
+</ul>
+</li>
+<li><a href="migrate.to.new.iredmail.server.html#migrate-mailboxes-maildir-format">Migrate mailboxes (Maildir format)</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#migrate-sieve-rules">Migrate sieve rules</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#migrate-mlmmj-mailing-lists">Migrate (mlmmj) mailing lists</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#migrate-roundcube-webmail-data">Migrate Roundcube webmail data</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#migrate-sogo-groupware-data">Migrate SOGo Groupware data</a><ul>
+<li><a href="migrate.to.new.iredmail.server.html#solution-1-export-and-import-sql-database">Solution 1: Export and import SQL database</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#solution-2-backup-and-restore-data">Solution 2: Backup and restore data</a></li>
+</ul>
+</li>
+<li><a href="migrate.to.new.iredmail.server.html#migrate-amavisd-iredapd-iredadmin-databases">Migrate Amavisd, iRedAPD, iRedAdmin databases</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#migrate-dkim-keys">Migrate DKIM keys</a></li>
+<li><a href="migrate.to.new.iredmail.server.html#post-migration">Post-migration</a></li>
+</ul>
+</li>
+<li><a href="migrate.to.new.iredmail.server.html#references">References</a></li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Please practise the migration on a test server first, make sure you understand
+the whole procedure and migrate all required data.</p>
+</div>
+<p>Since new iRedMail server will install same components as old server, you can choose what data you want to migrate.</p>
+<p>Most important data are:</p>
+<ul>
+<li>email accounts stored in SQL/LDAP.</li>
+<li>user mailboxes. Stored under /var/vmail by default.</li>
+<li>SQL database of Roundcube webmail. It stores per-user webmail preferences, and address book.</li>
+<li><strike>Policyd/Cluebringer database. It stores white/blacklists records, greylisting records, etc.</strike> Note: Policyd/Cluebringer were removed since iRedMail-0.9.3.</li>
+<li>Amavisd database.<ul>
+<li>It stores per-recipient white/blacklists in SQL tables: <code>mailaddr</code>, <code>policy</code>, <code>users</code>, <code>wblist</code>.</li>
+<li>Basic info of in/out emails are stored in SQL tables: <code>maddr</code>, <code>msgs</code>, <code>msgrcpt</code>. Quarantined emails are stored in <code>quarantine</code>, it requires other 3 tables. If you don't have any quarantined emails, it's safe to delete all records in these 4 tables.</li>
+</ul>
+</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Do not restore database <code>mysql</code> exported from old server, it contains SQL
+usernames/passwords for Roundcube/Amavisd/iRedAPD/iRedAdmin/... used on
+old server. New iRedMail server has the same SQL usernames, but different
+passwords. So please do not restore it.</p>
+</div>
+<h2 id="client-settings-outlook-thunderbird">Client settings (Outlook, Thunderbird)</h2>
+<p>Since iRedMail-0.8.7, iRedMail enforces secure POP3/IMAP/SMTP connections,
+please update your mail client applications to use TLS connection.</p>
+<ul>
+<li>For SMTP service, use port <code>587</code> with <code>STARTTLS</code> (or <code>TLS</code>).</li>
+<li>For IMAP service, use port <code>143</code> with <code>STARTTLS</code> (or <code>TLS</code>), or port <code>993</code> with <code>SSL</code>.</li>
+<li>For POP3 service, use port <code>110</code> with <code>STARTTLS</code> (or <code>TLS</code>), or port <code>995</code> with <code>SSL</code>.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>
+<p>If you want to enable smtp authentication on port <code>25</code> (again, not
+  recommended), please comment out Postfix parameter <code>smtpd_tls_auth_only = yes</code>
+  in its config file <code>/etc/postfix/main.cf</code>.</p>
+</li>
+<li>
+<p>if you want to enable SMTPS (SMTP over SSL, port <code>465</code>) to support
+  legacy mail clients, please follow this tutorial:
+  <a href="enable.smtps.html">How to enable SMTPS service</a>.</p>
+</li>
+</ul>
+</div>
+<h2 id="ldap-migrate-mail-accounts">LDAP: migrate mail accounts</h2>
+<p>Steps to migrate LDAP mail accounts:</p>
+<ul>
+<li>Setup a new server with the latest iRedMail, and make iRedAdmin-Pro-LDAP work as expected.</li>
+<li>Export mail accounts from LDAP on OLD mail server.</li>
+</ul>
+<p>Normally, LDAP data can be exported into LDIF format. Here's backup/restore procedure: <a href="backup.restore.html">Backup and Restore</a>.</p>
+<p>Notes:</p>
+<ul>
+<li>There might be some changes in LDAP schema, please find scripts
+  <a href="https://github.com/iredmail/iRedMail/tree/master/update/ldap">here</a> to apply
+  all required changes.</li>
+<li>Here are all <a href="iredmail.releases.html">upgrade tutorials for iRedMail</a>.</li>
+</ul>
+<h2 id="mysqlmariadbpostgresql-migrate-mail-accounts">MySQL/MariaDB/PostgreSQL: Migrate mail accounts</h2>
+<p>All mail accounts are stored in database <code>vmail</code>.</p>
+<ul>
+<li>
+<p>If both old and new servers are running same iRedMail version, you can simply
+  export <code>vmail</code> database on old server, then import it on new server.</p>
+</li>
+<li>
+<p>If old server is running an old iRedMail version, there might be some changes
+  in SQL structure, please read all upgrade tutorials for the old iRedMail
+  release, then apply SQL structure related changes to make sure old server
+  has same SQL structure. After you have same SQL structure on both servers,
+  you can simply export <code>vmail</code> database on old server, then import it on new
+  server. Check <a href="iredmail.releases.html">upgrade tutorials for iRedMail</a>.</p>
+</li>
+</ul>
+<h3 id="mysqlmariadb-inside-freebsd-jail">MySQL/MariaDB inside FreeBSD Jail</h3>
+<p>If you run iRedMail server in a jailed FreeBSD system, restored SQL database
+on new jailed system may have privilege error like this:</p>
+<pre><code>ERROR 1449 (HY000): The user specified as a definer ('root'@'10.195.20.1') does not exist
+</code></pre>
+<p>iRedMail installer created SQL tables (or VIEWs, TRIGGERs) as <code>root@10.195.20.1</code>
+(<code>10.195.20.1</code> was private IP address of your old Jail system), but this
+address was gone on new jailed system. You must replace old IP address by the
+new one before restoring the SQL tables, otherwise, triggers might have to be
+re-created manualy later. For example,</p>
+<pre><code>perl -pi -e 's#`root`@`10.195.20.1`#`root`@`10.20.21.3`#g' vmail-2020-04-26-01:25:21.sql
+perl -pi -e 's#`root`@`10.195.20.1`#`root`@`10.20.21.3`#g' amavisd-2020-04-26-01:25:21.sql
+</code></pre>
+<p>Then import this modified SQL file instead.</p>
+<h2 id="migrate-mailboxes-maildir-format">Migrate mailboxes (Maildir format)</h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<ul>
+<li>Make sure the maildir path stored in SQL/LDAP matches the mailbox
+  path on file system, so that mail clients can find migrated mail messages.</li>
+<li>After migrated mailboxes, you may want to recalculate mailbox quota by
+  following our tutorial:
+  <a href="recalculate.mailbox.quota.html">Force Dovecot to recalculate mailbox quota</a></li>
+</ul>
+</div>
+<ul>
+<li>Copy all mailboxes (in Maildir format) to new iRedMail server with tools like <code>rsync</code>.</li>
+<li>
+<p>Set correct file owner and permission of mailboxes. Default owner is <code>vmail</code>,
+  group is <code>vmail</code>, permission is <code>0700</code>.</p>
+</li>
+<li>
+<p>With SQL backends, you can get full maildir path of user with below SQL command:</p>
+</li>
+</ul>
+<pre><code>mysql&gt; USE vmail;
+mysql&gt; SELECT CONCAT(storagebasedirectory, '/', storagenode, '/', maildir) FROM mailbox WHERE username='user@domain.com';
+</code></pre>
+<ul>
+<li>With OpenLDAP backend, full maildir path is stored in LDAP attribute
+  <code>homeDirectory</code> of mail user object. You can query with <code>ldapsearch</code> command:</li>
+</ul>
+<pre><code>ldapsearch -x -o ldif-wrap=no -D 'cn=Manager,dc=xx,dc=xx' -W -b 'o=domains,dc=xx,dc=xx' &quot;(mail=user@domain.com)&quot; homeDirectory
+</code></pre>
+<h2 id="migrate-sieve-rules">Migrate sieve rules</h2>
+<ul>
+<li>Global sieve rule is <code>/var/vmail/sieve/dovecot.sieve</code>.</li>
+<li>Per-user sieve rules are stored in user's own mailbox. For example: <code>/var/vmail/vmail1/example.com/z/h/b/zhb-2023.04.04.01.24.26/sieve</code>.</li>
+</ul>
+<h2 id="migrate-mlmmj-mailing-lists">Migrate (mlmmj) mailing lists</h2>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>mlmmj mailing list was introduced in iRedMail-0.9.8.</p>
+</div>
+<p>Mailing lists are stored in 2 places:</p>
+<ul>
+<li>Mailing list accounts are stored in SQL database (for iRedMail SQL backends)
+  or LDAP (for LDAP backends)</li>
+<li>Mailing list data:<ul>
+<li><code>/var/vmail/mlmmj</code>: it stores active mailing lists.</li>
+<li><code>/var/vmail/mlmmj-archive</code>: it stores removed mailing lists.</li>
+</ul>
+</li>
+</ul>
+<p>For mailing list accounts, they should be migrated while migrating mail
+accounts mentioned in steps above.</p>
+<p>For mailing list data, you can simply copy them to new server. After copied,
+the data must be owned by user/group <code>mlmmj:mlmmj</code> with permission <code>0700</code>.</p>
+<h2 id="migrate-roundcube-webmail-data">Migrate Roundcube webmail data</h2>
+<ul>
+<li>Export/import roundcube webmail database, and upgrade database to work with
+  new version of Roundcube.</li>
+</ul>
+<p>Reference: <a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">https://github.com/roundcube/roundcubemail/wiki/Upgrade</a></p>
+<h2 id="migrate-sogo-groupware-data">Migrate SOGo Groupware data</h2>
+<h3 id="solution-1-export-and-import-sql-database">Solution 1: Export and import SQL database</h3>
+<p>If you run same version of SOGo on old and new server, it's ok to migrate
+data by simply exporting the <code>sogo</code> SQL database and import to new server.</p>
+<p>For SQL backends, you need to re-create SQL table <code>sogo.users</code> after restored
+database:</p>
+<ul>
+<li>For MySQL, MariaDB backends:</li>
+</ul>
+<pre><code>GRANT SELECT ON vmail.mailbox TO sogo@&quot;127.0.0.1&quot;;
+CREATE VIEW sogo.users (
+        c_uid, c_name, c_password, c_cn, mail, domain,
+        c_webmail, c_calendar, c_activesync
+    ) AS SELECT
+            username, username, password, name, username, domain,
+            enablesogowebmail, enablesogocalendar, enablesogoactivesync
+        FROM vmail.mailbox WHERE enablesogo=1 AND active=1;
+</code></pre>
+<ul>
+<li>For PostgreSQL backend. Please switch to PostgreSQL daemon user <code>_postgres</code>
+  first, then run <code>psql -d vmail</code> to connect to <code>vmail</code> database (SOGo is
+  configured to query users from <code>vmail</code> database since iRedMail-1.6.0, so that
+  end users can change their own passwords):</li>
+</ul>
+<pre><code>-- create SQL view in vmail database.
+
+CREATE VIEW sogo_users AS
+     SELECT username AS c_uid,
+            username AS c_name,
+            password AS c_password,
+            name     AS c_cn,
+            username AS mail,
+            domain   AS domain,
+            enablesogowebmail     AS c_webmail,
+            enablesogocalendar    AS c_calendar,
+            enablesogoactivesync  AS c_activesync
+       FROM mailbox
+      WHERE enablesogo=1 AND active=1;
+
+-- allow end users to change their own passwords.
+GRANT SELECT,UPDATE ON mailbox TO sogo;
+GRANT SELECT,UPDATE ON sogo_users TO sogo;
+</code></pre>
+<h3 id="solution-2-backup-and-restore-data">Solution 2: Backup and restore data</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>It's strongly recommended to practice with a testing machine and verify
+the calendars, events and contacts after migrated.</p>
+</div>
+<p>iRedMail has daily cron job to backup SOGo data with script
+<code>/var/vmail/backup/backup_sogo.sh</code>, you should run it manually
+right before migration so that all recent data are exported.</p>
+<p>Backup copies are stored under <code>/var/vmail/backup/sogo/&lt;year&gt;/&lt;month&gt;/</code> by
+default.</p>
+<p>Copy the latest backup file to new server, then follow this tutorial to
+restore it: <a href="https://sogo.nu/support/faq/how-can-i-backuprestore-my-user-data.html">How can I backup/restore my user data?</a></p>
+<h2 id="migrate-amavisd-iredapd-iredadmin-databases">Migrate Amavisd, iRedAPD, iRedAdmin databases</h2>
+<p>Export those database on old server, then import them on new server.</p>
+<h2 id="migrate-dkim-keys">Migrate DKIM keys</h2>
+<p>Amavisd will read DKIM keys and sign outgoing emails. DKIM keys are stored
+under <code>/var/lib/dkim</code> by default, you can copy all keys under this directory to
+new server, and make sure they have correct file owner <code>amavis:amavis</code> and
+permission <code>0600</code>.</p>
+<p>If you prefer generating new DKIM keys on new server, don't forget to update
+DNS records for mail domain names.</p>
+<h2 id="post-migration">Post-migration</h2>
+<p>After migration, please recalculate mailbox quota by following this tutorial:</p>
+<ul>
+<li><a href="recalculate.mailbox.quota.html">Force Dovecot to recalculate mailbox quota</a></li>
+</ul>
+<h1 id="references">References</h1>
+<ul>
+<li><a href="password.hashes.html">Password hashes</a></li>
+<li><a href="reset.user.password.html">Reset user password</a></li>
+<li><a href="why.append.timestamp.in.maildir.path.html">Why append timestamp in maildir path</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

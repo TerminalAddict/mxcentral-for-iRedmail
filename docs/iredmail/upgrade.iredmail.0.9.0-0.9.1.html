@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 0.9.0 to 0.9.1</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-090-to-091">Upgrade iRedMail from 0.9.0 to 0.9.1</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#upgrade-iredmail-from-090-to-091">Upgrade iRedMail from 0.9.0 to 0.9.1</a><ul>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#general-all-backends-should-apply-these-steps">General (All backends should apply these steps)</a><ul>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#upgrade-roundcube-webmail-to-the-latest-stable-release">Upgrade Roundcube webmail to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#upgrade-iredapd-postfix-policy-server-to-the-latest-150">Upgrade iRedAPD (Postfix policy server) to the latest 1.5.0</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-return-receipt-response-rejected-by-iredapd-plugin-reject_null_sender">Fixed: return receipt response rejected by iRedAPD plugin reject_null_sender</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-amavisd-cannot-ban-zipped-exe-attachment-file">Fixed: Amavisd cannot ban zipped .exe attachment file.</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-amavisd-cannot-detect-exe-file-in-rar-compressed-attachment">Fixed: Amavisd cannot detect .exe file in rar compressed attachment.</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-cannot-run-php-script-under-web-document-root-with-nginx">Fixed: Cannot run PHP script under web document root with Nginx.</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-incorrect-log-file-and-ownergroup-in-logrotate-config-file-etclogrotatedpolicyd">Fixed: Incorrect log file and owner/group in logrotate config file: /etc/logrotate.d/policyd</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-incorrect-path-of-command-sogo-tool-on-openbsd">Fixed: Incorrect path of command sogo-tool on OpenBSD</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#optional-make-dovecot-subscribe-newly-created-folder-automatically">[OPTIONAL] Make Dovecot subscribe newly created folder automatically</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#optional-setup-fail2ban-to-monitor-password-failures-in-sogo-log-file">[OPTIONAL] Setup Fail2ban to monitor password failures in SOGo log file</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#optional-add-two-more-fail2ban-filter-regular-expressios-to-help-catch-spam">[OPTIONAL] Add two more Fail2ban filter regular expressios to help catch spam</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#openldap-backend-special">OpenLDAP backend special</a><ul>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#use-the-latest-ldap-schema-file-provided-by-iredmail">Use the latest LDAP schema file provided by iRedMail</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#restrict-mail-user-to-login-from-specified-ip-addresses-or-networks">Restrict mail user to login from specified IP addresses or networks</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-not-backup-sogo-database">Fixed: not backup SOGo database</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-drop-retired-column-in-amavisd-database-policyspam_modifies_subj">Fixed: drop retired column in Amavisd database: policy.spam_modifies_subj</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#optional-bypass-greylisting-for-some-big-isps">[OPTIONAL] Bypass greylisting for some big ISPs</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#mysqlmariadb-backend-special">MySQL/MariaDB backend special</a><ul>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#add-new-sql-column-in-vmail-database">Add new SQL column in vmail database</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#restrict-mail-user-to-login-from-specified-ip-addresses-or-networks-and-apply-service-restriction-while-acting-as-sasl-server">Restrict mail user to login from specified IP addresses or networks, and apply service restriction while acting as SASL server</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-userextensiondomaincom-doesnt-work-with-per-domain-catch-all">Fixed: user+extension@domain.com doesn't work with per-domain catch-all</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-not-backup-sogo-database_1">Fixed: not backup SOGo database</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-drop-retired-column-in-amavisd-database-policyspam_modifies_subj_1">Fixed: drop retired column in Amavisd database: policy.spam_modifies_subj</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#optional-bypass-greylisting-for-some-big-isps_1">[OPTIONAL] Bypass greylisting for some big ISPs</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#postgresql-backend-special">PostgreSQL backend special</a><ul>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#add-new-sql-column-in-vmail-database_1">Add new SQL column in vmail database</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#restrict-mail-user-to-login-from-specified-ip-addresses-or-networks-and-apply-service-restriction-while-acting-as-sasl-server_1">Restrict mail user to login from specified IP addresses or networks, and apply service restriction while acting as SASL server</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-userextensiondomaincom-doesnt-work-with-per-domain-catch-all_1">Fixed: user+extension@domain.com doesn't work with per-domain catch-all</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-not-backup-sogo-database_2">Fixed: not backup SOGo database</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#fixed-drop-retired-column-in-amavisd-database-policyspam_modifies_subj_2">Fixed: drop retired column in Amavisd database: policy.spam_modifies_subj</a></li>
+<li><a href="upgrade.iredmail.0.9.0-0.9.1.html#optional-bypass-greylisting-for-some-big-isps_2">[OPTIONAL] Bypass greylisting for some big ISPs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>2015-05-15: Initial public.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-steps">General (All backends should apply these steps)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code># File: /etc/iredmail-release
+
+0.9.1
+</code></pre>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release">Upgrade Roundcube webmail to the latest stable release</h3>
+<p>Additional notes before upgrading Roundcube webmail 1.1.0 (or later releases):</p>
+<ul>
+<li>for Debian/Ubuntu users, please install package <code>php-pear</code> and <code>php5-intl</code>,
+  enable <code>intl</code> module for PHP, then restart Apache service or <code>php5_fpm</code>
+  service (if you're running Nginx):</li>
+</ul>
+<pre><code># apt-get install php-pear php5-intl
+# php5enmod intl
+# service apache2 restart    # &lt;- OR: `service php5_fpm restart` if you're running Nginx
+</code></pre>
+<ul>
+<li>for OpenBSD users, please install package <code>php-intl</code>, then
+  restart <code>php_fpm</code> service:</li>
+</ul>
+<pre><code># pkg_add -r php-intl
+# /etc/rc.d/php_fpm restart
+</code></pre>
+<p>Please download the <code>Complete</code> edition (e.g. <code>roundcubemail-1.1.1-complete.tar.gz</code>)
+instead of <code>Dependent</code> edition (e.g. <code>roundcubemail-1.1.1.tar.gz</code>).</p>
+<p>After you have additional packages installed, please follow Roundcube official
+tutorial to upgrade Roundcube webmail to the latest stable release:
+<a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</p>
+<p>Notes:</p>
+<ul>
+<li>If you're going to update PHP to 5.6, you should add below settings in
+  Roundcube config file (<code>config/config.inc.php</code>) to avoid ssl certificate issue.
+  If you don't know the location of this config file, check our tutorial here:
+  <a href="file.locations.html#roundcube-webmail">Locations of configuration and log files of major components</a>.</li>
+</ul>
+<pre><code>// Required if you're running PHP 5.6
+$config['imap_conn_options'] = array(
+    'ssl' =&gt; array(
+        'verify_peer'  =&gt; false,
+        'verify_peer_name' =&gt; false,
+    ),
+);
+
+$config['smtp_conn_options'] = array(
+    'ssl' =&gt; array(
+        'verify_peer'      =&gt; false,
+        'verify_peer_name' =&gt; false,
+    ),
+);
+</code></pre>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-150">Upgrade iRedAPD (Postfix policy server) to the latest 1.5.0</h3>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<p>Detailed release notes are available here: <a href="iredapd.releases.html">iRedAPD release notes</a>.</p>
+<p>Note:</p>
+<p>iRedAPD-1.5.0 is able to log rejection and other non-DUNNO actions in iRedAdmin
+database, admin can view the log under menu <code>System -&gt; Admin Log</code> of iRedAdmin.
+If you want to log these actions, please add below new parameters in iRedAPD
+config file <code>/opt/iredapd/settings.py</code>:</p>
+<pre><code># Log reject (and other non-DUNNO) action in iRedAdmin SQL database
+log_action_in_db = True
+iredadmin_db_server = '127.0.0.1'
+iredadmin_db_port = '3306'
+iredadmin_db_name = 'iredadmin'
+iredadmin_db_user = 'iredadmin'
+iredadmin_db_password = 'password'
+</code></pre>
+<p>You can find SQL username/password of iRedAdmin database in iRedAdmin config
+file.</p>
+<h3 id="fixed-return-receipt-response-rejected-by-iredapd-plugin-reject_null_sender">Fixed: return receipt response rejected by iRedAPD plugin <code>reject_null_sender</code></h3>
+<p>Note: this is applicable if you want to keep iRedAPD plugin <code>reject_null_sender</code>
+but still able to send return receipt with Roundcube webmail.</p>
+<p>According to RFC2298, return receipt envelope sender address must be empty. If
+you have iRedAPD plugin <code>reject_null_sender</code> enabled, it will reject return
+receipt response. To particularly solve this issue, you can set below setting
+in Roundcube config file <code>config/config.inc.php</code>:</p>
+<ul>
+<li>on RHEL/CentOS/OpenBSD, it's <code>/var/www/roundcubemail/config/config.inc.php</code>.</li>
+<li>on Debian/Ubuntu, it's <code>/usr/share/apache2/roundcubemail/config/config.inc.php</code>.</li>
+<li>on FreeBSD, it's <code>/usr/local/www/roundcube/config/config.inc.php</code>.</li>
+</ul>
+<pre><code>$config['mdn_use_from'] = true;
+</code></pre>
+<p>Note: if other mail client applications don't set smtp authentication user as
+envelope sender of return receipt, same issue will occurs. You must disable
+iRedAPD plugin <code>reject_null_sender</code> in <code>/opt/iredapd/settings.py</code> to make all
+mail clients work.</p>
+<p>iRedAPD plugin <code>reject_null_sender</code> rejects message submitted by sasl
+authenticated user but with null sender in <code>From:</code> header (<code>from=&lt;&gt;</code> in Postfix
+log). If your user's password was cracked by spammer, spammer can use this
+account to bypass smtp authentication, but with a null sender in <code>From:</code>
+header, throttling won't be triggered.</p>
+<h3 id="fixed-amavisd-cannot-ban-zipped-exe-attachment-file">Fixed: Amavisd cannot ban zipped <code>.exe</code> attachment file.</h3>
+<p>Note: this is applicable to only RHEL/CentOS.</p>
+<p>Amavisd on some Linux/BSD distribution uses <code>$banned_namepath_re</code>
+instead of <code>$banned_filename_re</code> to check banned file types, but it
+(<code>$banned_namepath_re</code>) was not defined, so we define some blocked file
+types here.</p>
+<p>Please append below settings in Amavisd config file <code>/etc/amavisd/amavisd.conf</code>,
+before the last line (<code>1;  # insure a defined return</code>) in the same file:</p>
+<pre><code># Amavisd on some Linux/BSD distribution use \$banned_namepath_re
+# instead of \$banned_filename_re, so we define some blocked file
+# types here.
+#
+# Sample input for $banned_namepath_re:
+#
+#   P=p003\tL=1\tM=multipart/mixed\nP=p002\tL=1/2\tM=application/octet-stream\tT=dat\tN=my_docum.zip
+#
+# What it means:
+#   - T: type. e.g. zip archive.
+#   - M: MIME type. e.g. application/octet-stream.
+#   - N: suggested (MIME) name. e.g. my_docum.zip.
+
+$banned_namepath_re = new_RE(
+    [qr'T=(zip|rar|arc|arj|zoo|gz|bz2)(,|\t)'xmi =&gt; 'DISCARD'],     # Compressed file types
+    [qr'T=x-(msdownload|msdos-program|msmetafile|wmf)(,|\t)'xmi =&gt; 'DISCARD'],
+    [qr'T=(hta)(,|\t)'xmi =&gt; 'DISCARD'],
+
+    # Dangerous file types
+    [qr'T=(9|386|LeChiffre|aaa|abc|aepl|ani|aru|atm|aut|b64|bat|bhx|bkd|blf|bll|bmw|boo|bps|bqf|breaking_bad|buk|bup|bxz|cc|ccc|ce0|ceo|cfxxe|chm|cih|cla|class|cmd|com|cpl|crinf|crjoker|crypt|cryptolocker|cryptowall|ctbl|cxq|cyw|dbd|delf|dev|dlb|dli|dll|dllx|dom|drv|dx|dxz|dyv|dyz|ecc|exe|exe-ms|exe1|exe_renamed|exx|ezt|ezz|fag|fjl|fnr|fuj|good|gzquar|hlp|hlw|hqx|hsq|hts|iva|iws|jar|js|kcd|keybtc@inbox_com|let|lik|lkh|lnk|locky|lok|lol!|lpaq5|magic|mfu|micro|mim|mjg|mjz|mp3|nls|oar|ocx|osa|ozd|pcx|pgm|php2|php3|pid|pif|plc|pr|pzdc|qit|qrn|r5a|rhk|rna|rsc_tmp|s7p|scr|shs|ska|smm|smtmp|sop|spam|ssy|swf|sys|tko|tps|tsa|tti|ttt|txs|upa|uu|uue|uzy|vb|vba|vbe|vbs|vbx|vexe|vxd|vzr|wlpginstall|wmf|ws|wsc|wsf|wsh|wss|xdu|xir|xlm|xlv|xnt|xnxx|xtbl|xxe|xxx|xyz|zix|zvz|zzz)(,|\t)'xmi =&gt; 'DISCARD'],
+
+    # Dangerous file name extensions
+    [qr'N=.*\.(9|386|LeChiffre|aaa|abc|aepl|ani|aru|atm|aut|b64|bat|bhx|bkd|blf|bll|bmw|boo|bps|bqf|breaking_bad|buk|bup|bxz|cc|ccc|ce0|ceo|cfxxe|chm|cih|cla|class|cmd|com|cpl|crinf|crjoker|crypt|cryptolocker|cryptowall|ctbl|cxq|cyw|dbd|delf|dev|dlb|dli|dll|dllx|dom|drv|dx|dxz|dyv|dyz|ecc|exe|exe-ms|exe1|exe_renamed|exx|ezt|ezz|fag|fjl|fnr|fuj|good|gzquar|hlp|hlw|hqx|hsq|hts|iva|iws|jar|js|kcd|keybtc@inbox_com|let|lik|lkh|lnk|locky|lok|lol!|lpaq5|magic|mfu|micro|mim|mjg|mjz|mp3|nls|oar|ocx|osa|ozd|pcx|pgm|php2|php3|pid|pif|plc|pr|pzdc|qit|qrn|r5a|rhk|rna|rsc_tmp|s7p|scr|shs|ska|smm|smtmp|sop|spam|ssy|swf|sys|tko|tps|tsa|tti|ttt|txs|upa|uu|uue|uzy|vb|vba|vbe|vbs|vbx|vexe|vxd|vzr|wlpginstall|wmf|ws|wsc|wsf|wsh|wss|xdu|xir|xlm|xlv|xnt|xnxx|xtbl|xxe|xxx|xyz|zix|zvz|zzz)$'xmi =&gt; 'DISCARD'],
+);
+</code></pre>
+<p>Restarting Amavisd service is required.</p>
+<h3 id="fixed-amavisd-cannot-detect-exe-file-in-rar-compressed-attachment">Fixed: Amavisd cannot detect <code>.exe</code> file in rar compressed attachment.</h3>
+<p>Note: This fix is applicable to RHEL/CentOS, Debian and Ubuntu.</p>
+<ul>
+<li>On RHEL/CentOS, iRedMail doesn't install <code>unrar</code>.</li>
+<li>On Debian/Ubuntu, iRedMail installs package <code>unrar-free</code> as unarchiver to
+  uncompress <code>.rar</code> attachment, but Amavisd cannot correctly detect <code>.exe</code> file
+  in rar compressed file.</li>
+</ul>
+<p>Steps to fix this issue on RHEL/CentOS:</p>
+<pre><code># yum clean metadata
+# yum install unrar
+# service amavisd restart
+</code></pre>
+<hr />
+<p>Steps to fix this issue on Debian:</p>
+<ul>
+<li>Install package <code>unrar-free</code>, restart Amavisd service.</li>
+</ul>
+<pre><code># apt-get install unrar-free
+# service amavis restart
+</code></pre>
+<hr />
+<p>Steps to fix this issue on Ubuntu:</p>
+<ul>
+<li>Make sure you have <code>multiverse</code> section enabled in <code>/etc/apt/sources.list</code>.
+  for example:</li>
+</ul>
+<pre><code># For Ubuntu 14.04 LTS
+deb http://[ubuntu_mirror_site]/ubuntu/ trusty main restricted universe multiverse
+deb http://[ubuntu_mirror_site]/ubuntu/ trusty-updates main restricted universe multiverse
+
+# For Ubuntu 15.04
+deb http://[ubuntu_mirror_site]/ubuntu/ vivid main restricted universe multiverse
+deb http://[ubuntu_mirror_site]/ubuntu/ vivid-updates main restricted universe multiverse
+</code></pre>
+<ul>
+<li>Delete package <code>unrar-free</code>, install package <code>unrar</code>.</li>
+</ul>
+<pre><code># apt-get remove --purge unrar-free
+# apt-get install unrar
+</code></pre>
+<ul>
+<li>Add below setting in Amavisd config file <code>/etc/amavis/conf.d/50-user</code> to ask
+  Amavisd to use <code>unrar-nonfree</code> as unarchiver:</li>
+</ul>
+<pre><code>$unrar = ['unrar-nonfree'];
+</code></pre>
+<ul>
+<li>Restart Amavisd service:</li>
+</ul>
+<pre><code># service amavis restart
+</code></pre>
+<h3 id="fixed-cannot-run-php-script-under-web-document-root-with-nginx">Fixed: Cannot run PHP script under web document root with Nginx.</h3>
+<p>With previous release of iRedMail, Nginx won't run PHP scripts under
+sub-directories of web document root, this step will fix it.</p>
+<ul>
+<li>Open Nginx config file <code>/etc/nginx/conf.d/default.conf</code> (on Linux/OpenBSD)
+or <code>/usr/local/etc/nginx/conf.d/default.conf</code>, add one more setting in
+configuration block <code>location ~ \.php$ {}</code> like below:</li>
+</ul>
+<pre><code>...
+root /var/www/html;
+...
+location ~ \.php$ {
+    ...
+    fastcgi_param SCRIPT_FILENAME /var/www/html$fastcgi_script_name;    # &lt;- Add this line
+}
+</code></pre>
+<ul>
+<li>Save your changes and restart Nginx service.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>There're two <code>location ~ \.php$ {}</code> blocks, please update both of them.</li>
+<li>
+<p>You must replace <code>/var/www/html</code> in above sample code to the value of <code>root</code>
+  setting defined in same config file.</p>
+<ul>
+<li>on RHEL/CentOS, it's <code>/var/www/html</code>.</li>
+<li>on Debian/Ubuntu, it's <code>/var/www</code>.</li>
+<li>on FreeBSD, it's <code>/usr/local/www/apache22/data</code>.
+  Note: if you're running Apache-2.4, the directory name should be
+  <code>apache24</code>, not <code>apache22</code>.</li>
+<li>on OpenBSD, it's <code>/var/www/htdocs</code>.</li>
+</ul>
+</li>
+</ul>
+<h3 id="fixed-incorrect-log-file-and-ownergroup-in-logrotate-config-file-etclogrotatedpolicyd">Fixed: Incorrect log file and owner/group in logrotate config file: <code>/etc/logrotate.d/policyd</code></h3>
+<p>Note: This is applicable to Linux and FreeBSD, we don't have Cluebringer
+installed on OpenBSD.</p>
+<p>iRedMail-0.9.0 generates logrotate config file <code>/etc/logrotate.d/policyd</code> with
+incorrect log file name and owner/group.</p>
+<p>The original setting looks like below:</p>
+<pre><code>/var/log/amavisd.log {
+    ...
+    create 0600 amavis amavis
+    ...
+}
+</code></pre>
+<p>Please change the log file name and owner/group to below settings:</p>
+<pre><code>/var/log/cbpolicyd.log {
+    ...
+    create 0600 cluebringer cluebringer
+    ...
+}
+</code></pre>
+<p>Note: on FreeBSD, the owner/group name is <code>policyd</code>, not <code>cluebringer</code>.</p>
+<h3 id="fixed-incorrect-path-of-command-sogo-tool-on-openbsd">Fixed: Incorrect path of command <code>sogo-tool</code> on OpenBSD</h3>
+<p>Note: this step is applicable to only OpenBSD.</p>
+<p>Please check user <code>_sogo</code>'s cron job, make sure path to <code>sogo-tool</code> command is
+<code>/usr/local/sbin/sogo-tool</code>:</p>
+<pre><code># crontab -l -u _sogo
+</code></pre>
+<p>If it's not <code>/usr/local/sbin/sogo-tool</code>, please edit its cron job with below
+command and fix it:</p>
+<pre><code># crontab -e -u _sogo
+</code></pre>
+<h3 id="optional-make-dovecot-subscribe-newly-created-folder-automatically">[<strong>OPTIONAL</strong>] Make Dovecot subscribe newly created folder automatically</h3>
+<p>With default iRedMail setting, Dovecot will create folder automatically (for
+example, send email to <code>user+extension@domain.com</code> will create folder
+<code>extension</code> in <code>user@domain.com</code>'s mailbox), but not subscribe it. Below change
+will make it subscribe to new folder automatically.</p>
+<ul>
+<li>Open Dovecot config file <code>/etc/dovecot/dovecot.conf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/dovecot/dovecot.conf</code> (FreeBSD), find block <code>protocol lda {}</code>
+  like below:</li>
+</ul>
+<pre><code>protocol lda {
+    ...
+}
+</code></pre>
+<ul>
+<li>Add one more setting in this block:</li>
+</ul>
+<pre><code>protocol lda {
+    ...
+    lda_mailbox_autosubscribe = yes
+}
+</code></pre>
+<ul>
+<li>Restarting Dovecot service.</li>
+</ul>
+<h3 id="optional-setup-fail2ban-to-monitor-password-failures-in-sogo-log-file">[<strong>OPTIONAL</strong>] Setup Fail2ban to monitor password failures in SOGo log file</h3>
+<p>To improve server security, we'd better block clients which have too many
+failed login attempts from SOGo.</p>
+<p>Please append below lines in Fail2ban main config file <code>/etc/fail2ban/jail.local</code>:</p>
+<pre><code>[SOGo]
+enabled     = true
+filter      = sogo-auth
+port        = http, https
+# without proxy this would be:
+# port    = 20000
+action      = iptables-multiport[name=SOGo, port=&quot;http,https&quot;, protocol=tcp]
+logpath     = /var/log/sogo/sogo.log
+</code></pre>
+<p>Restarting Fail2ban service is required.</p>
+<h3 id="optional-add-two-more-fail2ban-filter-regular-expressios-to-help-catch-spam">[OPTIONAL] Add two more Fail2ban filter regular expressios to help catch spam</h3>
+<p>We have two new Fail2ban filters to help catch spam:</p>
+<ol>
+<li>first one will scan HELO rejections in Postfix log file.</li>
+<li>second one will scan aborded pop3/imap login in Dovecot log file.</li>
+</ol>
+<p>Steps:</p>
+<ol>
+<li>Open file <code>/etc/fail2ban/filter.d/postfix.iredmail.conf</code> or
+<code>/usr/local/etc/fail2ban/filter.d/postfix.iredmail.conf</code> (on FreeBSD), append
+below line under <code>[Definition]</code> section:</li>
+</ol>
+<pre><code>            reject: RCPT from (.*)\[&lt;HOST&gt;\]: 504 5.5.2 (.*) Helo command rejected: need fully-qualified hostname
+</code></pre>
+<p>After modification, the whole content is:</p>
+<pre><code>[Definition]
+failregex = \[&lt;HOST&gt;\]: SASL (PLAIN|LOGIN) authentication failed
+            lost connection after AUTH from (.*)\[&lt;HOST&gt;\]
+            reject: RCPT from (.*)\[&lt;HOST&gt;\]: 550 5.1.1
+            reject: RCPT from (.*)\[&lt;HOST&gt;\]: 450 4.7.1
+            reject: RCPT from (.*)\[&lt;HOST&gt;\]: 554 5.7.1
+            reject: RCPT from (.*)\[&lt;HOST&gt;\]: 504 5.5.2 (.*) Helo command rejected: need fully-qualified hostname
+ignoreregex =
+</code></pre>
+<ol>
+<li>Open file <code>/etc/fail2ban/filter.d/dovecot.iredmail.conf</code> or
+<code>/usr/local/etc/fail2ban/filter.d/dovecot.iredmail.conf</code> (on FreeBSD), replace
+its content by below text:</li>
+</ol>
+<pre><code>[Definition]
+failregex = Authentication failure.* rip=&lt;HOST&gt;
+            Aborted login \(no auth attempts in .* rip=&lt;HOST&gt;
+            Aborted login \(auth failed.* rip=&lt;HOST&gt;
+            Aborted login \(tried to use disallowed .* rip=&lt;HOST&gt;
+            Aborted login \(tried to use disabled .* rip=&lt;HOST&gt;
+
+ignoreregex =
+</code></pre>
+<p>Restarting Fail2ban service is required.</p>
+<h2 id="openldap-backend-special">OpenLDAP backend special</h2>
+<h3 id="use-the-latest-ldap-schema-file-provided-by-iredmail">Use the latest LDAP schema file provided by iRedMail</h3>
+<p>We have a new attribute <code>allowNets</code> for mail user in the latest LDAP schema
+file. With this new attribute, you can restrict mail users to login from
+specified IP addresses or networks, multiple IP/nets must be separated by
+comma.</p>
+<p>Steps to use the latest LDAP schema file are:</p>
+<ul>
+<li>Download the newest iRedMail ldap schema file</li>
+<li>Copy old ldap schema file as a backup copy</li>
+<li>Replace the old one</li>
+<li>Restart OpenLDAP service.</li>
+</ul>
+<p>Here we go:</p>
+<ul>
+<li>On RHEL/CentOS, OpenBSD:</li>
+</ul>
+<pre><code># cd /tmp
+# wget https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+# cd /etc/openldap/schema/
+# cp iredmail.schema iredmail.schema.bak
+
+# cp -f /tmp/iredmail.schema /etc/openldap/schema/
+# /etc/init.d/slapd restart
+</code></pre>
+<ul>
+<li>On Debian/Ubuntu:</li>
+</ul>
+<pre><code># cd /tmp
+# wget https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+# cd /etc/ldap/schema/
+# cp iredmail.schema iredmail.schema.bak
+
+# cp -f /tmp/iredmail.schema /etc/ldap/schema/
+# /etc/init.d/slapd restart
+</code></pre>
+<ul>
+<li>On FreeBSD:</li>
+</ul>
+<pre><code># cd /tmp
+# wget https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+# cd /usr/local/etc/openldap/schema/
+# cp iredmail.schema iredmail.schema.bak
+
+# cp -f /tmp/iredmail.schema /usr/local/etc/openldap/schema/
+# service slapd restart
+</code></pre>
+<h3 id="restrict-mail-user-to-login-from-specified-ip-addresses-or-networks">Restrict mail user to login from specified IP addresses or networks</h3>
+<p>With the latest LDAP schema file, it's able to restrict mail users to login
+from specified IP/networks.</p>
+<p>Open Dovecot config file <code>/etc/dovecot/dovecot-ldap.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot-ldap.conf</code> (FreeBSD), append
+<code>allowNets=allow_nets</code> in parameter <code>pass_attrs</code>. The final setting should be:</p>
+<pre><code>pass_attrs      = mail=user,userPassword=password,allowNets=allow_nets
+</code></pre>
+<p>Restarting Dovecot service is required.</p>
+<blockquote>
+<p>Sample usage: allow user <code>user@domain.com</code> to login from IP <code>172.16.244.1</code>
+and network <code>192.168.1.0/24</code>:
+</p>
+</blockquote>
+<pre><code>dn: mail=user@domain.com,ou=Users,domainName=domain.com,o=domains,dc=xx,dc=xx
+objectClass: mailUser
+mail: user@domain.com
+allowNets: 192.168.1.10,192.168.1.0/24
+...
+</code></pre>
+<blockquote>
+<p>To remove this restriction, just remove attribute <code>allowNets</code> for this user.</p>
+</blockquote>
+<h3 id="fixed-not-backup-sogo-database">Fixed: not backup SOGo database</h3>
+<p>Note: this step is not applicable if you don't use SOGo groupware.</p>
+<p>Open backup script <code>/var/vmail/backup/backup_mysql.sh</code>, append SOGo SQL
+database name in variable <code>DATABASES=</code>. For example:</p>
+<pre><code>DATABASES='... sogo'
+</code></pre>
+<p>Save your change and that's all.</p>
+<h3 id="fixed-drop-retired-column-in-amavisd-database-policyspam_modifies_subj">Fixed: drop retired column in Amavisd database: <code>policy.spam_modifies_subj</code></h3>
+<p>Note: This is applicable to Amavisd-new-2.7.0 and later releases.</p>
+<p>Amavisd drops column <code>policy.spam_modifies_subj</code> since amavisd-new-2.7.0
+release, we'd better remove this column.</p>
+<p>Login to MySQL server as root user, then execute below SQL commands to drop it:</p>
+<pre><code>mysql&gt; USE amavisd;
+mysql&gt; ALTER TABLE policy DROP COLUMN spam_modifies_subj;
+</code></pre>
+<h3 id="optional-bypass-greylisting-for-some-big-isps">[<strong>OPTIONAL</strong>] Bypass greylisting for some big ISPs</h3>
+<p>ISPs' mail servers send out spams, but also normal business mails. Applying
+greylisting on them is helpless.</p>
+<ul>
+<li>Download SQL template file:</li>
+</ul>
+<pre><code># cd /tmp
+# wget https://github.com/iredmail/iRedMail/raw/fd52316fc12651768c69671ddcfbafc211cd4689/iRedMail/samples/cluebringer/greylisting-whitelist.sql
+</code></pre>
+<ul>
+<li>Login to MySQL database and import this file:</li>
+</ul>
+<pre><code>$ mysql -uroot -p
+mysql&gt; USE cluebringer;
+mysql&gt; SOURCE /tmp/greylisting-whitelist.sql;
+</code></pre>
+<p>That's all.</p>
+<h2 id="mysqlmariadb-backend-special">MySQL/MariaDB backend special</h2>
+<h3 id="add-new-sql-column-in-vmail-database">Add new SQL column in <code>vmail</code> database</h3>
+<p>We have a new SQL column <code>mailbox.allow_nets</code> in <code>vmail</code> database, it's used
+to restrict mail users to login from specified IP addresses or networks,
+multiple IP/nets must be separated by comma.</p>
+<p>Connect to SQL server as MySQL root user, create new column:</p>
+<pre><code>$ mysql -uroot -p
+mysql&gt; USE vmail;
+mysql&gt; ALTER TABLE mailbox ADD COLUMN `allow_nets` TEXT DEFAULT NULL;
+</code></pre>
+<h3 id="restrict-mail-user-to-login-from-specified-ip-addresses-or-networks-and-apply-service-restriction-while-acting-as-sasl-server">Restrict mail user to login from specified IP addresses or networks, and apply service restriction while acting as SASL server</h3>
+<ul>
+<li>
+<p>With new SQL column <code>mailbox.allow_nets</code>, it's able to restrict mail users to
+  login from specified IP/networks. We have sample usage below.</p>
+</li>
+<li>
+<p>With new service restriction, it's able to enable or disable smtp service for
+  mail users.</p>
+</li>
+</ul>
+<p>Open Dovecot config file <code>/etc/dovecot/dovecot-mysql.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot-mysql.conf</code> (FreeBSD), then:</p>
+<ul>
+<li>append <code>allow_nets</code> in parameter <code>password_query</code></li>
+<li>append <code>AND enable%Ls%Lc=1</code> in <code>WHERE</code> statement</li>
+</ul>
+<p>The final setting should be:</p>
+<pre><code>password_query = SELECT password, allow_nets FROM mailbox WHERE username='%u' AND enable%Ls%Lc=1 AND active='1'
+</code></pre>
+<p>Restarting Dovecot service is required.</p>
+<blockquote>
+<p>Sample usage: allow user <code>user@domain.com</code> to login from IP <code>172.16.244.1</code>
+and network <code>192.168.1.0/24</code>:
+</p>
+</blockquote>
+<pre><code>sql&gt; USE vmail;
+sql&gt; UPDATE mailbox SET allow_nets='172.16.244.1,192.168.1.0/24' WHERE username='user@domain.com`;
+</code></pre>
+<blockquote>
+<p>To remove this restriction, just set <code>mailbox.allow_nets</code> to <code>NULL</code>, not empty string.</p>
+</blockquote>
+<h3 id="fixed-userextensiondomaincom-doesnt-work-with-per-domain-catch-all">Fixed: user+extension@domain.com doesn't work with per-domain catch-all</h3>
+<p>With iRedMail-0.9.0 and earlier versions, if you have per-domain catch-all
+enabled, email sent to <code>user+extension@domain.com</code> will be delivered to
+catch-all address instead of <code>user@domain.com</code>. Below steps fix this issue.</p>
+<ul>
+<li>Open file <code>/etc/postfix/mysql/catchall_maps.cf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/postfix/mysql/catchall_maps.cf</code> (FreeBSD), find below line:</li>
+</ul>
+<pre><code>query = ... WHERE alias.address='%d' AND alias.address=domain.domain ...
+</code></pre>
+<ul>
+<li>Append one more statement after <code>alias.address='%d'</code>, the final setting
+  should be:</li>
+</ul>
+<pre><code>query = ... WHERE alias.address='%d' AND '%u' NOT LIKE '%%+%%' AND alias.address=domain.domain ...
+</code></pre>
+<ul>
+<li>Save your change and restart Postfix service.</li>
+</ul>
+<h3 id="fixed-not-backup-sogo-database_1">Fixed: not backup SOGo database</h3>
+<p>Note: this step is not applicable if you don't use SOGo groupware.</p>
+<p>Open backup script <code>/var/vmail/backup/backup_mysql.sh</code>, append SOGo SQL
+database name in variable <code>DATABASES=</code>. For example:</p>
+<pre><code>DATABASES='... sogo'
+</code></pre>
+<p>Save your change and that's all.</p>
+<h3 id="fixed-drop-retired-column-in-amavisd-database-policyspam_modifies_subj_1">Fixed: drop retired column in Amavisd database: <code>policy.spam_modifies_subj</code></h3>
+<p>Note: This is applicable to Amavisd-new-2.7.0 and later releases.</p>
+<p>Amavisd drops column <code>policy.spam_modifies_subj</code> since amavisd-new-2.7.0
+release, we'd better remove this column.</p>
+<p>Login to MySQL server as root user, then execute below SQL commands to drop it:</p>
+<pre><code>mysql&gt; USE amavisd;
+mysql&gt; ALTER TABLE policy DROP COLUMN spam_modifies_subj;
+</code></pre>
+<h3 id="optional-bypass-greylisting-for-some-big-isps_1">[<strong>OPTIONAL</strong>] Bypass greylisting for some big ISPs</h3>
+<p>ISPs' mail servers send out spams, but also normal business mails. Applying
+greylisting on them is helpless.</p>
+<ul>
+<li>Download SQL template file:</li>
+</ul>
+<pre><code># cd /tmp
+# wget https://github.com/iredmail/iRedMail/raw/fd52316fc12651768c69671ddcfbafc211cd4689/iRedMail/samples/cluebringer/greylisting-whitelist.sql
+</code></pre>
+<ul>
+<li>Login to MySQL database and import this file:</li>
+</ul>
+<pre><code>$ mysql -uroot -p
+mysql&gt; USE cluebringer;
+mysql&gt; SOURCE /tmp/greylisting-whitelist.sql;
+</code></pre>
+<p>That's all.</p>
+<h2 id="postgresql-backend-special">PostgreSQL backend special</h2>
+<h3 id="add-new-sql-column-in-vmail-database_1">Add new SQL column in <code>vmail</code> database</h3>
+<p>We have a new SQL column <code>mailbox.allow_nets</code> in <code>vmail</code> database, it's used
+to restrict mail users to login from specified IP addresses or networks,
+multiple IP/nets must be separated by comma.</p>
+<p>Now connect to PostgreSQL server as admin user, create new column:</p>
+<pre><code># su - postgres
+$ psql -d vmail
+sql&gt; ALTER TABLE mailbox ADD COLUMN allow_nets TEXT DEFAULT NULL;
+</code></pre>
+<h3 id="restrict-mail-user-to-login-from-specified-ip-addresses-or-networks-and-apply-service-restriction-while-acting-as-sasl-server_1">Restrict mail user to login from specified IP addresses or networks, and apply service restriction while acting as SASL server</h3>
+<ul>
+<li>
+<p>With new SQL column <code>mailbox.allow_nets</code>, it's able to restrict mail users to
+  login from specified IP/networks. We have sample usage below.</p>
+</li>
+<li>
+<p>With new service restriction, it's able to enable or disable smtp service for
+  mail users.</p>
+</li>
+</ul>
+<p>Open Dovecot config file <code>/etc/dovecot/dovecot-pgsql.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot-pgsql.conf</code> (FreeBSD), then:</p>
+<ul>
+<li>append <code>allow_nets</code> in parameter <code>password_query</code></li>
+<li>append <code>AND enable%Ls%Lc=1</code> in <code>WHERE</code> statement</li>
+</ul>
+<p>The final setting should be:</p>
+<pre><code>password_query = SELECT password, allow_nets FROM mailbox WHERE username='%u' AND enable%Ls%Lc=1 AND active='1'
+</code></pre>
+<p>Restarting Dovecot service is required.</p>
+<blockquote>
+<p>Sample usage: allow user <code>user@domain.com</code> to login from IP <code>172.16.244.1</code>
+and network <code>192.168.1.0/24</code>:
+</p>
+</blockquote>
+<pre><code>sql&gt; \c vmail;
+sql&gt; UPDATE mailbox SET allow_nets='172.16.244.1,192.168.1.0/24' WHERE username='user@domain.com`;
+</code></pre>
+<blockquote>
+<p>To remove this restriction, just set <code>mailbox.allow_nets</code> to <code>NULL</code>, not empty string.</p>
+</blockquote>
+<h3 id="fixed-userextensiondomaincom-doesnt-work-with-per-domain-catch-all_1">Fixed: user+extension@domain.com doesn't work with per-domain catch-all</h3>
+<p>With iRedMail-0.9.0 and earlier versions, if you have per-domain catch-all
+enabled, email sent to <code>user+extension@domain.com</code> will be delivered to
+catch-all address instead of <code>user@domain.com</code>. Below steps fix this issue.</p>
+<ul>
+<li>Open file <code>/etc/postfix/pgsql/catchall_maps.cf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/postfix/pgsql/catchall_maps.cf</code> (FreeBSD), find below line:</li>
+</ul>
+<pre><code>query = ... WHERE alias.address='%d' AND alias.address=domain.domain ...
+</code></pre>
+<ul>
+<li>Append one more statement after <code>alias.address='%d'</code>, the final setting
+  should be:</li>
+</ul>
+<pre><code>query = ... WHERE alias.address='%d' AND '%u' NOT LIKE '%%+%%' AND alias.address=domain.domain ...
+</code></pre>
+<ul>
+<li>Save your change and restart Postfix service.</li>
+</ul>
+<h3 id="fixed-not-backup-sogo-database_2">Fixed: not backup SOGo database</h3>
+<p>Note: this step is not applicable if you don't use SOGo groupware.</p>
+<p>Open backup script <code>/var/vmail/backup/backup_mysql.sh</code>, append SOGo SQL
+database name in variable <code>DATABASES=</code>. For example:</p>
+<pre><code>DATABASES='... sogo'
+</code></pre>
+<p>Save your change and that's all.</p>
+<h3 id="fixed-drop-retired-column-in-amavisd-database-policyspam_modifies_subj_2">Fixed: drop retired column in Amavisd database: <code>policy.spam_modifies_subj</code></h3>
+<p>Note: This is applicable to Amavisd-new-2.7.0 and later releases.</p>
+<p>Amavisd drops column <code>policy.spam_modifies_subj</code> since amavisd-new-2.7.0
+release, we'd better remove this column.</p>
+<p>Login to PostgreSQL server as admin user, then execute below SQL commands to drop it:</p>
+<pre><code>sql&gt; \c amavisd;
+sql&gt; ALTER TABLE policy DROP COLUMN spam_modifies_subj;
+</code></pre>
+<h3 id="optional-bypass-greylisting-for-some-big-isps_2">[<strong>OPTIONAL</strong>] Bypass greylisting for some big ISPs</h3>
+<p>ISPs' mail servers send out spams, but also normal business mails. Applying
+greylisting on them is helpless.</p>
+<ul>
+<li>Download SQL template file:</li>
+</ul>
+<pre><code># cd /tmp
+# wget https://github.com/iredmail/iRedMail/raw/fd52316fc12651768c69671ddcfbafc211cd4689/iRedMail/samples/cluebringer/greylisting-whitelist.sql
+</code></pre>
+<ul>
+<li>
+<p>Switch to PostgreSQL daemon user, then execute SQL commands to import it:</p>
+<ul>
+<li>On Linux, PostgreSQL daemon user is <code>postgres</code>.</li>
+<li>On FreeBSD, PostgreSQL daemon user is <code>pgsql</code>.</li>
+<li>On OpenBSD, PostgreSQL daemon user is <code>_postgresql</code>.</li>
+</ul>
+</li>
+</ul>
+<pre><code># su - postgres
+$ psql -d cluebringer
+sql&gt; \i /tmp/greylisting-whitelist.sql;
+</code></pre>
+<p>That's all.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

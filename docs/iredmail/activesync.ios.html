@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Exchange ActiveSync: Setup iOS devices</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="exchange-activesync-setup-ios-devices">Exchange ActiveSync: Setup iOS devices</h1>
+<div class="admonition note">
+<p class="admonition-title">Important Notes</p>
+<ul>
+<li>SOGo provides <strong>EAS (Exchange ActiveSync)</strong> support, but not <strong>EWS
+  (Exchange Web Service)</strong>.</li>
+<li><strong>Outlook</strong> 2013, 2016 for Windows works well with EAS.</li>
+<li>Mainstream <strong>mobile devices</strong> (iOS, Android, BlackBerry 10) work well with
+  EAS, they can sync mails, calendars, contacts, tasks.</li>
+<li>Apple Mail.app, and Outlook for Mac support EWS. But not EAS.</li>
+<li>Outlook 2010 for Windows supports MAPI.</li>
+</ul>
+<p>iRedMail doesn't integrate <a href="http://www.openchange.org">OpenChange</a> and
+<a href="http://www.samba.org">Samba4</a> for native MAPI support.</p>
+</div>
+<h2 id="requirements">Requirements</h2>
+<ul>
+<li>iRedMail-0.9.0 or later releases is required.</li>
+<li>You must choose to install SOGo groupware during iRedMail installation.</li>
+</ul>
+<h2 id="step-by-step-configuration">Step-by-step configuration</h2>
+<p>1: Open application <code>Settings</code> on home screen:</p>
+<p><img alt="" src="images/sogo/ios.settings.png" /></p>
+<p>2: Click <code>Mails , Contacts, Calendars</code>:</p>
+<p><img alt="" src="images/sogo/ios.settings.accounts.png" /></p>
+<p>3: Click <code>Add Account</code>:</p>
+<p><img alt="" src="images/sogo/ios.settings.accounts.add.png" /></p>
+<p>4: Choose <code>Exchange</code>.</p>
+<p><img alt="" src="images/sogo/ios.settings.accounts.add.exchange.png" /></p>
+<p>5: Fill up the form with your server address and email account credential</p>
+<ul>
+<li>Email: <code>your full email address</code></li>
+<li>Password: <code>password of your email account</code></li>
+<li>Description: <code>you can type anything here</code></li>
+</ul>
+<p><img alt="" src="images/sogo/ios.exchange.1.png" /></p>
+<p>6: If it cannot auto discover server settings, you should fill up the form
+   with server address and username.</p>
+<ul>
+<li>Server: <code>your server name or IP address</code></li>
+<li>Username: <code>your full email address</code></li>
+</ul>
+<p><img alt="" src="images/sogo/ios.exchange.2.png" /></p>
+<p>7: Choose items you want to sync to this mobile device:</p>
+<p><img alt="" src="images/sogo/ios.exchange.sync.items.png" /></p>
+<p>That's all.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

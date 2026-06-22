@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>SQL: User mail forwarding</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="sql-user-mail-forwarding">SQL: User mail forwarding</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="sql.user.mail.forwarding.html#sql-user-mail-forwarding">SQL: User mail forwarding</a><ul>
+<li><a href="sql.user.mail.forwarding.html#set-mail-forwarding-with-iredadmin-pro">Set mail forwarding with iRedAdmin-Pro</a></li>
+<li><a href="sql.user.mail.forwarding.html#set-mail-forwarding-with-sql-command-line">Set mail forwarding with SQL command line</a></li>
+<li><a href="sql.user.mail.forwarding.html#related-tutorial">Related tutorial</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>This document is applicable to iRedMail-0.9.7 and later releases.</li>
+<li>Here's <a href="sql.user.mail.forwarding-20170701.html">doc for iRedMail-0.9.6 and earlier releases</a>.</li>
+</ul>
+</div>
+<h2 id="set-mail-forwarding-with-iredadmin-pro">Set mail forwarding with iRedAdmin-Pro</h2>
+<p>With iRedAdmin-Pro, you can manage mail forwarding addresses in user
+profile page, under tab <code>Forwarding</code>.</p>
+<p>Screenshot:</p>
+<p><img alt="" src="images/iredadmin/user_profile_mail_forwarding.png" width="1000px" /></p>
+<h2 id="set-mail-forwarding-with-sql-command-line">Set mail forwarding with SQL command line</h2>
+<p>Let's say you have an <strong>existing</strong> mail user <code>user@domain.com</code>, and you want to
+forward all received emails to another address <code>forward@example.com</code>,
+to achieve this, you can login to SQL server and update <code>vmail</code> database like
+below:</p>
+<pre><code>USE vmail;
+INSERT INTO forwardings (address,
+                         forwarding,
+                         domain,
+                         dest_domain,
+                         is_forwarding,
+                         active)
+                 VALUES ('user@domain.com',
+                         'forward@example.com',
+                         'domain.com',
+                         'example.com',
+                         1,
+                         1);
+</code></pre>
+<p>If you want to forward email to multiple addresses, please create more records
+like above:</p>
+<pre><code>USE vmail;
+
+-- Forwarding to address 'forward-2@example.com'
+INSERT INTO forwardings (address,
+                         forwarding,
+                         domain,
+                         dest_domain,
+                         is_forwarding,
+                         active)
+                 VALUES ('user@domain.com',
+                         'forward-2@example.com',
+                         'domain.com',
+                         'example.com',
+                         1,
+                         1);
+
+-- Forwarding to address 'forward-3@example.com'
+INSERT INTO forwardings (address,
+                         forwarding,
+                         domain,
+                         dest_domain,
+                         is_forwarding,
+                         active)
+                 VALUES ('user@domain.com',
+                         'forward-3@example.com',
+                         'domain.com',
+                         'example.com',
+                         1,
+                         1);
+</code></pre>
+<p>To save a copy of forwarded email in mailbox, please add your own email address
+as a forwarding destination like below:</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>This SQL record exists by default, but it's a good idea to make sure it
+exists. If it exists, you will get error like <code>ERROR 1062
+(23000): Duplicate entry 'user@domain.com-user@domain.com' for key
+'address'</code>, don't panic.</p>
+</div>
+<pre><code>INSERT INTO forwardings (address,
+                         forwarding,
+                         domain,
+                         dest_domain,
+                         is_forwarding,
+                         active)
+                 VALUES ('user@domain.com',
+                         'user@domain.com',
+                         'domain.com',
+                         'domain.com',
+                         1,
+                         1);
+</code></pre>
+<h2 id="related-tutorial">Related tutorial</h2>
+<ul>
+<li><a href="ldap.user.mail.forwarding.html">LDAP: user mail forwarding</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

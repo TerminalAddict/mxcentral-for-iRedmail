@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Ignore Trash folder in mailbox quota</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="ignore.trash.folder.in.quota-zh_CN.html">简体中文</a> /</p>
+</div>
+<h1 id="ignore-trash-folder-in-mailbox-quota">Ignore Trash folder in mailbox quota</h1>
+<p>Per-user mailbox quota rule is defined in Dovecot, in one of below files:</p>
+<ul>
+<li><code>/etc/dovecot/dovecot-mysql.conf</code>: MySQL backend</li>
+<li><code>/etc/dovecot/dovecot-pgsql.conf</code>: PostgreSQL backend</li>
+</ul>
+<p>If no per-user quota rules found, Dovecot will use <code>quota_rule[X]</code> defined in
+<code>/etc/dovecot/dovecot.conf</code>. For example:</p>
+<pre><code># File: /etc/dovecot/dovecot.conf
+
+plugin {
+
+    quota = dict:user::proxy::quotadict
+    quota_rule = *:storage=1G
+    #quota_rule2 = *:messages=0
+    #quota_rule3 = Trash:storage=1G
+    #quota_rule4 = Junk:ignore
+
+    ...
+}
+</code></pre>
+<p>So, if you want to ignore quota of <code>Trash</code> folder, you can add new quota_rule
+in either <code>/etc/dovecot/dovecot.conf</code> or <code>/etc/dovecot/dovecot-{mysql,pgsql,ldap}.conf</code>.</p>
+<ul>
+<li>Sample setting #1:</li>
+</ul>
+<pre><code># File: /etc/dovecot/dovecot.conf
+
+plugin {
+
+    quota = dict:user::proxy::quotadict
+    quota_rule = *:storage=1G
+    quota_rule2 = Trash:ignore      # &lt;-- new quota rule, ignore Trash folder
+
+    ...
+}
+</code></pre>
+<ul>
+<li>Sample setting #2:</li>
+</ul>
+<pre><code># File: /etc/dovecot/dovecot-ldap.conf
+user_attrs      = ...,mailQuota=quota_rule=*:bytes=%$,=quota_rule2=Trash:ignore
+
+# File: /etc/dovecot/dovecot-mysql.conf, or dovecot-pgsql.conf
+user_query = SELECT ... \
+                   CONCAT('*:bytes=', mailbox.quota*1048576) AS quota_rule \
+                   'Trash:ignore' AS quota_rule2 \      -- New quota rule, ignore Trash folder
+                   FROM ...
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

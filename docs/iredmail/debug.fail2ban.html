@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Turn on debug logging in Fail2ban</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="debug.fail2ban-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="turn-on-debug-logging-in-fail2ban">Turn on debug logging in Fail2ban</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="debug.fail2ban.html#turn-on-debug-logging-in-fail2ban">Turn on debug logging in Fail2ban</a><ul>
+<li><a href="debug.fail2ban.html#log-file">Log File</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>To turn on debug mode in Fail2ban, please set its log level to <code>debug</code> in
+config file <code>/etc/fail2ban/fail2ban.local</code>, then restart fail2ban service.
+If file <code>/etc/fail2ban/fail2ban.local</code> doesn't exist, use
+<code>/etc/fail2ban/fail2ban.conf</code> instead.</p>
+<pre><code>loglevel = DEBUG
+</code></pre>
+<h2 id="log-file">Log File</h2>
+<p>Fail2ban may log to different log files on different Linux/BSD distributions:</p>
+<ul>
+<li><code>/var/log/fail2ban.log</code></li>
+<li><code>/var/log/fail2ban/fail2ban.log</code></li>
+<li><code>/var/log/messages</code></li>
+<li><code>/var/log/syslog</code></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

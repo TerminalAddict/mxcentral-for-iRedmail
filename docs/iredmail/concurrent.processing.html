@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Process more (or less) emails concurrently</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="process-more-or-less-emails-concurrently">Process more (or less) emails concurrently</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Processing more emails concurrently requires more RAM, please make sure you
+have enough RAM to handle them, otherwise ClamAV may exit randomly due to
+no enough memory (for ClamAV).</p>
+</div>
+<p>Amavisd-new is content filter, it invokes SpamAssassin and ClamAV for
+spam/virus scanning, it also offers additional features like DKIM signing and
+verification.</p>
+<p>In <a href="file.locations.html#amavisd">Amavisd config file</a>, <code>$max_servers</code> sets
+the number of concurrent Amavisd processes and it must match the number set
+in <code>/etc/postfix/master.cf</code> <code>maxproc</code> column for the <code>smtp-amavis</code> service.
+Sample settings:</p>
+<pre><code># Amavisd config file:
+#   - on RHEL/CentOS: /etc/amavisd/amavisd.conf
+#   - on Debian/Ubuntu: /etc/amavis/conf.d/50-user
+#   - on FreeBSD: /usr/local/etc/amavisd.conf
+#   - on OpenBSD: /etc/amavisd.conf
+
+$max_servers = 4;
+</code></pre>
+<pre><code># File: /etc/postfix/master.cf
+
+smtp-amavis unix -  -   -   -   4  smtp
+    ...
+</code></pre>
+<p>Both values should be identical for two reasons: If Amavisd offers more
+processes than Postfix will ever use, Amavisd wastes resources. On the other
+hand, if Postfix starts more dedicated transports than amavisd can handle
+simultaneously, e-mail transport will be refused and logged as error.</p>
+<p>If many emails stalled in mail queue (check with command <code>postqueue -p</code>), and
+your server has powerful CPU and memory, you can increase the number of
+concurrent Amavisd processes, so that it can process more emails at the same
+time. Sample setting:</p>
+<pre><code># File: /etc/amavisd/amavisd.conf
+
+$max_servers = 10;
+</code></pre>
+<p>Restarting Amavisd service is required.</p>
+<pre><code># File: /etc/postfix/master.cf
+
+smtp-amavis unix -  -   -   -   10  smtp
+    ...
+</code></pre>
+<p>Note: If you don't want to modify <code>/etc/postfix/master.cf</code>, it's ok to set
+<code>smtp-amavis_destination_concurrency_limit = 10</code> in <code>/etc/postfix/main.cf</code>
+instead.</p>
+<p>Restarting Postfix service is required if you modified <code>/etc/postfix/master.cf</code>,
+reloading OR restarting is required if you modified <code>/etc/postfix/main.cf</code>.</p>
+<p>References:</p>
+<ul>
+<li><a href="http://www.amavis.org">Amavisd web site</a></li>
+<li><a href="http://www.ijs.si/software/amavisd/README.postfix.html#d0e1231">Tuning: Maximum Number of Concurrent Processes</a></li>
+<li><a href="http://www.ijs.si/software/amavisd/README.postfix.html">Integrating amavisd-new in Postfix</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

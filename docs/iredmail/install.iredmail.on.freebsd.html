@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Install iRedMail on FreeBSD</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="install.iredmail.on.freebsd-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="install-iredmail-on-freebsd">Install iRedMail on FreeBSD</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="install.iredmail.on.freebsd.html#install-iredmail-on-freebsd">Install iRedMail on FreeBSD</a><ul>
+<li><a href="install.iredmail.on.freebsd.html#system-requirements">System Requirements</a></li>
+<li><a href="install.iredmail.on.freebsd.html#preparations">Preparations</a><ul>
+<li><a href="install.iredmail.on.freebsd.html#set-a-fully-qualified-domain-name-fqdn-hostname-on-your-server">Set a fully qualified domain name (FQDN) hostname on your server</a></li>
+<li><a href="install.iredmail.on.freebsd.html#install-packages-required-by-iredmail-installer">Install packages required by iRedMail installer</a></li>
+<li><a href="install.iredmail.on.freebsd.html#download-the-latest-release-of-iredmail">Download the latest release of iRedMail</a></li>
+</ul>
+</li>
+<li><a href="install.iredmail.on.freebsd.html#start-iredmail-installer">Start iRedMail installer</a></li>
+<li><a href="install.iredmail.on.freebsd.html#screenshots-of-installation">Screenshots of installation:</a></li>
+<li><a href="install.iredmail.on.freebsd.html#important-things-you-must-know-after-installation">Important things you MUST know after installation</a></li>
+<li><a href="install.iredmail.on.freebsd.html#access-webmail-and-other-web-applications">Access webmail and other web applications</a></li>
+<li><a href="install.iredmail.on.freebsd.html#get-technical-support">Get technical support</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<blockquote>
+<p>If you want to install iRedMail inside FreeBSD <strong>Jail</strong>, please use
+this installation guide instead:
+<a href="install.iredmail.on.freebsd.with.jail.html">Install iRedMail inside FreeBSD Jail (with ezjail)</a></p>
+</blockquote>
+<h2 id="system-requirements">System Requirements</h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<ul>
+<li>iRedMail is designed to be deployed on a <strong>FRESH</strong> server system, which
+  means your server does <strong>NOT</strong> have mail related components installed,
+  e.g. MySQL, OpenLDAP, Postfix, Dovecot, Amavisd, etc. iRedMail will install
+  and configure them for you automatically. Otherwise it may override your
+  existing files/configurations although it will backup files before
+  modifying, and it may not be working as expected.</li>
+<li>
+<p><strong>Network port 25 MUST be open.</strong> Port 25 is used for communication between mail
+  servers, it must be open to send to or received from other mail servers.
+  Many ISPs block it by default:</p>
+<ul>
+<li>Linode. Explained in the <a href="https://www.linode.com/blog/linode/a-new-policy-to-help-fight-spam/">blog post</a>,
+    you can open a support ticket to ask the Linode team to open it. If you <a href="https://www.linode.com/?r=b4d04083428fb99ce452d84b57253d11692a0850">sign up to Linode with our reference</a>, iRedMail Team's Linode account will receive a credit of $15-20.00. Thanks.</li>
+<li>Vultr: <a href="https://www.vultr.com/docs/what-ports-are-blocked/">Port 25 is blocked</a>.</li>
+<li>Amazon AWS EC2. Request to <a href="https://aws.amazon.com/premiumsupport/knowledge-center/ec2-port-25-throttle/">remove the throttle on port 25</a>.</li>
+<li>Google Cloud Platform.</li>
+<li>Microsoft Azure.</li>
+<li>DigitalOcean. According to <a href="https://www.digitalocean.com/community/questions/port-25-465-is-blocked-how-can-i-enable-it">a post in their community</a>, <strong>SEEMS</strong> impossible to unblock port 25, that means you can <strong>NOT</strong> run mail server on DigitalOcean VPS.</li>
+</ul>
+</li>
+</ul>
+</div>
+<p>To install iRedMail on FreeBSD, you need:</p>
+<ul>
+<li>A <strong>FRESH</strong>, minimal, working FreeBSD system, no additional ports or binary
+  packages were installed. Supported releases are listed on
+  <a href="https://www.iredmail.org/download.html">Download</a> page.</li>
+<li>At least <code>4 GB</code> memory is required for a low traffic production mail server
+  with spam/virus scanning enabled.</li>
+<li>Make sure 3 UID/GID are not used by other user/group: 2000, 2001, 2002.</li>
+</ul>
+<p>Note: All packages will be installed from ports tree.</p>
+<h2 id="preparations">Preparations</h2>
+<h3 id="set-a-fully-qualified-domain-name-fqdn-hostname-on-your-server">Set a fully qualified domain name (FQDN) hostname on your server</h3>
+<p>No matter your server is a testing machine or production server, it's strongly
+recommended to set a fully qualified domain name (FQDN) hostname.</p>
+<p>Enter command <code>hostname -f</code> to view the current hostname:</p>
+<pre><code class="language-shell"># hostname -f
+mx.example.com
+</code></pre>
+<p>On FreeBSD, hostname is set in two files: <code>/etc/rc.conf</code>, <code>/etc/hosts</code>.</p>
+<ul>
+<li><code>/etc/rc.conf</code>: set hostname.</li>
+</ul>
+<pre><code># Part of File: /etc/rc.conf
+hostname=&quot;mx.example.com&quot;
+</code></pre>
+<ul>
+<li><code>/etc/hosts</code>: hostname &lt;=&gt; IP address mapping.</li>
+</ul>
+<pre><code># Part of file: /etc/hosts
+127.0.0.1   mx.example.com mx localhost localhost.localdomain
+</code></pre>
+<p>Verify the FQDN hostname. If it wasn't changed, please reboot server to make it work.</p>
+<pre><code># hostname -f
+mx.example.com
+</code></pre>
+<h3 id="install-packages-required-by-iredmail-installer">Install packages required by iRedMail installer</h3>
+<pre><code class="language-bash">pkg install bash cdialog
+</code></pre>
+<h3 id="download-the-latest-release-of-iredmail">Download the latest release of iRedMail</h3>
+<ul>
+<li>
+<p>Visit <a href="https://www.iredmail.org/download.html">Download page</a> to get the
+  latest stable release of iRedMail.</p>
+</li>
+<li>
+<p>Upload iRedMail to your mail server via ftp or scp or whatever method you
+  can use, login to the server to install iRedMail. We assume you uploaded
+  it to <code>/root/iRedMail-x.y.z.tar.gz</code> (replace x.y.z by the real version number).</p>
+</li>
+<li>
+<p>Uncompress iRedMail tarball:</p>
+</li>
+</ul>
+<pre><code>cd /root/
+tar zxf iRedMail-x.y.z.tar.gz
+</code></pre>
+<h2 id="start-iredmail-installer">Start iRedMail installer</h2>
+<p>It's now ready to start iRedMail installer, it will ask you several simple
+questions, that's all required to setup a full-featured mail server.</p>
+<pre><code class="language-shell">cd /root/iRedMail-x.y.z/
+bash iRedMail.sh
+</code></pre>
+<h2 id="screenshots-of-installation">Screenshots of installation:</h2>
+<ul>
+<li>Welcome and thanks for your use</li>
+</ul>
+<p><img alt="" src="images/installation/welcome.png" width="700px" /></p>
+<ul>
+<li>Specify location to store all mailboxes. Default is <code>/var/vmail/</code>.</li>
+</ul>
+<p><img alt="" src="images/installation/mail_storage.png" width="700px" /></p>
+<ul>
+<li>Choose backend used to store mail accounts. You can manage mail accounts
+with iRedAdmin, our web-based iRedMail admin panel.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>There's no big difference between available backends, so
+it's strongly recommended to choose the one you're familiar with for easier
+management and maintenance after installation.</p>
+</div>
+<p><img alt="" src="images/installation/backends.png" width="700px" /></p>
+<ul>
+<li>If you choose to store mail accounts in OpenLDAP, iRedMail installer will
+  ask to set the LDAP suffix.</li>
+</ul>
+<p><img alt="" src="images/installation/ldap_suffix.png" width="700px" /></p>
+<div class="admonition note">
+<p class="admonition-title">To MySQL/MariaDB/PostgreSQL users</p>
+<p>If you choose to store mail accounts in MySQL/MariaDB/PostgreSQL, iRedMail
+installer will generate a random, strong password for you. You can find it
+in file <code>iRedMail.tips</code>.</p>
+</div>
+<ul>
+<li>Add your first mail domain name</li>
+</ul>
+<p><img alt="" src="images/installation/first_domain.png" width="700px" /></p>
+<ul>
+<li>Set password of admin account of your first mail domain.</li>
+</ul>
+<p><strong>Note</strong>: This account is an admin account and a mail user. That means you can
+login to webmail and admin panel (iRedAdmin) with this account, login username
+is full email address.</p>
+<p><img alt="" src="images/installation/admin_pw.png" width="700px" /></p>
+<ul>
+<li>
+<p>Choose optional components</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p><strong>Which webmail should you choose?</strong> Roundcube or SOGo?</p>
+<ul>
+<li>Roundcube is a fast and lightweight webmail, and webmail only.
+  If all you need is a webmail to access mailbox and manage mail
+  filters, then Roundcube is the best option.</li>
+<li>SOGo offers webmail, calendar (CalDAV), contacts (CardDAV) and
+  ActiveSync. If you need calendar and contacts support, also syncing
+  them to mobile or PC mail client applications, then SOGo is the one
+  to go. Note: If you have many ActiveSync clients, it requires a lot RAM.</li>
+<li>It's ok to install both, but you can only manage mail filters with
+  Roundcube in this case, because the filter rules generated by
+  Roundcube and SOGo are not compatible. You can <a href="why.no.sieve.support.in.sogo.html">force to enable it in
+  SOGo</a>, but please inform end
+  users and ask them to stick to one of them for managing mail filters.</li>
+</ul>
+</div>
+</li>
+</ul>
+<p><img alt="" src="images/installation/optional_components.png" width="700px" /></p>
+<p>After answered above questions, iRedMail installer will ask you to review and
+confirm to start installation. It will install and configure required packages
+automatically. Type <code>y</code> or <code>Y</code> and press <code>Enter</code> to start.</p>
+<p><img alt="" src="images/installation/review.png" width="700px" /></p>
+<h2 id="important-things-you-must-know-after-installation">Important things you <strong>MUST</strong> know after installation</h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The weakest part of a mail server is user's weak password. Spammers don't
+want to hack your server, they just want to send spam from your server.
+Please <strong>ALWAYS ALWAYS ALWAYS</strong> force users to use a strong password.</p>
+</div>
+<ul>
+<li>
+<p>Read file <code>/root/iRedMail-x.y.z/iRedMail.tips</code> first, it contains:</p>
+<ul>
+<li>URLs, usernames and passwords of web-based applications</li>
+<li>Location of mail service related software configuration files. You can
+  also check this tutorial instead:
+  <a href="file.locations.html">Locations of configuration and log files of major components</a>.</li>
+<li>Some other important and sensitive information</li>
+</ul>
+</li>
+<li>
+<p><a href="setup.dns.html">Setup DNS records for your mail server</a></p>
+</li>
+<li><a href="index.html#configure-mail-client-applications">How to configure your mail clients</a></li>
+<li><a href="file.locations.html">Locations of configuration and log files of major components</a></li>
+<li>It's highly recommended to get a SSL cert to avoid annonying warning
+  message in web browser or mail clients when accessing mailbox via
+  HTTPS/IMAPS/POP3/SMTPS. <a href="https://letsencrypt.org">Let's Encrypt offers <strong>FREE</strong> SSL certificate</a>.
+  We have a document for you to
+  <a href="use.a.bought.ssl.certificate.html">use a SSL certificate</a>.</li>
+<li>If you need to bulk create mail users, check our document for
+  <a href="ldap.bulk.create.mail.users.html">OpenLDAP</a> and
+  <a href="sql.bulk.create.mail.users.html">MySQL/MariaDB/PostgreSQL</a>.</li>
+<li>If you're running a busy mail server, we have <a href="performance.tuning.html">some suggestions for better
+  performance</a>.</li>
+</ul>
+<h2 id="access-webmail-and-other-web-applications">Access webmail and other web applications</h2>
+<p>After installation successfully completed, you can access web-based programs
+if you choose to install them. Replace <code>your_server</code> below by your real server
+hostname or IP address.</p>
+<ul>
+<li><strong>Roundcube webmail</strong>: <a href="https://your_server/mail/">https://your_server/mail/</a></li>
+<li><strong>SOGo Groupware</strong>: <a href="https://your_server/SOGo">https://your_server/SOGo</a></li>
+<li><strong>Web admin panel (iRedAdmin)</strong>: <a href="https://your_server/iredadmin/">https://your_server/iredadmin/</a></li>
+</ul>
+<h2 id="get-technical-support">Get technical support</h2>
+<ul>
+<li>You are welcome to post issues, feedbacks, feature requests, suggestions in
+  our <a href="https://forum.iredmail.org/">online support forum</a>, it's more
+  responsive than you expected.</li>
+<li>We offer paid professional support service too, check our web site for more
+  details: <a href="https://www.iredmail.org/support.html">Get Professional Support from iRedMail Team</a>.</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

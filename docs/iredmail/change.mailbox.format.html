@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Change per-user mailbox format (e.g. maildir, mdbox)</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="change-per-user-mailbox-format-eg-maildir-mdbox">Change per-user mailbox format (e.g. maildir, mdbox)</h1>
+<p>iRedMail uses <code>maildir</code> mailbox format by default, it's easy to backup, migrate
+and recover.  As long as mailbox grows larger and larger, the performance will
+be slower due to too much disk I/O - caused by <code>maildir</code> format. Dovecot's own
+mailbox format <code>mdbox</code> has very good performance for large mailbox due to
+reduced disk I/O.</p>
+<p>You may want to switch to other mailbox format for some reason. To help you
+switch easily, iRedMail-0.9.9 introduces 2 new SQL columns (for SQL backends)
+and LDAP attributes (for LDAP backends) to help you switch per-user mailbox
+format easily. All <a href="https://wiki.dovecot.org/MailboxFormat">mailbox formats supported by
+Dovecot</a> are supported in iRedMail.</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>If you're running an iRedMail release earlier than iRedMail-0.9.9, you can
+  upgrade it by following <a href="iredmail.releases.html">iRedMail upgrade tutorials</a>.</li>
+<li>iRedAdmin-Pro RESTful API interface supports changing mailbox format too.
+  Check its <a href="iredadmin-pro.restful.api.html">API document</a> (expand all
+  parameters and search <code>mailboxformat</code> or <code>mailboxFormat</code>).</li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>With <code>mdbox</code> format, if mailbox index files are damaged or lost, mail
+messages will be lost. Because one of the main reasons for dbox's high
+performance is that it uses Dovecot's index files as the only storage for
+message flags and keywords, so the indexes don't have to be "synchronized".
+Dovecot trusts that they're always up-to-date (unless it sees that
+something is clearly broken).</p>
+<p>Please read documents on Dovecot website to make sure you fully understand
+the pros and (most importantly) cons of the format you're going to use:
+<a href="https://wiki.dovecot.org/MailboxFormat">Mailbox Formats</a>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<ul>
+<li>Changing mailbox format does not migrate existing mailbox for you. You
+  have to migrate it <strong>BEFORE</strong> switching to new mailbox format, then
+  update SQL/LDAP data to use new mailbox format right after migrated the
+  mailbox.</li>
+<li>New mailbox format will be used by Dovecot immediately after SQL/LDAP change.</li>
+</ul>
+</div>
+<h2 id="sql-backends">SQL backends</h2>
+<p>You can switch to different mailbox format with SQL commands below. We use
+MySQL for example here.</p>
+<pre><code>USE vmail;
+UPDATE mailbox SET mailboxformat='mdbox', mailboxfolder='mdbox' where username=&quot;user@your-domain.com&quot;;
+</code></pre>
+<ul>
+<li>Value of <code>mailboxfolder</code> can be any folder name supported by Linux/BSD file
+  system, but value of <code>mailboxformat</code> must be one of the formats supported by
+  Dovecot, e.g. maildir, sdbox, mdbox.</li>
+<li>Value of <code>mailboxfolder</code> can not be same as previously used one, otherwise
+  old mailbox will be messed up when Dovecot delivers new email.</li>
+</ul>
+<h2 id="ldap-backends">LDAP backends</h2>
+<p>You need some LDAP management tool like <a href="http://phpldapadmin.sourceforge.net/">phpLDAPadmin</a>,
+<a href="https://directory.apache.org/studio/">Apache Directory Studio</a>, or command
+line tool <code>ldapvi</code> (you can install it with <code>yum</code> or <code>apt-get</code> command directly)
+to update mail user's LDIF data.</p>
+<pre><code>mailboxFormat: mdbox
+mailboxFolder: mdbox
+</code></pre>
+<ul>
+<li>Value of <code>mailboxFolder</code> can be any folder name supported by Linux/BSD file
+  system, but value of <code>mailboxFormat</code> must be one of the formats supported by
+  Dovecot, e.g. maildir, sdbox, mdbox.</li>
+<li>Value of <code>mailboxfolder</code> can not be same as previously used one, otherwise
+  old mailbox will be messed up when Dovecot delivers new email.</li>
+<li>With iRedMail-0.9.9, if attribute <code>mailboxFormat</code> and <code>mailboxFolder</code> don't
+  present in user LDAP object, Dovecot is configured to use <code>maildir</code> as
+  default mailbox format and <code>Maildir</code> (case-sensitive) as folder name.</li>
+</ul>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://wiki.dovecot.org/Tools/Doveadm/Sync">Doveadm Sync</a>. It mentions how
+  to easily migrate existing mailbox to new mailbox format with <code>doveadm sync</code>
+  command.</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

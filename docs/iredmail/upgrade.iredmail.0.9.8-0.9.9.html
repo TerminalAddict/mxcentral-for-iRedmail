@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 0.9.8 to 0.9.9</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-098-to-099">Upgrade iRedMail from 0.9.8 to 0.9.9</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#upgrade-iredmail-from-098-to-099">Upgrade iRedMail from 0.9.8 to 0.9.9</a><ul>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</a><ul>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-31">Upgrade iRedAPD (Postfix policy server) to the latest stable release (3.1)</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-094">Upgrade iRedAdmin (open source edition) to the latest stable release (0.9.4)</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#upgrade-mlmmjadmin-to-the-latest-stable-release-20">Upgrade mlmmjadmin to the latest stable release (2.0)</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#upgrade-roundcube-webmail-to-the-latest-stable-release-138">Upgrade Roundcube webmail to the latest stable release (1.3.8)</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#upgrade-netdata-to-the-latest-stable-release-1111">Upgrade netdata to the latest stable release (1.11.1)</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#fix-improper-nginx-config-files-for-roundcube">Fix improper Nginx config files for Roundcube</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#improve-mlmmj-script-used-for-appending-footer-text">Improve mlmmj script used for appending footer text</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#fix-address-mapping-issue-for-mlmmj-mailing-list">Fix address mapping issue for mlmmj mailing list</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#fixed-sogo-backup-script-doesnt-set-correct-permission-on-backup-files">Fixed: SOGo backup script doesn't set correct permission on backup files</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#openldap-special">OpenLDAP special</a><ul>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#update-iredmail-ldap-schema-file">Update iRedMail LDAP schema file</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#dovecot-read-mailbox-format-from-ldap">Dovecot: read mailbox format from LDAP</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#optional-monitoring-openldap-with-netdata">[OPTIONAL] Monitoring OpenLDAP with netdata</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#mysqlmariadb-special">MySQL/MariaDB special</a><ul>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#sql-structure-changes-in-vmail-database">SQL structure changes in vmail database</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#dovecot-read-mailbox-format-from-sql">Dovecot: read mailbox format from SQL</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#postgresql-special">PostgreSQL special</a><ul>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#sql-structure-changes-in-vmail-database_1">SQL structure changes in vmail database</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#dovecot-read-mailbox-format-from-sql_1">Dovecot: read mailbox format from SQL</a><ul>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#postgresql-8x">PostgreSQL 8.x</a></li>
+<li><a href="upgrade.iredmail.0.9.8-0.9.9.html#postgresql-9x-and-later-releases">PostgreSQL 9.x and later releases</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Dec 23, 2018, Fixed: Improper new dovecot ldap/sql queries which doesn't convert upper cases of maildir to lower cases.</li>
+<li>Dec 21, 2018, Fixed: SOGo backup script doesn't set correct permission on backup files.</li>
+<li>Dec 21, 2018, mention how to upgrade netdata.</li>
+<li>Dec 20, 2018, fix hard-coded mailbox folder name in <code>dovecot-mysql.conf</code>.</li>
+<li>Dec 19, 2018, add section for upgrading mlmmjadmin.</li>
+<li>Dec 17, 2018, initial release.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code>0.9.9
+</code></pre>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-31">Upgrade iRedAPD (Postfix policy server) to the latest stable release (3.1)</h3>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<h3 id="upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-094">Upgrade iRedAdmin (open source edition) to the latest stable release (0.9.4)</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>In this release, iRedAdmin (and iRedAdmin-Pro) is running as a standalone
+service named "iredadmin", each time you modified its config file, please
+restart the service ("iredadmin").</p>
+</div>
+<p>Please follow this tutorial to upgrade iRedAdmin open source edition to the
+latest stable release:
+<a href="migrate.or.upgrade.iredadmin.html">Upgrade iRedAdmin to the latest stable release</a></p>
+<h3 id="upgrade-mlmmjadmin-to-the-latest-stable-release-20">Upgrade mlmmjadmin to the latest stable release (2.0)</h3>
+<p>Please follow below tutorial to upgrade mlmmjadmin to the latest stable release:
+<a href="upgrade.mlmmjadmin.html">Upgrade mlmmjadmin to the latest stable release</a></p>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release-138">Upgrade Roundcube webmail to the latest stable release (1.3.8)</h3>
+<div class="admonition warning">
+<p class="admonition-title">Roundcube 1.3</p>
+<ul>
+<li>Roundcube 1.3 requires at least <strong>PHP 5.4</strong>. If your server is still running
+  PHP 5.3 and cannot upgrade to 5.4, please upgrade Roundcube to the latest
+  1.2 branch (1.2.5) instead.</li>
+<li>Roundcube 1.3 no longer supports IE &lt; 10 and old versions of Firefox,
+  Chrome and Safari.</li>
+<li>Roundcube 1.3 uses jQuery 3.2 and will not work with current jQuery
+  mobile plugin. If you use any third-party plugin, please check its
+  website to make sure it's compatible with Roundcube 1.3 before upgrading.</li>
+</ul>
+<p>With the release of Roundcube 1.3.0, the previous stable release branches
+1.2.x and 1.1.x will switch in to LTS low maintenance mode which means
+they will only receive important security updates but no longer any regular
+improvement updates.</p>
+</div>
+<p>Please follow Roundcube official tutorial to upgrade Roundcube webmail to the
+latest stable release immediately:</p>
+<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</li>
+</ul>
+<h3 id="upgrade-netdata-to-the-latest-stable-release-1111">Upgrade netdata to the latest stable release (1.11.1)</h3>
+<p>If you have netdata installed, you can upgrade it by following this tutorial: <a href="upgrade.netdata.html">Upgrade netdata</a>.</p>
+<h3 id="fix-improper-nginx-config-files-for-roundcube">Fix improper Nginx config files for Roundcube</h3>
+<p>Accurate Nginx url match helps avoid namespace conflicts, we need some fixes
+for Roundcube to get accurate url match.</p>
+<p>Please open file <code>/etc/nginx/templates/roundcube.tmpl</code>, find <code>location</code>
+directives like below:</p>
+<pre><code>location ~ /mail/(bin|config|installer|logs|SQL|temp|vendor)($|/.*) { deny all; }
+location ~ /mail/(CHANGELOG|composer.json|INSTALL|jsdeps.json|LICENSE|README|UPGRADING)($|.*) { deny all; }
+location ~ /mail/plugins/.*/config.inc.php.* { deny all; }
+location ~ /mail/plugins/enigma/home($|/.*) { deny all; }
+</code></pre>
+<p>Add a <code>^</code> symbol before url path, this will exactly match the url begins
+with the path.</p>
+<pre><code>location ~ ^/mail/(bin|config|installer|logs|SQL|temp|vendor)($|/.*) { deny all; }
+location ~ ^/mail/(CHANGELOG|composer.json|INSTALL|jsdeps.json|LICENSE|README|UPGRADING)($|.*) { deny all; }
+location ~ ^/mail/plugins/.*/config.inc.php.* { deny all; }
+location ~ ^/mail/plugins/enigma/home($|/.*) { deny all; }
+</code></pre>
+<p>Open file <code>/etc/nginx/templates/roundcube-subdomain.tmpl</code>, find <code>location</code>
+directives like below:</p>
+<pre><code>location ~ /(bin|config|installer|logs|SQL|temp|vendor)($|/.*) { deny all; }
+location ~ /(CHANGELOG|composer.json|INSTALL|jsdeps.json|LICENSE|README|UPGRADING)($|.*) { deny all; }
+location ~ /plugins/.*/config.inc.php.* { deny all; }
+location ~ /plugins/enigma/home($|/.*) { deny all; }
+</code></pre>
+<p>Add <code>^</code> symbol like below:</p>
+<pre><code>location ~ ^/(bin|config|installer|logs|SQL|temp|vendor)/.* { deny all; }
+location ~ ^/(CHANGELOG|composer.json|INSTALL|jsdeps.json|LICENSE|README|UPGRADING)$ { deny all; }
+location ~ ^/plugins/.*/config.inc.php.* { deny all; }
+location ~ ^/plugins/enigma/home($|/.*) { deny all; }
+</code></pre>
+<h3 id="improve-mlmmj-script-used-for-appending-footer-text">Improve mlmmj script used for appending footer text</h3>
+<p>Run commands below to create file <code>/usr/bin/mlmmj-amime-receive</code> (Linux) or
+<code>/usr/local/bin/mlmmj-amime-receive</code> (FreeBSD/OpenBSD):</p>
+<p>On Linux:</p>
+<pre><code>cd /usr/bin/
+wget -O mlmmj-amime-receive https://github.com/iredmail/iRedMail/raw/1.0/samples/mlmmj/mlmmj-amime-receive
+chown mlmmj:mlmmj mlmmj-amime-receive
+chmod 0550 mlmmj-amime-receive
+</code></pre>
+<p>On FreeBSD or OpenBSD:</p>
+<pre><code>cd /usr/local/bin/
+wget -O mlmmj-amime-receive https://github.com/iredmail/iRedMail/raw/1.0/samples/mlmmj/mlmmj-amime-receive
+chown mlmmj:mlmmj mlmmj-amime-receive
+chmod 0550 mlmmj-amime-receive
+</code></pre>
+<h3 id="fix-address-mapping-issue-for-mlmmj-mailing-list">Fix address mapping issue for mlmmj mailing list</h3>
+<p>With default settings of iRedMail-0.9.8, if you use a per-user alias address
+as member of a mailing list, Postfix does not expand it to the final
+recipient. For more details of this bug, please check this
+<a href="https://forum.iredmail.org/topic14841-mlmmj-subscription-emails-missing.html">forum post</a>.
+Please follow steps below to fix it.</p>
+<ul>
+<li>Open Amavisd config file, find the policy bank named <code>MLMMJ</code> like below:<ul>
+<li>on RHEL/CentOS, it's <code>/etc/amavisd/amavisd.conf</code></li>
+<li>on Debian/Ubuntu, it's <code>/etc/amavis/conf.d/50-user</code></li>
+<li>on FreeBSD, it's <code>/usr/local/etc/amavisd.conf</code></li>
+<li>on OpenBSD, it's <code>/etc/amavisd.conf</code></li>
+</ul>
+</li>
+</ul>
+<pre><code>$policy_bank{'MLMMJ'} = {
+    ...
+};
+</code></pre>
+<p>Add a new line inside the {} block:</p>
+<pre><code>$policy_bank{'MLMMJ'} = {
+    ...
+    forward_method =&gt; 'smtp:[127.0.0.1]:10028',
+};
+</code></pre>
+<p>Here we use a new smtp port 10028.</p>
+<ul>
+<li>Append new lines to file <code>/etc/postfix/master.cf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/postfix/master.cf</code> (FreeBSD):</li>
+</ul>
+<pre><code>127.0.0.1:10028 inet n  -   n   -   -  smtpd
+    -o syslog_name=postfix/10028
+    -o content_filter=
+    -o mynetworks_style=host
+    -o mynetworks=127.0.0.1
+    -o local_recipient_maps=
+    -o relay_recipient_maps=
+    -o strict_rfc821_envelopes=yes
+    -o smtp_tls_security_level=none
+    -o smtpd_tls_security_level=none
+    -o smtpd_restriction_classes=
+    -o smtpd_delay_reject=no
+    -o smtpd_client_restrictions=permit_mynetworks,reject
+    -o smtpd_helo_restrictions=
+    -o smtpd_sender_restrictions=
+    -o smtpd_recipient_restrictions=permit_mynetworks,reject
+    -o smtpd_end_of_data_restrictions=
+    -o smtpd_error_sleep_time=0
+    -o smtpd_soft_error_limit=1001
+    -o smtpd_hard_error_limit=1000
+    -o smtpd_client_connection_count_limit=0
+    -o smtpd_client_connection_rate_limit=0
+    -o receive_override_options=no_header_body_checks,no_unknown_recipient_checks
+</code></pre>
+<p>It's very similar to existing transport '10025', but without option <code>no_address_mappings</code>.
+Port 10025 is used <strong>BEFORE</strong> content filter, but 10028 is used <strong>AFTER</strong>
+content filter.</p>
+<ul>
+<li>Restart both postfix and amavisd services.</li>
+</ul>
+<h3 id="fixed-sogo-backup-script-doesnt-set-correct-permission-on-backup-files">Fixed: SOGo backup script doesn't set correct permission on backup files</h3>
+<p>SOGo backup script <code>/var/vmail/backup/backup_sogo.sh</code> shipped in iRedMail-0.9.8
+and earlier releases doesn't set correct permission on backup files, please
+download the latest version and override the one on your system:</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Script <code>backup_sogo.sh</code> uses <code>/var/vmail/backup</code> to store backup files by
+default, if you use a different directory, please edit this file and modify
+parameter <code>BACKUP_ROOTDIR=</code> to use the correct one.</p>
+</div>
+<pre><code>cd /var/vmail/backup/
+wget -O backup_sogo.sh https://github.com/iredmail/iRedMail/raw/1.0/tools/backup_sogo.sh
+chown root backup_sogo.sh
+chmod 0400 backup_sogo.sh
+</code></pre>
+<h2 id="openldap-special">OpenLDAP special</h2>
+<h3 id="update-iredmail-ldap-schema-file">Update iRedMail LDAP schema file</h3>
+<p>iRedMail-0.9.9 introduces 2 new LDAP attributes for mail user account:</p>
+<ul>
+<li><code>mailboxFormat</code>: used to store mailbox format. All formats supported by
+  Dovecot are ok. for example, <code>maildir</code>, <code>mdbox</code>. For more details, please
+  check Dovecot document here: <a href="https://wiki2.dovecot.org/MailboxFormat">https://wiki2.dovecot.org/MailboxFormat</a></li>
+<li><code>mailboxFolder</code>: used to store the folder name which will be appended to
+  maildir path. Defaults to <code>Maildir</code>.</li>
+</ul>
+<p>With these 2 new attributes, it will be very easy to switch different mailbox
+format.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you use different mailbox format, you need to set mailbox format to the
+one you're using.</p>
+</div>
+<p>Download the latest iRedMail LDAP schema file</p>
+<ul>
+<li>On RHEL/CentOS:</li>
+</ul>
+<pre><code>cd /tmp
+wget -O iredmail.schema https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+cd /etc/openldap/schema/
+cp iredmail.schema iredmail.schema.bak
+
+cp -f /tmp/iredmail.schema /etc/openldap/schema/
+service slapd restart
+</code></pre>
+<ul>
+<li>On Debian/Ubuntu:</li>
+</ul>
+<pre><code>cd /tmp
+wget -O iredmail.schema https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+cd /etc/ldap/schema/
+cp iredmail.schema iredmail.schema.bak
+
+cp -f /tmp/iredmail.schema /etc/ldap/schema/
+service slapd restart
+</code></pre>
+<ul>
+<li>On FreeBSD:</li>
+</ul>
+<pre><code>cd /tmp
+wget -O iredmail.schema https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+cd /usr/local/etc/openldap/schema/
+cp iredmail.schema iredmail.schema.bak
+
+cp -f /tmp/iredmail.schema /usr/local/etc/openldap/schema/
+service slapd restart
+</code></pre>
+<ul>
+<li>
+<p>On OpenBSD:</p>
+<blockquote>
+<p>Note: if you're running ldapd as LDAP server, the schema directory is
+<code>/etc/ldap</code>, and service name is <code>ldapd</code>.</p>
+</blockquote>
+</li>
+</ul>
+<pre><code>cd /tmp
+ftp https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+cd /etc/openldap/schema/
+cp iredmail.schema iredmail.schema.bak
+
+cp -f /tmp/iredmail.schema /etc/openldap/schema/
+rcctl restart slapd
+</code></pre>
+<h3 id="dovecot-read-mailbox-format-from-ldap">Dovecot: read mailbox format from LDAP</h3>
+<p>Please open file <code>/etc/dovecot/dovecot-ldap.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot-ldap.conf</code> (FreeBSD), find the <code>user_attrs =</code>
+line like below:</p>
+<pre><code>user_attrs      = mail=master_user,mail=user,homeDirectory=home,=mail=maildir:~/Maildir/,mailQuota=quota_rule=*:bytes=%$
+</code></pre>
+<p>Please replace it by below one:</p>
+<pre><code>user_attrs      = mail=master_user,mail=user,=home=%L{ldap:homeDirectory},=mail=%{ldap:mailboxFormat:maildir}:~/%{ldap:mailboxFolder:Maildir}/,mailQuota=quota_rule=*:bytes=%$
+</code></pre>
+<p>If attribute <code>mailboxFormat</code> doesn't present in user object, Dovecot will use
+string <code>maildir</code> as default value.</p>
+<p>For more details about changing mailbox format, please check our tutorial:
+<a href="change.mailbox.format.html">Change mailbox format</a>.</p>
+<p>Restarting Dovecot service is required.</p>
+<h3 id="optional-monitoring-openldap-with-netdata">[OPTIONAL] Monitoring OpenLDAP with netdata</h3>
+<p>netdata-1.11.1 (released on 23 Nov 2018) supports monitoring OpenLDAP through its <code>monitor</code> backend.
+Please follow this tutorial to upgrade netdata and configure both OpenLDAP and netdata for monitoring.</p>
+<ul>
+<li>On Linux:<ul>
+<li><a href="integration.netdata.linux.html#update-netdata">Upgrade netdata</a></li>
+<li><a href="integration.netdata.linux.html#monitor-openldap">Monitor OpenLDAP</a></li>
+</ul>
+</li>
+<li>On FreeBSD:<ul>
+<li>Please update netdata with ports tree first, make sure you're running
+  netdata-1.11.1 or later release.?</li>
+<li><a href="integration.netdata.freebsd.html#monitor-openldap">Monitor OpenLDAP</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="mysqlmariadb-special">MySQL/MariaDB special</h2>
+<h3 id="sql-structure-changes-in-vmail-database">SQL structure changes in <code>vmail</code> database</h3>
+<p>We've made some changes to <code>vmail</code> database:</p>
+<ul>
+<li>New SQL column <code>mailbox.mailboxformat</code>: used to store mailbox format.
+  All formats supported by Dovecot are ok. for example, <code>maildir</code>, <code>mdbox</code>.
+  <strong>Default value is <code>maildir</code>.</strong>
+  For more details, please check Dovecot document here:
+  <a href="https://wiki2.dovecot.org/MailboxFormat">https://wiki2.dovecot.org/MailboxFormat</a></li>
+<li><code>mailboxfolder</code>: used to store the folder name which will be appended to
+  maildir path. Defaults to <code>Maildir</code>.</li>
+</ul>
+<p>With these 2 new columns, it will be very easy to migrate existing mailbox to
+different mailbox format, or set different mailbox for new user.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you use different mailbox format, you need to set mailbox format to the
+one you're using.</p>
+</div>
+<p>Download SQL template file and import it:</p>
+<pre><code>cd /root/
+wget -O iredmail.mysql https://github.com/iredmail/iRedMail/raw/1.0/update/0.9.9/iredmail.mysql
+mysql vmail &lt; /root/iredmail.mysql
+</code></pre>
+<h3 id="dovecot-read-mailbox-format-from-sql">Dovecot: read mailbox format from SQL</h3>
+<p>Please open file <code>/etc/dovecot/dovecot-mysql.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot-mysql.conf</code> (FreeBSD), find the <code>user_query =</code>
+line like below:</p>
+<pre><code>user_query = SELECT \
+            ...
+            CONCAT(mailbox.storagebasedirectory, '/', mailbox.storagenode, '/', mailbox.maildir) AS home, \
+            ...
+</code></pre>
+<p>Update above line and also add a new <code>CONCAT</code> line after it:</p>
+<pre><code>user_query = SELECT \
+            ...
+            LOWER(CONCAT(mailbox.storagebasedirectory, '/', mailbox.storagenode, '/', mailbox.maildir)) AS home, \
+            CONCAT(mailbox.mailboxformat, ':~/', mailbox.mailboxfolder, '/') AS mail, \
+            ...
+</code></pre>
+<p>Restarting Dovecot service is required.</p>
+<p>For more details about changing mailbox format, please check our tutorial:
+<a href="change.mailbox.format.html">Change mailbox format</a>.</p>
+<h2 id="postgresql-special">PostgreSQL special</h2>
+<h3 id="sql-structure-changes-in-vmail-database_1">SQL structure changes in <code>vmail</code> database</h3>
+<p>We've made some changes to <code>vmail</code> database:</p>
+<ul>
+<li>New SQL column <code>mailbox.mailboxformat</code>: used to store mailbox format.
+  All formats supported by Dovecot are ok. for example, <code>maildir</code>, <code>mdbox</code>.
+  <strong>Default value is <code>maildir</code>.</strong>
+  For more details, please check Dovecot document here:
+  <a href="https://wiki2.dovecot.org/MailboxFormat">https://wiki2.dovecot.org/MailboxFormat</a></li>
+<li><code>mailboxfolder</code>: used to store the folder name which will be appended to
+  maildir path. Defaults to <code>Maildir</code>.</li>
+</ul>
+<p>With these 2 new columns, it will be very easy to migrate existing mailbox to
+different mailbox format, or set different mailbox for new user.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you use different mailbox format, you need to set mailbox format to the
+one you're using.</p>
+</div>
+<p>Download SQL template file used to update SQL database:</p>
+<pre><code>cd /tmp/
+wget -O iredmail.pgsql https://github.com/iredmail/iRedMail/raw/1.0/update/0.9.9/iredmail.pgsql
+</code></pre>
+<ul>
+<li>Run shell commands as root user below to connect to PostgreSQL server:</li>
+</ul>
+<pre><code># su - postgres
+$ psql -d vmail
+sql&gt; \i /tmp/iredmail.pgsql
+</code></pre>
+<h3 id="dovecot-read-mailbox-format-from-sql_1">Dovecot: read mailbox format from SQL</h3>
+<p>Please open file <code>/etc/dovecot/dovecot-pgsql.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/dovecot/dovecot-pgsql.conf</code> (FreeBSD), then</p>
+<h4 id="postgresql-8x">PostgreSQL 8.x</h4>
+<p>If you're running <strong>PostgreSQL 8.x</strong>, you can find the <code>user_query =</code> line like
+below:</p>
+<pre><code>user_query = SELECT \
+    mailbox.storagebasedirectory || '/' || mailbox.storagenode || '/' || mailbox.maildir AS home, \
+    ...
+</code></pre>
+<p>Update above line and also add a new line after it:</p>
+<pre><code>user_query = SELECT \
+    LOWER(mailbox.storagebasedirectory || '/' || mailbox.storagenode || '/' || mailbox.maildir) AS home, \
+    mailbox.mailboxformat || ':~/' || mailbox.mailboxfolder || '/' AS mail, \
+    ...
+</code></pre>
+<p>Restarting Dovecot service is required.</p>
+<p>For more details about changing mailbox format, please check our tutorial:
+<a href="change.mailbox.format.html">Change mailbox format</a>.</p>
+<h4 id="postgresql-9x-and-later-releases">PostgreSQL 9.x and later releases</h4>
+<p>If you're running <strong>PostgreSQL 9.x</strong> and later releases, you can find the
+<code>user_query =</code> line like below:</p>
+<pre><code>user_query = SELECT \
+            ...
+            CONCAT(mailbox.storagebasedirectory, '/', mailbox.storagenode, '/', mailbox.maildir) AS home, \
+            ...
+</code></pre>
+<p>Update above line and also add a new <code>CONCAT</code> line after it:</p>
+<pre><code>user_query = SELECT \
+            ...
+            LOWER(CONCAT(mailbox.storagebasedirectory, '/', mailbox.storagenode, '/', mailbox.maildir)) AS home, \
+            CONCAT(mailbox.mailboxformat, ':~/', mailbox.mailboxfolder, '/') AS mail, \
+            ...
+</code></pre>
+<p>Restarting Dovecot service is required.</p>
+<p>For more details about changing mailbox format, please check our tutorial:
+<a href="change.mailbox.format.html">Change mailbox format</a>.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

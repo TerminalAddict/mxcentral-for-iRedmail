@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 0.9.7 to 0.9.8</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-097-to-098">Upgrade iRedMail from 0.9.7 to 0.9.8</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#upgrade-iredmail-from-097-to-098">Upgrade iRedMail from 0.9.7 to 0.9.8</a><ul>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#general-all-backends-should-apply-these-steps">General (All backends should apply these steps)</a><ul>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-22">Upgrade iRedAPD (Postfix policy server) to the latest stable release (2.2)</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-09">Upgrade iRedAdmin (open source edition) to the latest stable release (0.9)</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#upgrade-roundcube-webmail-to-the-latest-stable-release-136">Upgrade Roundcube webmail to the latest stable release (1.3.6)</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#upgrade-sogo-from-v3-to-v4">Upgrade SOGo from v3 to v4</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#upgrade-dovecot-from-22-to-23">Upgrade Dovecot from 2.2 to 2.3</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#fixed-sogo-backup-script-contains-3-issues">Fixed: SOGo backup script contains 3 issues</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#fail2ban-new-jail-postfix-pregreet">Fail2ban: new jail postfix-pregreet</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#fixed-nginx-snippet-file-hard-codes-static-file-types-for-iredadmin">Fixed: Nginx snippet file hard-codes static file types for iRedAdmin</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#improve-nginx-config-file-to-handle-mailing-list-subscriptionunsubscription">Improve Nginx config file to handle mailing list subscription/unsubscription</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#security-fixed-nginx-snippet-file-doesnt-block-access-to-roundcube-sensitive-files">[SECURITY] Fixed: Nginx snippet file doesn't block access to Roundcube sensitive files</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#fix-unexpected-dnsbl-query-result-for-site-bbarracudacentralorg">Fix unexpected DNSBL query result for site b.barracudacentral.org</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#openbsd-upgrade-uwsgi-to-the-latest-2017">OpenBSD: Upgrade uwsgi to the latest 2.0.17</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#optional-log-mail-subject-sender-size-in-mail-deliver-log">[OPTIONAL] Log mail subject, sender, size in mail deliver log</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#optional-integrate-netdata-fancy-system-monitor">[OPTIONAL] integrate netdata - fancy system monitor</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#openldap-backend">OpenLDAP backend</a><ul>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#update-openldap-config-file-to-index-new-attributes-and-fix-an-acl">Update OpenLDAP config file to index new attributes and fix an ACL</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#update-iredmail-ldap-schema-file">Update iRedMail LDAP schema file</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#add-new-ldap-attributevalue-pairs-required-by-dovecot-23">Add new ldap attribute/value pairs required by Dovecot-2.3.</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#mlmmj-mailing-list-manager-integration">mlmmj (mailing list manager) integration</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#amavisd-add-new-sql-column-maddremail_raw-to-store-mail-address-without-address-extension">Amavisd: Add new SQL column maddr.email_raw to store mail address without address extension</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#update-sogo-config-file-for-per-domain-global-address-book">Update SOGo config file for per-domain global address book</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#mysqlmariadb-backends">MySQL/MariaDB backends</a><ul>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#fixed-user-under-disabled-domain-is-able-to-send-email-with-smtp-protocol">Fixed: User under disabled domain is able to send email with smtp protocol</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#sql-structure-changes-in-vmail-database">SQL structure changes in vmail database</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#amavisd-add-new-sql-column-maddremail_raw-to-store-mail-address-without-address-extension_1">Amavisd: Add new SQL column maddr.email_raw to store mail address without address extension</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#mlmmj-mailing-list-manager-integration_1">mlmmj (mailing list manager) integration</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#postgresql-backend">PostgreSQL backend</a><ul>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#fixed-user-under-disabled-domain-is-able-to-send-email-with-smtp-protocol_1">Fixed: User under disabled domain is able to send email with smtp protocol</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#sql-structure-changes-in-vmail-database_1">SQL structure changes in vmail database</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#amavisd-add-new-sql-column-maddremail_raw-to-store-mail-address-without-address-extension_2">Amavisd: Add new SQL column maddr.email_raw to store mail address without address extension</a></li>
+<li><a href="upgrade.iredmail.0.9.7-0.9.8.html#mlmmj-mailing-list-manager-integration_2">mlmmj (mailing list manager) integration</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Jun 19, Improve Nginx config file to handle mailing list subscription/unsubscription</li>
+<li>Mar 12, Add new ldap attribute/value pairs required by Dovecot-2.3.</li>
+<li>Mar 4, Upgrade SOGo from v3 to v4.</li>
+<li>Mar 4, Upgrade Roundcube webmail to the latet version - 1.3.6.</li>
+<li>Mar 1, SQL structure changes in <code>vmail</code> database.</li>
+<li>Feb 14, 2018: [SECURITY] Fixed: Nginx snippet file doesn't block access to Roundcube sensitive files.</li>
+<li>Feb 11, 2018: netdata integration.</li>
+<li>Feb 11, 2018: mlmmj &amp; mlmmjadmin integration.</li>
+<li>Feb 11, 2018: OpenBSD: Upgrade uwsgi to the latest 2.0.16</li>
+<li>Jan 31, 2018: Fail2ban: new jail <code>postfix-pregreet</code>.</li>
+<li>Jan 21, 2018: [LDAP] Update SOGo config file for per-domain global address book.</li>
+<li>Jan 19, 2018: Update OpenLDAP config file to index new attributes and fix an ACL.</li>
+<li>Jan 19, 2018: Update iRedMail LDAP schema file</li>
+<li>Dec 18, 2017: Don't hard-code static file types in Nginx template for iRedAdmin.</li>
+<li>Nov 24, 2017: Amavisd: Add new SQL column <code>maddr.email_raw</code> to store mail address without address extension.</li>
+<li>Oct 6, 2017: Fixed: SOGo backup script contains 3 issues</li>
+<li>Oct 6, 2017: [OPTIONAL] Fix improper expected DNSBL filter for site <code>b.barracudacentral.org</code></li>
+<li>Oct 6, 2017: [OPTIONAL] Log mail subject, sender, size in mail deliver log.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-steps">General (All backends should apply these steps)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code>0.9.8
+</code></pre>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-22">Upgrade iRedAPD (Postfix policy server) to the latest stable release (2.2)</h3>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<h3 id="upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-09">Upgrade iRedAdmin (open source edition) to the latest stable release (0.9)</h3>
+<p>Please follow this tutorial to upgrade iRedAdmin open source edition to the
+latest stable release:
+<a href="migrate.or.upgrade.iredadmin.html">Upgrade iRedAdmin to the latest stable release</a></p>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release-136">Upgrade Roundcube webmail to the latest stable release (1.3.6)</h3>
+<div class="admonition warning">
+<p class="admonition-title">Roundcube 1.3</p>
+<ul>
+<li>Roundcube 1.3 requires at least <strong>PHP 5.4</strong>. If your server is still running
+  PHP 5.3 and cannot upgrade to 5.4, please upgrade Roundcube to the latest
+  1.2 branch (1.2.5) instead.</li>
+<li>Roundcube 1.3 no longer supports IE &lt; 10 and old versions of Firefox,
+  Chrome and Safari.</li>
+<li>Roundcube 1.3 uses jQuery 3.2 and will not work with current jQuery
+  mobile plugin. If you use any third-party plugin, please check its
+  website to make sure it's compatible with Roundcube 1.3 before upgrading.</li>
+</ul>
+<p>With the release of Roundcube 1.3.0, the previous stable release branches
+1.2.x and 1.1.x will switch in to LTS low maintenance mode which means
+they will only receive important security updates but no longer any regular
+improvement updates.</p>
+</div>
+<p>Please follow Roundcube official tutorial to upgrade Roundcube webmail to the
+latest stable release immediately:</p>
+<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</li>
+</ul>
+<h3 id="upgrade-sogo-from-v3-to-v4">Upgrade SOGo from v3 to v4</h3>
+<p>SOGo v4 was released on Mar 7, 2018 by the SOGo team (<a href="https://sogo.nu">https://sogo.nu</a>), it
+will become the main branch with most active development.</p>
+<p>If you're satisfied with SOGo v3, you're free to continue running v3. but if
+you want to try v4, please follow our tutorial below to upgrade it.</p>
+<ul>
+<li><a href="upgrade.sogo.3.to.4.html">Upgrade SOGo from v3 to v4</a></li>
+</ul>
+<h3 id="upgrade-dovecot-from-22-to-23">Upgrade Dovecot from 2.2 to 2.3</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>This is only applicable to FreeBSD.</p>
+</div>
+<p>Currently only FreeBSD offers Dovecot 2.3 by the ports tree, other Linux/BSD
+distributions still offers Dovecot 2.2, you should stick to Dovecot 2.2 if your
+Linux/BSD vendor doesn't offer 2.3 yet.</p>
+<p>Please follow our tutorial below to upgrade Dovecot:</p>
+<ul>
+<li><a href="upgrade.dovecot.2.2-2.3.html">Upgrade Dovecot from 2.2.x to 2.3.x</a></li>
+</ul>
+<h3 id="fixed-sogo-backup-script-contains-3-issues">Fixed: SOGo backup script contains 3 issues</h3>
+<p>SOGo backup script <code>/var/vmail/backup/backup_sogo.sh</code> shipped in iRedMail-0.9.7
+and earlier releases contains 3 issues:</p>
+<ul>
+<li>it cannot remove old backup files</li>
+<li>it doesn't set correct owner and permission on backup files</li>
+<li>it cannot find command <code>sogo-tool</code> on FreeBSD. This issue causes our script
+  didn't backup any sogo data on FreeBSD at all.</li>
+</ul>
+<p>To fix them, please download the latest version and override the one on your
+system:</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Script <code>backup_sogo.sh</code> uses <code>/var/vmail/backup</code> to store backup files by
+default, if you use a different directory, please edit this file and modify
+parameter <code>BACKUP_ROOTDIR=</code> to use the correct one.</p>
+</div>
+<pre><code>cd /var/vmail/backup/
+rm -f backup_sogo.sh
+wget https://github.com/iredmail/iRedMail/raw/1.0/tools/backup_sogo.sh
+chown root backup_sogo.sh
+chmod 0400 backup_sogo.sh
+</code></pre>
+<h3 id="fail2ban-new-jail-postfix-pregreet">Fail2ban: new jail <code>postfix-pregreet</code></h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>This is not applicable to OpenBSD because we don't have Fail2ban running on
+OpenBSD.</p>
+</div>
+<p>Quote from <a href="http://www.postfix.org/POSTSCREEN_README.html#pregreet">Postfix website</a>:</p>
+<blockquote>
+<p>The SMTP protocol is a classic example of a protocol where the server speaks
+before the client. postscreen(8) detects zombies that are in a hurry and that
+speak before their turn.</p>
+</blockquote>
+<p>Many spammers are in a hurry to transfer message to your server, we'd
+like to block them due to not follow RFC.</p>
+<p>During mail server maintenance, we found many spammers from China mainland
+cannot pass this pregreet test and all of them use <code>ylmf-pc</code> as HELO hostname.
+it's very possible that they're running an illegal Windows XP system which were
+installed with a malware Windows XP ISO image.</p>
+<p>Steps to create this new Fail2ban jail:</p>
+<ul>
+<li>Download filter rule:</li>
+</ul>
+<pre><code>cd /etc/fail2ban/filter.d/
+wget https://github.com/iredmail/iRedMail/raw/1.0/samples/fail2ban/filter.d/postfix-pregreet.iredmail.conf
+</code></pre>
+<ul>
+<li>
+<p>Create new file <code>/etc/fail2ban/jail.d/postfix-pregreet.local</code> with content
+  below:</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Please make sure you're using correct Postfix log file in <code>logpath =</code>
+parameter. On RHEL/CentOS/FreeBSD, it's <code>/var/log/maillog</code>. On
+Debian/Ubuntu, it's <code>/var/log/mail.log</code>.</p>
+</div>
+</li>
+</ul>
+<pre><code>[postfix-pregreet]
+enabled     = true
+filter      = postfix-pregreet.iredmail
+logpath     = /var/log/maillog
+maxretry    = 1
+action      = iptables-multiport[name=postfix-pregreet, port=&quot;25&quot;, protocol=tcp]
+</code></pre>
+<ul>
+<li>Restarting Fail2ban service is required.</li>
+</ul>
+<h3 id="fixed-nginx-snippet-file-hard-codes-static-file-types-for-iredadmin">Fixed: Nginx snippet file hard-codes static file types for iRedAdmin</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>This is only applicable to Nginx.</p>
+</div>
+<p>With default iRedMail settings, Nginx snippet file <code>/etc/nginx/templates/iredadmin.tmpl</code>
+(on Linux/OpenBSD) or <code>/usr/local/etc/nginx/templates/iredadmin.tmpl</code> (on FreeBSD)
+hard-codes static file types like below:</p>
+<pre><code>location ~ ^/iredadmin/static/(.*)\.(png|jpg|gif|css|js) {
+    alias /var/www/iredadmin/static/$1.$2;
+}
+</code></pre>
+<p>Note: The path in <code>alias</code> directive is different on different Linux/BSD distributions.</p>
+<p>Please replace it by:</p>
+<pre><code>location ~ ^/iredadmin/static/(.*) {
+    alias /var/www/iredadmin/static/$1;
+}
+</code></pre>
+<p>Reloading or restarting Nginx service is required.</p>
+<h3 id="improve-nginx-config-file-to-handle-mailing-list-subscriptionunsubscription">Improve Nginx config file to handle mailing list subscription/unsubscription</h3>
+<p>iRedMail integrates mlmmj as mailing list manager (integration tutorial
+mentioned later in this tutorial), it supports subscription and unsubscription
+from web page. To hide the application handle the subscription/unsubscription
+behind it, iRedMail requires a new URL <code>https://&lt;server&gt;/newsletter/</code> for this
+purpose.</p>
+<p>Please append lines below to file <code>/etc/nginx/templates/iredadmin.tmpl</code>
+(on Linux/OpenBSD) or <code>/usr/local/etc/nginx/templates/iredadmin.tmpl</code> (on
+FreeBSD)</p>
+<pre><code># Handle newsletter-style subscription/unsubscription supported in iRedAdmin-Pro.
+location ~ ^/newsletter/ {
+    rewrite /newsletter/(.*) /iredadmin/newsletter/$1 last;
+}
+</code></pre>
+<p>Reloading or restarting Nginx service is required.</p>
+<h3 id="security-fixed-nginx-snippet-file-doesnt-block-access-to-roundcube-sensitive-files">[SECURITY] Fixed: Nginx snippet file doesn't block access to Roundcube sensitive files</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>This is only applicable to Nginx.</p>
+</div>
+<p>With default iRedMail settings, Nginx doesn't block access to Roundcube
+sensitive files and <code>.htaccess</code> file, this may leak users' PGP keys.
+Please follow steps below to fix it.</p>
+<p>Please open file <code>/etc/nginx/templates/roundcube.tmpl</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/nginx/templates/roundcube.tmpl</code> (FreeBSD), add lines below
+<strong>ABOVE</strong> any existing lines:</p>
+<pre><code># Block access to default directories and files under these directories
+location ~ ^/mail/(bin|config|installer|logs|SQL|temp|vendor)($|/.*) { deny all; }
+
+# Block access to default files under top-directory and files start with same name.
+location ~ ^/mail/(CHANGELOG|composer.json|INSTALL|jsdeps.json|LICENSE|README|UPGRADING)($|.*) { deny all; }
+
+# Block plugin config files and sample config files.
+location ~ ^/mail/plugins/.*/config.inc.php.* { deny all; }
+
+# Block access to plugin data
+location ~ ^/mail/plugins/enigma/home($|/.*) { deny all; }
+</code></pre>
+<p>Please open file <code>/etc/nginx/templates/roundcube-subdomain.tmpl</code>
+(Linux/OpenBSD) or <code>/usr/local/etc/nginx/templates/roundcube-subdomain.tmpl</code>
+(FreeBSD), add lines below <strong>ABOVE</strong> any existing lines:</p>
+<pre><code># Block access to default directories and files under these directories
+location ~ ^/(bin|config|installer|logs|SQL|temp|vendor)($|/.*) { deny all; }
+
+# Block access to default files under top-directory and files start with same name.
+location ~ ^/(CHANGELOG|composer.json|INSTALL|jsdeps.json|LICENSE|README|UPGRADING)($|.*) { deny all; }
+
+# Block plugin config files and sample config files.
+location ~ ^/plugins/.*/config.inc.php.* { deny all; }
+
+# Block access to plugin data
+location ~ ^/plugins/enigma/home($|/.*) { deny all; }
+</code></pre>
+<p>Open file <code>/etc/nginx/sites-available/00-default.conf</code> AND <code>00-default-ssl.conf</code>,
+make sure template file <code>misc.tmpl</code> is loaded before other template files.
+For example, your existing config file may look like this:</p>
+<pre><code>server {
+    ...
+    include /etc/nginx/templates/...;
+    include /etc/nginx/templates/...;
+    include /etc/nginx/templates/misc.tmpl;
+}
+</code></pre>
+<p>Please move the <code>misc.tmpl</code> line <strong>ABOVE</strong> any other <code>include</code> directive.
+Final setting should look like this:</p>
+<pre><code>server {
+    ...
+    include /etc/nginx/templates/misc.tmpl;
+    include /etc/nginx/templates/...;
+    include /etc/nginx/templates/...;
+}
+</code></pre>
+<p>Note: Nginx in iRedMail-0.9.7 loads modular config files from
+<code>/etc/nginx/sites-conf.d/default/</code> and <code>/etc/nginx/sites-conf.d/default-ssl/</code>
+instead of storing all configurations for default web hosts in one file, in
+this case you need to:</p>
+<ul>
+<li>rename file <code>/etc/nginx/sites-conf.d/default/99-include-tmpl-misc.conf</code> to
+  <code>/etc/nginx/sites-conf.d/default/1-include-tmpl-misc.conf</code>.</li>
+<li>rename file <code>/etc/nginx/sites-conf.d/default-ssl/99-include-tmpl-misc.conf</code> to
+  <code>/etc/nginx/sites-conf.d/default-ssl/1-include-tmpl-misc.conf</code>.</li>
+</ul>
+<p>Restarting Nginx service is required.</p>
+<h3 id="fix-unexpected-dnsbl-query-result-for-site-bbarracudacentralorg">Fix unexpected DNSBL query result for site <code>b.barracudacentral.org</code></h3>
+<p>Postfix config file (<code>/etc/postfix/main.cf</code> on Linux/OpenBSD, or
+<code>/usr/local/etc/postfix/main.cf</code> on FreeBSD) generated by iRedMail enables
+DNSBL service for postscreen service like below:</p>
+<pre><code>postscreen_dnsbl_sites =
+    zen.spamhaus.org=127.0.0.[2..11]*3
+    b.barracudacentral.org=127.0.0.[2..11]*2
+</code></pre>
+<p>but site <code>b.barracudacentral.org</code> returns only domain <code>127.0.0.2</code> (instead of
+a range from <code>127.0.0.2</code> to <code>127.0.0.11</code>), so we should change the
+<code>b.barracudacentral.org=127.0.0.[2..11]*2</code> line to:</p>
+<pre><code>postscreen_dnsbl_sites =
+    zen.spamhaus.org=127.0.0.[2..11]*3
+    b.barracudacentral.org=127.0.0.2*2
+</code></pre>
+<p>Reloading or restarting Postfix is required.</p>
+<h3 id="openbsd-upgrade-uwsgi-to-the-latest-2017">OpenBSD: Upgrade uwsgi to the latest 2.0.17</h3>
+<p>uwsgi is the interface between Nginx and iRedAdmin, so if you're running
+iRedAdmin, it's recommended to upgrade uwsgi to the latest version, 2.0.17.</p>
+<p>Steps: Download the latest uwsgi, compile it, then restart uwsgi service.</p>
+<pre><code>cd /root/
+ftp https://projects.unbit.it/downloads/uwsgi-2.0.17.tar.gz
+tar zxf uwsgi-2.0.17.tar.gz
+cd uwsgi-2.0.17
+python setup.py install
+</code></pre>
+<p>uwsgi should be succesfully installed, then restart uwsgi service:</p>
+<pre><code>rcctl restart uwsgi
+</code></pre>
+<h3 id="optional-log-mail-subject-sender-size-in-mail-deliver-log">[OPTIONAL] Log mail subject, sender, size in mail deliver log</h3>
+<p>If you may need to get more info of (locally) delivered mail messages,
+Dovecot setting <code>deliver_log_format</code> can log extra mail subject, sender, and
+message size in mail deliver log. Please append this setting in Dovecot config
+file <code>dovecot.conf</code>, then restart or reload Dovecot service.
+* On Linux/OpenBSD, it's <code>/etc/dovecot/dovecot.conf</code>
+* On FreeBSD, it's <code>/usr/local/etc/dovecot/dovecot.conf</code></p>
+<pre><code>deliver_log_format = from=%{from}, envelope_sender=%{from_envelope}, subject=%{subject}, msgid=%m, size=%{size}, %$
+</code></pre>
+<h3 id="optional-integrate-netdata-fancy-system-monitor">[OPTIONAL] integrate netdata - fancy system monitor</h3>
+<p>iRedMail-0.9.8 integrates netdata as an optional component, it's a fancy system
+monitor to help you understand how your iRedMail server runs.</p>
+<p>To integrate netdata, please follow our tutorial below:</p>
+<ul>
+<li><a href="integration.netdata.linux.html">Integrate netdata monitor on Linux server</a></li>
+<li><a href="integration.netdata.freebsd.html">Integrate netdata monitor on FreeBSD server</a></li>
+</ul>
+<p>Unfortunately, netdata doesn't work on OpenBSD.</p>
+<h2 id="openldap-backend">OpenLDAP backend</h2>
+<h3 id="update-openldap-config-file-to-index-new-attributes-and-fix-an-acl">Update OpenLDAP config file to index new attributes and fix an ACL</h3>
+<ul>
+<li>
+<p>Please open OpenLDAP config file <code>slapd.conf</code>:</p>
+<ul>
+<li>On RHEL/CentOS, it's <code>/etc/openldap/slapd.conf</code></li>
+<li>On Debian/Ubuntu, it's <code>/etc/ldap/slapd.conf</code></li>
+<li>On FreeBSD, it's <code>/usr/local/etc/openldap/slapd.conf</code></li>
+<li>On OpenBSD:<ul>
+<li>if you're running OpenLDAP, it's <code>/etc/openldap/slapd.conf</code>.</li>
+<li>if you're running <code>ldapd(8)</code> as LDAP server, no need to fix ACL
+  issue (<code>access to dn.subtree=</code>), but still need to index new
+  attributes.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>find lines below:</p>
+</li>
+</ul>
+<pre><code>access to dn.subtree=&quot;o=domains,dc=xxx,dc=xxx&quot;
+    by anonymous                    auth
+    by self                         write
+    by dn.exact=&quot;cn=vmail,dc=xxx,dc=xxx&quot;    read
+    by dn.exact=&quot;cn=vmailadmin,dc=xxx,dc=xxx&quot;  write
+    by users                        none
+</code></pre>
+<p>Replace the last line <code>by users none</code> by:</p>
+<pre><code>   by users read
+</code></pre>
+<ul>
+<li>Append lines below to the end of OpenLDAP config file <code>slapd.conf</code>:</li>
+</ul>
+<pre><code>index member,uniqueMember eq,pres
+index mailingListID eq
+</code></pre>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>For OpenBSD <code>ldapd(8)</code> server, please add lines below inside the
+<code>namespace xxx {}</code> block:</p>
+<p><pre>
+index member
+index uniqueMember
+index mailingListID
+</pre></p>
+</div>
+<h3 id="update-iredmail-ldap-schema-file">Update iRedMail LDAP schema file</h3>
+<p>iRedMail-0.9.8 introduces 1 new LDAP attribute for mailing list account:</p>
+<ul>
+<li><code>mailingListID</code>: used to store a server-wide unique id, currently is used
+  for mailing list subscription/unsubscription (a.k.a. newsletter).</li>
+</ul>
+<p>Download the latest iRedMail LDAP schema file</p>
+<ul>
+<li>On RHEL/CentOS:</li>
+</ul>
+<pre><code>cd /tmp
+wget https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+cd /etc/openldap/schema/
+cp iredmail.schema iredmail.schema.bak
+
+cp -f /tmp/iredmail.schema /etc/openldap/schema/
+</code></pre>
+<ul>
+<li>On Debian/Ubuntu:</li>
+</ul>
+<pre><code>cd /tmp
+wget https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+cd /etc/ldap/schema/
+cp iredmail.schema iredmail.schema.bak
+
+cp -f /tmp/iredmail.schema /etc/ldap/schema/
+</code></pre>
+<ul>
+<li>On FreeBSD:</li>
+</ul>
+<pre><code>cd /tmp
+wget https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+cd /usr/local/etc/openldap/schema/
+cp iredmail.schema iredmail.schema.bak
+
+cp -f /tmp/iredmail.schema /usr/local/etc/openldap/schema/
+</code></pre>
+<ul>
+<li>
+<p>On OpenBSD:</p>
+<blockquote>
+<p>Note: if you're running ldapd as LDAP server, the schema directory is
+<code>/etc/ldap</code>, and service name is <code>ldapd</code>.</p>
+</blockquote>
+</li>
+</ul>
+<pre><code>cd /tmp
+ftp https://github.com/iredmail/iRedMail/raw/1.0/samples/iredmail/iredmail.schema
+
+cd /etc/openldap/schema/
+cp iredmail.schema iredmail.schema.bak
+
+cp -f /tmp/iredmail.schema /etc/openldap/schema/
+</code></pre>
+<h3 id="add-new-ldap-attributevalue-pairs-required-by-dovecot-23">Add new ldap attribute/value pairs required by Dovecot-2.3.</h3>
+<p>Dovecot-2.3 has an internal change which impacts mail accounts created by
+iRedMail, it requires 2 new ldap attribute/value pairs for all mail users:</p>
+<ul>
+<li>enabledService=imaptls</li>
+<li>enabledService=pop3tls</li>
+</ul>
+<p>Please follow steps below to add them.</p>
+<ul>
+<li>Download script used to update existing mail users:</li>
+</ul>
+<pre><code>cd /root/
+wget https://github.com/iredmail/iRedMail/raw/1.0/update/ldap/update-ldap-dovecot-2.3.py
+</code></pre>
+<ul>
+<li>Open downloaded file <code>update-ldap-dovecot-2.3.py</code>, set LDAP server
+  related settings in this file. For example:</li>
+</ul>
+<pre><code># Part of file: update-ldap-dovecot-2.3.py
+
+uri = 'ldap://127.0.0.1:389'
+basedn = 'o=domains,dc=example,dc=com'
+bind_dn = 'cn=vmailadmin,dc=example,dc=com'
+bind_pw = 'password'
+</code></pre>
+<p>You can find required LDAP credential in iRedAdmin config file or
+<code>iRedMail.tips</code> file under your iRedMail installation directory. Using either
+<code>cn=Manager,dc=xx,dc=xx</code> or <code>cn=vmailadmin,dc=xx,dc=xx</code> as bind dn is ok, both
+of them have read-write privilege to update mail accounts.</p>
+<ul>
+<li>Execute this script, it will add required data:</li>
+</ul>
+<pre><code># python update-ldap-dovecot-2.3.py
+</code></pre>
+<h3 id="mlmmj-mailing-list-manager-integration">mlmmj (mailing list manager) integration</h3>
+<p>iRedMail-0.9.8 integrates mlmmj as mailing list manager, please follow our
+document below to integrate it:</p>
+<ul>
+<li><a href="integration.mlmmj.ldap.html">Integrate mlmmj mailing list manager</a></li>
+</ul>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>mlmmj is a core component since iRedMail-0.9.8.</p>
+</div>
+<h3 id="amavisd-add-new-sql-column-maddremail_raw-to-store-mail-address-without-address-extension">Amavisd: Add new SQL column <code>maddr.email_raw</code> to store mail address without address extension</h3>
+<p>Many sender/recipient addresses contain address extension like
+<code>user+extension@domain.com</code>, this is annoying if we try to get top 10
+senders/recipients from Amavisd SQL database, because address
+<code>user+ext1@domain.com</code> and <code>user+ext2@domain.com</code> are considered as different
+user. To avoid this issue, we create a SQL trigger to store email address
+without address extension in a new column <code>maddr.email_raw</code>. Please follow
+steps below to apply the SQL structure change.</p>
+<ul>
+<li>Download and import SQL template file used to update SQL database:</li>
+</ul>
+<pre><code>cd /tmp/
+wget https://github.com/iredmail/iRedMail/raw/1.0/update/0.9.8/amavisd.mysql
+mysql amavisd &lt; amavisd.mysql
+</code></pre>
+<h3 id="update-sogo-config-file-for-per-domain-global-address-book">Update SOGo config file for per-domain global address book</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>With this change, user can only see other users in same domain. If this is
+<strong>NOT</strong> what you expect, you should <strong>NOT</strong> apply this change.</p>
+</div>
+<p>SOGo is configured by iRedMail to query all users on server while performing
+account search (e.g. global address book, meeting attendees), this may be not
+what you expect if you host multiple mail domains and they should not see
+others on same server. Please follow steps below to fix it.</p>
+<ul>
+<li>Open SOGo config file <code>/etc/sogo/sogo.conf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/sogo/sogo.conf</code> (FreeBSD), find lines like below:</li>
+</ul>
+<pre><code>        {
+            // Used for global address book
+            type = ldap;
+            id = global_addressbook;
+            canAuthenticate = NO;
+            isAddressBook = YES;
+            displayName = &quot;Global Address Book&quot;;
+</code></pre>
+<ul>
+<li>Add one line after the <code>displayName =</code> line:</li>
+</ul>
+<pre><code>            bindAsCurrentUser = YES;
+</code></pre>
+<ul>
+<li>Restarting SOGo service is required to apply this change.</li>
+</ul>
+<h2 id="mysqlmariadb-backends">MySQL/MariaDB backends</h2>
+<h3 id="fixed-user-under-disabled-domain-is-able-to-send-email-with-smtp-protocol">Fixed: User under disabled domain is able to send email with smtp protocol</h3>
+<p>Dovecot is IMAP/POP3/Managesieve server, also a SASL auth server for Postfix.
+If mail domain is disabled, users under this domain are not able to use
+IMAP/POP3/Managesieve services, but there's a bug in Dovecot SQL query
+configured by iRedMail, it doesn't check domain status while performing smtp
+sasl auth. Please follow steps below to fix it.</p>
+<ul>
+<li>Open file <code>/etc/dovecot/dovecot-mysql.conf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/dovecot/dovecot-mysql.conf</code> (FreeBSD), find the
+  <code>password_query</code> line like below:</li>
+</ul>
+<pre><code>password_query = SELECT password, allow_nets FROM mailbox WHERE username='%u' AND enable%Ls%Lc=1 AND active=1
+</code></pre>
+<ul>
+<li>Replace it by lines below:</li>
+</ul>
+<pre><code>password_query = SELECT mailbox.password, mailbox.allow_nets \
+        FROM mailbox,domain \
+       WHERE mailbox.username='%u' \
+             AND mailbox.`enable%Ls%Lc`=1 \
+             AND mailbox.active=1 \
+             AND mailbox.domain=domain.domain \
+             AND domain.backupmx=0 \
+             AND domain.active=1
+</code></pre>
+<ul>
+<li>Save your change and restart Dovecot service.</li>
+</ul>
+<h3 id="sql-structure-changes-in-vmail-database">SQL structure changes in <code>vmail</code> database</h3>
+<p>We've made some changes to <code>vmail</code> database:</p>
+<ul>
+<li>Drop sql column <code>mailbox.local_part</code>. This column was inherited from
+  PostfixAdmin, but iRedMail didn't use it at all.</li>
+<li>Rename table <code>alias_moderators</code> to <code>moderators</code>. Used to store moderators of
+  both mail alias accounts and mailing lists.</li>
+<li>Add new column <code>domain.maillists</code>. Used to store per-domain limit of mailing
+  list accounts. Note: this is majorly used by iRedAdmin-Pro.</li>
+<li>Add new column <code>forwardings.is_maillist</code>.</li>
+<li>Add new column <code>mailbox.enableimaptls</code>. Required by Dovecot-2.3.</li>
+<li>Add new table <code>maillists</code>, used by our new mailing list manager software - mlmmj.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Please backup SQL database <code>vmail</code> before you run any SQL commands below.</p>
+<p><code>bash /var/vmail/backup/backup_mysql.sh</code></p>
+</div>
+<p>Download SQL template file used to update SQL database:</p>
+<pre><code>cd /root/
+wget -O iredmail.mysql https://github.com/iredmail/iRedMail/raw/1.0/update/0.9.8/iredmail.mysql
+</code></pre>
+<p>Connect to MySQL server as MySQL root user, and execute SQL commands:</p>
+<pre><code>mysql vmail &lt; /root/iredmail.mysql
+</code></pre>
+<h3 id="amavisd-add-new-sql-column-maddremail_raw-to-store-mail-address-without-address-extension_1">Amavisd: Add new SQL column <code>maddr.email_raw</code> to store mail address without address extension</h3>
+<p>Many sender/recipient addresses contain address extension like
+<code>user+extension@domain.com</code>, this is annoying if we try to get top 10
+senders/recipients from Amavisd SQL database, because address
+<code>user+ext1@domain.com</code> and <code>user+ext2@domain.com</code> should be considered as same
+user, but it's not. To avoid this issue, we create a SQL trigger to store email
+address without address extension in a new column <code>maddr.email_raw</code>. Steps:</p>
+<ul>
+<li>Download and import SQL template file used to update SQL database:</li>
+</ul>
+<pre><code>cd /tmp/
+wget https://github.com/iredmail/iRedMail/raw/1.0/update/0.9.8/amavisd.mysql
+mysql amavisd &lt; amavisd.mysql
+</code></pre>
+<h3 id="mlmmj-mailing-list-manager-integration_1">mlmmj (mailing list manager) integration</h3>
+<p>iRedMail-0.9.8 integrates mlmmj as mailing list manager, please follow our
+document below to integrate it:</p>
+<ul>
+<li><a href="integration.mlmmj.mysql.html">Integrate mlmmj mailing list manager</a></li>
+</ul>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>mlmmj is a core component since iRedMail-0.9.8.</p>
+</div>
+<h2 id="postgresql-backend">PostgreSQL backend</h2>
+<h3 id="fixed-user-under-disabled-domain-is-able-to-send-email-with-smtp-protocol_1">Fixed: User under disabled domain is able to send email with smtp protocol</h3>
+<p>Dovecot is IMAP/POP3/Managesieve server, also a SASL auth server for Postfix.
+If mail domain is disabled, users under this domain are not able to use
+IMAP/POP3/Managesieve services, but there's a bug in Dovecot SQL query
+configured by iRedMail, it doesn't check domain status while performing smtp
+sasl auth. Please follow steps below to fix it.</p>
+<ul>
+<li>Open file <code>/etc/dovecot/dovecot-pgsql.conf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/dovecot/dovecot-pgsql.conf</code> (FreeBSD), find the
+  <code>password_query</code> line like below:</li>
+</ul>
+<pre><code>password_query = SELECT password, allow_nets FROM mailbox WHERE username='%u' AND enable%Ls%Lc=1 AND active=1
+</code></pre>
+<ul>
+<li>Replace it by lines below:</li>
+</ul>
+<pre><code>password_query = SELECT mailbox.password, mailbox.allow_nets \
+        FROM mailbox,domain \
+       WHERE mailbox.username='%u' \
+             AND mailbox.&quot;enable%Ls%Lc&quot;=1 \
+             AND mailbox.active=1 \
+             AND mailbox.domain=domain.domain \
+             AND domain.backupmx=0 \
+             AND domain.active=1
+</code></pre>
+<ul>
+<li>Save your change and restart Dovecot service.</li>
+</ul>
+<h3 id="sql-structure-changes-in-vmail-database_1">SQL structure changes in <code>vmail</code> database</h3>
+<p>We've made some changes to <code>vmail</code> database:</p>
+<ul>
+<li>Drop sql column <code>mailbox.local_part</code>. This column was inherited from
+  PostfixAdmin, but iRedMail didn't use it at all.</li>
+<li>Rename table <code>alias_moderators</code> to <code>moderators</code>. Used to store moderators of
+  both mail alias accounts and mailing lists.</li>
+<li>Add new column <code>domain.maillists</code>. Used to store per-domain limit of mailing
+  list accounts. Note: this is majorly used by iRedAdmin-Pro.</li>
+<li>Add new column <code>forwardings.is_maillist</code>.</li>
+<li>Add new column <code>mailbox.enableimaptls</code>. Required by Dovecot-2.3.</li>
+<li>Add new table <code>maillists</code>, used by our new mailing list manager software - mlmmj.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Please backup SQL database <code>vmail</code> before you run any SQL commands below.</p>
+<p><code>bash /var/vmail/backup/backup_pgsql.sh</code></p>
+</div>
+<ul>
+<li>Download SQL template file used to update SQL database:</li>
+</ul>
+<pre><code>cd /tmp/
+wget https://github.com/iredmail/iRedMail/raw/1.0/update/0.9.8/iredmail.pgsql
+</code></pre>
+<ul>
+<li>Connect to PostgreSQL server as <code>postgres</code> user and import the SQL file:<ul>
+<li>on Linux, it's <code>postgres</code> user</li>
+<li>on FreeBSD, it's <code>pgsql</code> user</li>
+<li>on OpenBSD, it's <code>_postgresql</code> user</li>
+</ul>
+</li>
+</ul>
+<pre><code>su - postgres
+psql -d vmail &lt; /tmp/iredmail.pgsql
+</code></pre>
+<h3 id="amavisd-add-new-sql-column-maddremail_raw-to-store-mail-address-without-address-extension_2">Amavisd: Add new SQL column <code>maddr.email_raw</code> to store mail address without address extension</h3>
+<p>Many sender/recipient addresses contain address extension like
+<code>user+extension@domain.com</code>, this is annoying if we try to get top 10
+senders/recipients from Amavisd SQL database, because address
+<code>user+ext1@domain.com</code> and <code>user+ext2@domain.com</code> should be considered as same
+user, but it's not. To avoid this issue, we create a SQL trigger to store email
+address without address extension in a new column <code>maddr.email_raw</code>. Steps:</p>
+<ul>
+<li>Download SQL template file used to update SQL database:</li>
+</ul>
+<pre><code>cd /tmp/
+wget https://github.com/iredmail/iRedMail/raw/1.0/update/0.9.8/amavisd.pgsql
+</code></pre>
+<ul>
+<li>Run shell commands as root user below to connect to PostgreSQL server:</li>
+</ul>
+<pre><code># su - postgres
+$ psql -U amavisd -d amavisd
+sql&gt; \i /tmp/amavisd.pgsql
+</code></pre>
+<h3 id="mlmmj-mailing-list-manager-integration_2">mlmmj (mailing list manager) integration</h3>
+<p>iRedMail-0.9.8 integrates mlmmj as mailing list manager, please follow our
+document below to integrate it:</p>
+<ul>
+<li><a href="integration.mlmmj.pgsql.html">Integrate mlmmj mailing list manager</a></li>
+</ul>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>mlmmj is a core component since iRedMail-0.9.8.</p>
+</div><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Setup Thunderbird: SOGo Address Book and Calendar synchronization with CardDAV and CalDAV</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="setup-thunderbird-sogo-address-book-and-calendar-synchronization-with-carddav-and-caldav">Setup Thunderbird: SOGo Address Book and Calendar synchronization with CardDAV and CalDAV</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="thunderbird.sogo.html#setup-thunderbird-sogo-address-book-and-calendar-synchronization-with-carddav-and-caldav">Setup Thunderbird: SOGo Address Book and Calendar synchronization with CardDAV and CalDAV</a><ul>
+<li><a href="thunderbird.sogo.html#calendar-caldav-with-thunderbird">Calendar (CalDAV) with Thunderbird</a><ul>
+<li><a href="thunderbird.sogo.html#configure-remote-calendar">Configure Remote Calendar</a></li>
+</ul>
+</li>
+<li><a href="thunderbird.sogo.html#address-book-carddav-with-sogo-connector">Address Book (CardDAV) with SOGo Connector</a><ul>
+<li><a href="thunderbird.sogo.html#download-and-install-sogo-connector">Download and install SOGo Connector</a></li>
+<li><a href="thunderbird.sogo.html#configure-thunderbird">Configure Thunderbird</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<p>SOGo Connector extention provides integration of Mozilla Thunderbird with the SOGo groupware solution. It does this by adding support for remote DAV address books and by adding features to the calendar.</p>
+<h2 id="calendar-caldav-with-thunderbird">Calendar (CalDAV) with Thunderbird</h2>
+<h3 id="configure-remote-calendar">Configure Remote Calendar</h3>
+<p>To use SOGo calendar, we need to get the link of SOGo Calendar first.</p>
+<ul>
+<li>Login to SOGo</li>
+<li>Click <code>Calendar</code> on top-right corner</li>
+<li>
+<p>Choose the calendar you want to sync (<code>Personal Calendar</code> is the default one),
+  click on 3 vertical dots, choose <code>Link to this Calendar</code> and copy CalDAV URL.</p>
+<p>Note: Some old SOGo releases might use <code>127.0.0.1:20000</code> as server
+address in the CardDAV URL, you must replace them by the real server
+address like <code>https://&lt;your_server_name_or_ip&gt;/SOGo</code>.</p>
+</li>
+</ul>
+<p><img alt="" src="images/thunderbird/sogo_link_to_calendar.png" /></p>
+<p>Launch Thunderbird to add SOGo calendar:</p>
+<ul>
+<li>Create a new calendar by click menu on Thunderbird main window: <code>File</code> -&gt;
+  <code>New</code> -&gt; <code>Calendar</code>, and choose <code>On the Network</code> for SOGo calendar:</li>
+</ul>
+<p><img alt="" src="images/thunderbird/sogo_new_calendar.png" /></p>
+<ul>
+<li>on the <code>On the Network</code> page, choose format <code>CalDAV</code>, and paste the link of
+  SOGo calendar. for example, <code>https://&lt;host&gt;/SOGo/dav/&lt;userName&gt;/Calendar/personal/</code></li>
+</ul>
+<p><img alt="" src="images/thunderbird/sogo_configure_calendar.png" /></p>
+<ul>
+<li>Type a preferred name for this calendar, then click <code>Continue</code> to finish the
+  setup.</li>
+</ul>
+<h2 id="address-book-carddav-with-sogo-connector">Address Book (CardDAV) with SOGo Connector</h2>
+<h3 id="download-and-install-sogo-connector">Download and install SOGo Connector</h3>
+<ul>
+<li>Download the SOGo connector from SOGo website: <a href="https://sogo.nu/download.html#/frontends">https://sogo.nu/download.html#/frontends</a></li>
+<li>Launch Thunderbird, go to <code>Tools</code> -&gt; <code>Add-ons</code></li>
+</ul>
+<p><img alt="" src="images/thunderbird/sogo_menu_addons.png" /></p>
+<p>Click the gear icon and choose <code>Install Add-on From File</code></p>
+<p><img alt="" src="images/thunderbird/sogo_install_addons_from_file.png" /></p>
+<p>Select the downloaded SOGo Connector xpi file to install it, then restart Thunderbird.</p>
+<h3 id="configure-thunderbird">Configure Thunderbird</h3>
+<p>To use SOGo address book, we need to get the link of SOGo Address Book first.</p>
+<ul>
+<li>Login to SOGo</li>
+<li>Click <code>Address Book</code> on top-right corner</li>
+<li>
+<p>Choose the address book you want to sync (<code>Personal Address Book</code> is the
+  default one), click on 3 vertical dots, choose <code>Link to this Address Book</code>,
+  and copy CardDAV URL.</p>
+<p>Note: Some old SOGo releases might use <code>127.0.0.1:20000</code> as server
+address in the CardDAV URL, you must replace them by the real server
+address like <code>https://&lt;your_server_name_or_ip&gt;/SOGo</code>.</p>
+</li>
+</ul>
+<p><img alt="" src="images/thunderbird/sogo_link_to_address_book.png" /></p>
+<p>Now launch Thunderbird:</p>
+<ul>
+<li>open its Address Book (on macOS, it's menu <code>Windows</code> -&gt; <code>Address Book</code>)</li>
+<li>on Address Book window, click <code>File</code> -&gt; <code>New</code> -&gt; <code>Remote Address Book</code></li>
+</ul>
+<p><img alt="" src="images/thunderbird/sogo_new_remote_address_book.png" /></p>
+<p>Configure the Address Book Properties:</p>
+<ul>
+<li><code>Name</code>: SOGo Address Book name (you can use whatever name you like here)</li>
+<li><code>URL</code>: insert link you got from SOGo above - like: <code>https://&lt;host&gt;/SOGo/dav/&lt;userName&gt;/Contacts/personal/</code></li>
+<li>Optionally check Periodic sync</li>
+</ul>
+<p><img alt="" src="images/thunderbird/sogo_remote_address_book.png" /></p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

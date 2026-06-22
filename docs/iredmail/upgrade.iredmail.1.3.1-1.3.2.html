@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 1.3.1 to 1.3.2</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-131-to-132">Upgrade iRedMail from 1.3.1 to 1.3.2</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#upgrade-iredmail-from-131-to-132">Upgrade iRedMail from 1.3.1 to 1.3.2</a><ul>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</a><ul>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#sogo-yum-and-apt-repositories-for-sogo-v4-has-been-removed-permanently-by-upstream">SOGo: yum and apt repositories for SOGo v4 has been removed permanently by upstream</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-46">Upgrade iRedAPD (Postfix policy server) to the latest stable release (4.6)</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#upgrade-mlmmjadmin-to-the-latest-stable-release-304">Upgrade mlmmjadmin to the latest stable release (3.0.4)</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-11">Upgrade iRedAdmin (open source edition) to the latest stable release (1.1)</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#upgrade-roundcube-webmail-to-the-latest-stable-release-149">Upgrade Roundcube webmail to the latest stable release (1.4.9)</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#upgrade-netdata-to-the-latest-stable-release-1260">Upgrade netdata to the latest stable release (1.26.0)</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#fixed-update-fail2ban-filter-rules-to-match-new-error-log-produced-by-latest-roundcube">Fixed: update Fail2ban filter rules to match new error log produced by latest Roundcube</a></li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#optional-amavisd-log-matched-virus-database-name">[OPTIONAL] Amavisd: Log matched virus database name</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#openldap-backend">OpenLDAP backend</a><ul>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#fixed-can-not-store-mail-sender-address-with-utf8-characters-in-amavisd-database">Fixed: can not store mail sender address with utf8 characters in amavisd database</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#mysqlmariadb-backends">MySQL/MariaDB backends</a><ul>
+<li><a href="upgrade.iredmail.1.3.1-1.3.2.html#fixed-can-not-store-mail-sender-address-with-utf8-characters-in-amavisd-database_1">Fixed: can not store mail sender address with utf8 characters in amavisd database</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Oct 28, 2020: initial release.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code>1.3.2
+</code></pre>
+<h3 id="sogo-yum-and-apt-repositories-for-sogo-v4-has-been-removed-permanently-by-upstream">SOGo: yum and apt repositories for SOGo v4 has been removed permanently by upstream</h3>
+<p>SOGo team removed nightly builds for SOGo v4 + v3 permanently (FYI: <a href="https://sogo.nu/bugs/view.php?id=5157">https://sogo.nu/bugs/view.php?id=5157</a>), <strong>ALL</strong> servers must update yum/apt repository files and switch to SOGo v5.</p>
+<p>Please follow our tutorial to upgrade:</p>
+<ul>
+<li><a href="upgrade.sogo.4.to.5.html">Upgrade SOGo from v4 to v5</a></li>
+</ul>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release-46">Upgrade iRedAPD (Postfix policy server) to the latest stable release (4.6)</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>iRedAPD has been migrated to Python 3 and doesn't support Python 2 anymore.</p>
+</div>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<h3 id="upgrade-mlmmjadmin-to-the-latest-stable-release-304">Upgrade mlmmjadmin to the latest stable release (3.0.4)</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>mlmmjadmin has been migrated to Python 3 and doesn't support Python 2 anymore.</p>
+</div>
+<p>Please follow below tutorial to upgrade mlmmjadmin to the latest stable release:
+<a href="upgrade.mlmmjadmin.html">Upgrade mlmmjadmin to the latest stable release</a></p>
+<h3 id="upgrade-iredadmin-open-source-edition-to-the-latest-stable-release-11">Upgrade iRedAdmin (open source edition) to the latest stable release (1.1)</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>iRedAdmin has been migrated to Python 3 and doesn't support Python 2 anymore.</p>
+</div>
+<p>Please follow below tutorial to upgrade iRedAdmin to the latest stable release:
+<a href="migrate.or.upgrade.iredadmin.html">Upgrade iRedAdmin to the latest stable release</a>.</p>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release-149">Upgrade Roundcube webmail to the latest stable release (1.4.9)</h3>
+<div class="admonition warning">
+<p class="admonition-title">Roundcube 1.4</p>
+<p>Since Roundcube 1.3, at least <strong>PHP 5.4</strong> is required. If your server is
+running PHP 5.3 and cannot upgrade to 5.4, please upgrade Roundcube
+the latest 1.2 branch instead.</p>
+</div>
+<p>All users are encouraged to upgrade the latest Roundcube release.</p>
+<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</li>
+</ul>
+<p>References:</p>
+<ul>
+<li>05 July 2020, <a href="https://roundcube.net/news/2020/07/05/security-updates-1.4.7-1.3.14-and-1.2.11">Security updates 1.4.7, 1.3.14 and 1.2.11 released</a></li>
+<li>07 June 2020, <a href="https://roundcube.net/news/2020/06/07/updates-1.4.6-and-1.3.13-released">Updates 1.4.6 and 1.3.13 released</a></li>
+<li>02 June 2020, <a href="https://roundcube.net/news/2020/06/02/security-updates-1.4.5-and-1.3.12">Security updates 1.4.5 and 1.3.12 released</a></li>
+</ul>
+<h3 id="upgrade-netdata-to-the-latest-stable-release-1260">Upgrade netdata to the latest stable release (1.26.0)</h3>
+<p>If you have netdata installed, you can upgrade it by following this tutorial:
+<a href="upgrade.netdata.html">Upgrade netdata</a>.</p>
+<h3 id="fixed-update-fail2ban-filter-rules-to-match-new-error-log-produced-by-latest-roundcube">Fixed: update Fail2ban filter rules to match new error log produced by latest Roundcube</h3>
+<p>Please run commands below as root user to get latest filter file for Roundcube:</p>
+<pre><code>cd /etc/fail2ban/filter.d/
+wget -O roundcube.iredmail.conf https://raw.githubusercontent.com/iredmail/iRedMail/1.3.2/samples/fail2ban/filter.d/roundcube.iredmail.conf
+</code></pre>
+<p>Restarting <code>fail2ban</code> service is required.</p>
+<h3 id="optional-amavisd-log-matched-virus-database-name">[OPTIONAL] Amavisd: Log matched virus database name</h3>
+<p>Please update parameter <code>@av_scanner</code> in Amavisd config file as described
+below, so that Amavisd logs matched virus database name.</p>
+<ul>
+<li>On RHEL/CentOS, it's <code>/etc/amavisd/amavisd.conf</code></li>
+<li>On Debian/Ubuntu, it's <code>/etc/amavis/conf.d/50-user</code></li>
+<li>On FreeBSD, it's <code>/usr/local/etc/amavisd.conf</code></li>
+<li>On OpenBSD, it's <code>/etc/amavisd.conf</code></li>
+</ul>
+<p>Find parameter <code>@av_scanner</code> like below:</p>
+<pre><code>@av_scanners = (
+    ...
+    qr/\bOK$/,
+    qr/\bFOUND$/,
+    qr/^.*?: (?!Infected Archive)(.*) FOUND$/ ],
+);
+</code></pre>
+<p>Append letter <code>m</code> after <code>OK$/</code> and <code>FOUND$/</code> like below:</p>
+<pre><code>@av_scanners = (
+    ...
+    qr/\bOK$/m,
+    qr/\bFOUND$/m,
+    qr/^.*?: (?!Infected Archive)(.*) FOUND$/m ],
+);
+</code></pre>
+<p>Restarting Amavisd service is required.</p>
+<h2 id="openldap-backend">OpenLDAP backend</h2>
+<h3 id="fixed-can-not-store-mail-sender-address-with-utf8-characters-in-amavisd-database">Fixed: can not store mail sender address with utf8 characters in <code>amavisd</code> database</h3>
+<p>In <code>amavisd</code> database, column <code>msgs.from_addr</code> is defined as <code>VARCHAR(255)</code>, it
+doesn't support emoji characters. Please login to MySQL/MariaDB server as <code>root</code>
+user or <code>amavisd</code> user, then run SQL commands below to fix it:</p>
+<pre><code>USE amavisd;
+ALTER TABLE msgs MODIFY COLUMN from_addr VARBINARY(255) NOT NULL DEFAULT '';
+</code></pre>
+<h2 id="mysqlmariadb-backends">MySQL/MariaDB backends</h2>
+<h3 id="fixed-can-not-store-mail-sender-address-with-utf8-characters-in-amavisd-database_1">Fixed: can not store mail sender address with utf8 characters in <code>amavisd</code> database</h3>
+<p>In <code>amavisd</code> database, column <code>msgs.from_addr</code> is defined as <code>VARCHAR(255)</code>, it
+doesn't support emoji characters. Please login to MySQL/MariaDB server as <code>root</code>
+user or <code>amavisd</code> user, then run SQL commands below to fix it:</p>
+<pre><code>USE amavisd;
+ALTER TABLE msgs MODIFY COLUMN from_addr VARBINARY(255) NOT NULL DEFAULT '';
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Locations of configuration and log files of major components</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="file.locations-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="locations-of-configuration-and-log-files-of-major-components">Locations of configuration and log files of major components</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="file.locations.html#locations-of-configuration-and-log-files-of-major-components">Locations of configuration and log files of major components</a><ul>
+<li><a href="file.locations.html#ssl">SSL certificate</a></li>
+<li><a href="file.locations.html#postfix">Postfix</a><ul>
+<li><a href="file.locations.html#postfix-config">Main config files:</a></li>
+<li><a href="file.locations.html#postfix-log">Log files</a></li>
+</ul>
+</li>
+<li><a href="file.locations.html#dovecot">Dovecot</a><ul>
+<li><a href="file.locations.html#dovecot-config">Config files</a></li>
+<li><a href="file.locations.html#dovecot-log">Log files</a></li>
+</ul>
+</li>
+<li><a href="file.locations.html#nginx">Nginx</a></li>
+<li><a href="file.locations.html#php">PHP</a></li>
+<li><a href="file.locations.html#openldap">OpenLDAP</a></li>
+<li><a href="file.locations.html#mysql">MySQL, MariaDB</a></li>
+<li><a href="file.locations.html#pgsql">PostgreSQL</a></li>
+<li><a href="file.locations.html#roundcube">Roundcube webmail</a></li>
+<li><a href="file.locations.html#amavisd">Amavisd</a><ul>
+<li><a href="file.locations.html#amavisd-config">Main config files</a></li>
+<li><a href="file.locations.html#amavisd-log">Log files</a></li>
+</ul>
+</li>
+<li><a href="file.locations.html#spamassassin">SpamAssassin</a></li>
+<li><a href="file.locations.html#fail2ban">Fail2ban</a></li>
+<li><a href="file.locations.html#sogo">SOGo Groupware</a></li>
+<li><a href="file.locations.html#mlmmjadmin">mlmmjadmin</a></li>
+<li><a href="file.locations.html#iredapd">iRedAPD</a></li>
+<li><a href="file.locations.html#iredadmin">iRedAdmin</a></li>
+<li><a href="file.locations.html#apache">Apache</a></li>
+<li><a href="file.locations.html#cluebringer">Cluebringer</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="ssl">SSL certificate</h2>
+<p>The self-signed SSL certificate generated during iRedMail installation:</p>
+<ul>
+<li>
+<p>on RHEL/CentOS:</p>
+<ul>
+<li><code>/etc/pki/tls/certs/iRedMail.crt</code></li>
+<li>Private key: <code>/etc/pki/tls/private/iRedMail.key</code></li>
+</ul>
+</li>
+<li>
+<p>on Debian/Ubuntu:</p>
+<ul>
+<li><code>/etc/ssl/certs/iRedMail.crt</code></li>
+<li>Private key: <code>/etc/ssl/private/iRedMail.key</code></li>
+</ul>
+</li>
+<li>
+<p>on FreeBSD:</p>
+<ul>
+<li><code>/etc/ssl/certs/iRedMail.crt</code></li>
+<li>Private key: <code>/etc/ssl/private/iRedMail.key</code></li>
+</ul>
+</li>
+<li>
+<p>on OpenBSD:</p>
+<ul>
+<li><code>/etc/ssl/iRedMail.crt</code></li>
+<li>Private key: <code>/etc/ssl/iRedMail.key</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="postfix">Postfix</h2>
+<ul>
+<li>on <code>Linux</code> and OpenBSD, Postfix config files are placed under <code>/etc/postfix/</code>.</li>
+<li>on FreeBSD, Postfix config files are placed under <code>/usr/local/etc/postfix/</code>.</li>
+</ul>
+<h3 id="postfix-config">Main config files:</h3>
+<ul>
+<li><code>main.cf</code>: contains most configurations.</li>
+<li><code>master.cf</code>: contains transport related settings.</li>
+<li><code>aliases</code>: aliases for system accounts.</li>
+<li><code>helo_access.pcre</code>: PCRE regular expressions of HELO check rules.</li>
+<li><code>ldap/*.cf</code>: used to query mail accounts. LDAP backends only.</li>
+<li><code>mysql/*.cf</code>: used to query mail accounts. MySQL/MariaDB backends only.</li>
+<li><code>pgsql/*.cf</code>: used to query mail accounts. PostgreSQL backend only.</li>
+</ul>
+<h3 id="postfix-log">Log files</h3>
+<ul>
+<li>on RHEL/CentOS, FreeBSD, OpenBSD, it's <code>/var/log/maillog</code>.</li>
+<li>on Debian, Ubuntu, it's <code>/var/log/mail.log</code>.</li>
+</ul>
+<h2 id="dovecot">Dovecot</h2>
+<ul>
+<li>on Linux and OpenBSD, Dovecot config files are placed under <code>/etc/dovecot/</code>.</li>
+<li>on FreeBSD, Dovecot config files are placed under <code>/usr/local/etc/dovecot/</code>.</li>
+</ul>
+<h3 id="dovecot-config">Config files</h3>
+<p>Main config file is <code>dovecot.conf</code>. It contains most configurations.</p>
+<p>Additional config files under <code>/etc/dovecot/</code>:</p>
+<ul>
+<li><code>dovecot-ldap.conf</code>: used to query mail users and passwords. LDAP backends only.</li>
+<li><code>dovecot-mysql.conf</code>: used to query mail users and passwords. MySQL/MariaDB backends only.</li>
+<li><code>dovecot-pgsql.conf</code>: used to query mail users and passwords. PostgreSQL backend only.</li>
+<li><code>dovecot-used-quota.conf</code>: used to store and query real-time per-user mailbox quota.</li>
+<li><code>dovecot-share-folder.conf</code>: used to store settings of shared IMAP mailboxes.</li>
+<li><code>dovecot-master-users-password</code> or <code>dovecot-master-users</code>: used to store Dovecot master user accounts.</li>
+</ul>
+<h3 id="dovecot-log">Log files</h3>
+<ul>
+<li><code>/var/log/dovecot/*.log</code>: main log file after iRedMail-0.9.8.</li>
+</ul>
+<p>Earlier releases log to <code>/var/log/dovecot.log</code> and <code>/var/log/dovecot-*.log</code>.</p>
+<h2 id="nginx">Nginx</h2>
+<ul>
+<li>On <code>Linux</code> and OpenBSD:<ul>
+<li>Nginx config files are placed under <code>/etc/nginx/</code></li>
+<li>uWSGI config files are placed under <code>/etc/uwsgi/</code></li>
+</ul>
+</li>
+<li>On FreeBSD:<ul>
+<li>Nginx config files are placed under <code>/usr/local/etc/nginx</code></li>
+<li>Web applications are stored under <code>/usr/local/www</code></li>
+<li>uWSGI config files are placed under <code>/usr/local/etc/uwsgi/</code></li>
+</ul>
+</li>
+</ul>
+<p>Main config files are <code>nginx.conf</code> and <code>default.conf</code>.</p>
+<ul>
+<li>On <code>Linux</code> and FreeBSD: log files are placed under <code>/var/log/nginx/</code>.</li>
+<li>On OpenBSD: log files are placed under <code>/var/www/logs/</code> (same as Apache).</li>
+</ul>
+<h2 id="php">PHP</h2>
+<p>Main config file:</p>
+<ul>
+<li>on RHEL/CentOS: it's <code>/etc/php.ini</code></li>
+<li>on Debian/Ubuntu:<ul>
+<li>If you're running Apache as web server:<ul>
+<li>If you're running PHP-5: it's <code>/etc/php5/apache2/php.ini</code> (Debian 8, Ubuntu 14.04)</li>
+<li>If you're running PHP-7: it's <code>/etc/php/7.0/cli/php.ini</code> (Ubuntu 16.04)</li>
+</ul>
+</li>
+<li>If you're running Nginx as web server: it's <code>/etc/php5/fpm/php.ini</code>.<ul>
+<li>If you're running PHP-5: it's <code>/etc/php5/fpm/php.ini</code> (Debian 8, Ubuntu 14.04)</li>
+<li>If you're running PHP-7: it's <code>/etc/php/7.0/fpm/php.ini</code> (Ubuntu 16.04)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>on FreeBSD: it's <code>/usr/local/etc/php.ini</code>.</li>
+<li>on OpenBSD: it's <code>/etc/php-5.X.ini</code></li>
+</ul>
+<h2 id="openldap">OpenLDAP</h2>
+<p>Main config file:</p>
+<ul>
+<li>on RHEL/CentOS: it's <code>/etc/openldap/slapd.conf</code>.</li>
+<li>on Debian/Ubuntu: it's <code>/etc/ldap/slapd.conf</code>.</li>
+<li>on FreeBSD: it's <code>/usr/local/etc/openldap/slapd.conf</code>.</li>
+<li>on OpenBSD: it's <code>/etc/openldap/slapd.conf</code>.</li>
+</ul>
+<p>Schema files are stored under <code>schema/</code> directory (same directory as <code>slapd.conf</code>).</p>
+<p>OpenLDAP is configured to log to <code>/var/log/openldap.log</code> by default, if it's
+empty, please check normal syslog log file <code>/var/log/messages</code> or
+<code>/var/log/syslog</code> instead.</p>
+<h2 id="mysql">MySQL, MariaDB</h2>
+<p>Main config file:</p>
+<ul>
+<li>on RHEL/CentOS: <code>/etc/my.cnf</code>.</li>
+<li>on Debian/Ubuntu, it's <code>/etc/mysql/my.cnf</code>. If you're running MariaDB, it's
+  <code>/etc/mysql/mariadb.conf.d/mysqld.cnf</code>.</li>
+<li>on FreeBSD: <code>/var/db/mysql/my.cnf</code>.</li>
+<li>on OpenBSD: <code>/etc/my.cnf</code>.</li>
+</ul>
+<h2 id="pgsql">PostgreSQL</h2>
+<p>Main config file:</p>
+<ul>
+<li>on RHEL/CentOS: <code>/var/lib/pgsql/postgresql.conf</code></li>
+<li>on Debian/Ubuntu: <code>/etc/postgresql/&lt;VERSION&gt;/main/postgresql.conf</code></li>
+<li>on FreeBSD: <code>/var/db/postgres/postgresql.conf</code></li>
+<li>on OpenBSD: <code>/var/postgresql/data/postgresql.conf</code></li>
+</ul>
+<h2 id="roundcube">Roundcube webmail</h2>
+<ul>
+<li>
+<p>Root Directory. Roundcube webmail is installed under below directory by default:</p>
+<ul>
+<li>
+<p>RHEL/CentOS: <code>/opt/www/roundcubemail</code>. It's a symbol link to <code>roundcubemail-x.y.z</code> under same directory.</p>
+<p>Note: with old iRedMail releases, it's <code>/var/www/roundcubemail</code>.</p>
+</li>
+<li>
+<p>Debian/Ubuntu: <code>/opt/www/roundcubemail</code>. It's a symbol link to
+  <code>/opt/www/roundcubemail-x.y.z</code>.</p>
+<p>Note: with old iRedMail releases, it's <code>/usr/share/apache2/roundcubemail</code>,
+it's a symbol link to <code>/usr/share/apache2/roundcubemail-x.y.z/</code>.</p>
+</li>
+<li>
+<p>FreeBSD: <code>/usr/local/www/roundcube</code>.</p>
+</li>
+<li>
+<p>OpenBSD: <code>/opt/www/roundcubemail</code>. It's a symbol link to <code>roundcubemail-x.y.z</code>
+  under same directory.</p>
+<p>Note: with old iRedMail releases, it's <code>/var/www/roundcubemail</code>.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Config files:</p>
+<ul>
+<li>
+<p>Main config file is <code>config/config.inc.php</code> under Roundcube webmail
+  directory.</p>
+<p>If you're running old Roundcube webmail (0.9.x and earlier
+releases), it has two separate config files: <code>config/db.inc.php</code> and
+<code>config/main.inc.php</code>.</p>
+</li>
+<li>
+<p>Config files of plugins are placed under plugin directory. for example,
+  config file of <code>password</code> plugin is <code>plugins/password/config.inc.php</code>.</p>
+</li>
+</ul>
+</li>
+<li>
+<p id="roundcube-log">Log file. Roundcube is configured to log to <a href="file.locations.html#postfix">Postfix log</a> file by default.</p>
+</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Roundcube stores all default settings in <code>config/defaults.inc.php</code>, please do
+not modify it, instead, you should copy the settings you want to modify from
+<code>config/defaults.inc.php</code> to <code>config/config.inc.php</code>, then modify the one in
+<code>config/config.inc.php</code>.</p>
+</div>
+<ul>
+<li>Nginx config snippet:<ul>
+<li><code>/etc/nginx/templates/roundcube.tmpl</code></li>
+<li><code>/etc/nginx/templates/roundcube-subdomain.tmpl</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="amavisd">Amavisd</h2>
+<h3 id="amavisd-config">Main config files</h3>
+<ul>
+<li>on RHEL/CentOS: it's <code>/etc/amavisd/amavisd.conf</code>.</li>
+<li>
+<p>on Debian/Ubuntu: it's <code>/etc/amavis/conf.d/50-user</code>.</p>
+<p>Debian/Ubuntu have some additional config files under <code>/etc/amavis/conf.d/</code>,
+but you can always override them in <code>/etc/amavis/conf.d/50-user</code>.
+When we mention <code>amavisd.conf</code> in other documents, it always means <code>50-user</code>
+on Debian/Ubuntu.</p>
+</li>
+<li>
+<p>on FreeBSD: it's <code>/usr/local/etc/amavisd.conf</code>.</p>
+</li>
+<li>on OpenBSD: it's <code>/etc/amavisd.conf</code>.</li>
+</ul>
+<h3 id="amavisd-log">Log files</h3>
+<p>Amavisd is configured to log to <a href="file.locations.html#postfix">Postfix log file</a> by iRedMail.</p>
+<h2 id="spamassassin">SpamAssassin</h2>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>With default iRedMail settings, SpamAssassin is called by Amavisd, not run as a daemon.</p>
+</div>
+<p id="spamassassin-config">Main config file:</p>
+<ul>
+<li>On Linux/OpenBSD, it's <code>/etc/mail/spamassassin/local.cf</code>.</li>
+<li>On FreeBSD, it's <code>/usr/local/etc/mail/spamassassin/local.cf</code>.</li>
+</ul>
+<p id="spamassassin-log">SpamAssassin doesn't have a separated log file, to debug SpamAssassin, please
+set <code>$sa_debug = 1;</code> in Amavisd config file, then restart Amavisd service.</p>
+<h2 id="fail2ban">Fail2ban</h2>
+<p id="fail2ban-config">Main config file:</p>
+<ul>
+<li>On Linux/OpenBSD, it's <code>/etc/fail2ban/jail.local</code>.</li>
+<li>On FreeBSD, it's <code>/usr/local/etc/fail2ban/jail.local</code>.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>All custom settings should be placed in <code>jail.local</code>, and don't touch
+<code>jail.conf</code>, so that upgrading Fail2ban binary package won't lose/override
+your custom settings.</p>
+</div>
+<p>Filters:</p>
+<ul>
+<li>On Linux/OpenBSD, all filters are defined in files under <code>/etc/fail2ban/filter.d/</code>.</li>
+<li>On FreeBSD, all filters are defined in files under <code>/usr/local/etc/fail2ban/filter.d/</code>.</li>
+</ul>
+<p>Ban/Unban actions:</p>
+<ul>
+<li>On Linux/OpenBSD, all actions are defined in files under <code>/etc/fail2ban/action.d/</code>.</li>
+<li>On FreeBSD, all filters are defined in files under <code>/usr/local/etc/fail2ban/action.d/</code>.</li>
+</ul>
+<p id="fail2ban-log">Log file: Fail2ban logs to default syslog log file.</p>
+<ul>
+<li>on RHEL/CentOS/OpenBSD/FreeBSD, it's <code>/var/log/messages</code>.</li>
+<li>on Debian/Ubuntu, it's <code>/var/log/syslog</code>.</li>
+</ul>
+<h2 id="sogo">SOGo Groupware</h2>
+<ul>
+<li>Main config file is<ul>
+<li>on Linux/OpenBSD: <code>/etc/sogo/sogo.conf</code></li>
+<li>on FreeBSD: <code>/usr/local/etc/sogo/sogo.conf</code></li>
+</ul>
+</li>
+<li>Log file is <code>/var/log/sogo/sogo.log</code>.</li>
+</ul>
+<h2 id="mlmmjadmin">mlmmjadmin</h2>
+<ul>
+<li>Config file: <code>/opt/mlmmjadmin/settings.py</code> (same on all Linux/BSD distributions)</li>
+<li>Log file: <code>/var/log/mlmmjadmin/mlmmjadmin.log</code></li>
+<li>Data directories:<ul>
+<li>All active mailing lists: <code>/var/vmail/mlmmj</code>. Including archive.</li>
+<li>Removed and archived mailing lists: <code>/var/vmail/mlmmj-archive</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="iredapd">iRedAPD</h2>
+<ul>
+<li>Main config file is <code>/opt/iredapd/settings.py</code> on all Linux/BSD distributions.</li>
+<li>
+<p>Log file:</p>
+<ul>
+<li>With iRedAPD-1.7.0 and later releases, log file is <code>/var/log/iredapd/iredapd.log</code>.</li>
+<li>With iRedAPD-1.6.0 and older releases, log file is <code>/var/log/iredapd.log</code>.</li>
+</ul>
+</li>
+</ul>
+<h2 id="iredadmin">iRedAdmin</h2>
+<p>Main config file: <code>/opt/www/iredadmin/settings.py</code>.</p>
+<p>iRedAdmin is a web application, when debug mode is turned on, it will log error
+message to:</p>
+<ul>
+<li>Debian/Ubuntu: <code>/var/log/uwsgi/app/iredadmin.log</code>.</li>
+<li>RHEL/CentOS: <code>/var/log/messages</code>.</li>
+<li>OpenBSD: <code>/var/www/logs/uwsgi.log</code>.</li>
+<li>FreeBSD: <code>/var/log/uwsgi-iredadmin.log</code>.</li>
+</ul>
+<p>Note: If you modified any iRedAdmin source files (not just config file),
+don't forget to restart <code>iredadmin</code> service to load modified files.</p>
+<h2 id="apache"><strike>Apache</strike></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Apache was dropped since iRedMail-0.9.8.</p>
+</div>
+<ul>
+<li>
+<p>On RHEL/CentOS: Apache config files are placed under <code>/etc/httpd/</code>.</p>
+<ul>
+<li>Main config file is <code>/etc/httpd/conf/httpd.conf</code>.</li>
+<li>Module config files are placed under <code>/etc/httpd/conf.d/</code> (old releases)
+  or <code>/etc/httpd/conf.modules.d/</code>.</li>
+<li>Root directory used to store web applications is <code>/var/www</code>, document
+  root is <code>/var/www/html/</code>.</li>
+<li>Log files are placed under <code>/var/www/httpd/</code>.</li>
+</ul>
+</li>
+<li>
+<p>On Debian/Ubuntu: Apache config files are placed under <code>/etc/apache2</code>.</p>
+<ul>
+<li>Main config file is <code>/etc/apache2/apache2.conf</code>.</li>
+<li>Module config files are placed under <code>/etc/apache2/conf.d/</code> (old
+  releases) or <code>/etc/apache2/conf-available/</code>.</li>
+<li>Root directory used to store web applications is <code>/usr/share/apache2</code>,
+  document root is <code>/var/www/</code> (old releases) or <code>/var/www/html/</code>.</li>
+<li>Log files are placed under <code>/var/log/apache2/</code>.</li>
+</ul>
+</li>
+<li>
+<p>On FreeBSD: Apache config files are placed under <code>/usr/local/etc/apache2</code>.</p>
+<ul>
+<li>Main config file is <code>/usr/local/etc/apache2/httpd.conf</code>.</li>
+<li>Module config files are placed under <code>/usr/local/etc/apache2/Includes/</code>.</li>
+<li>Root directory used to store web applications is <code>/usr/local/www/</code>,
+  document root is <code>/usr/local/www/apacheXX/data/</code>.</li>
+<li>Log files are placed under <code>/var/log/</code>, main log files are
+  <code>/var/log/httpd-access.log</code> and <code>/var/log/httpd-error.log</code>.</li>
+</ul>
+</li>
+<li>
+<p>On OpenBSD: Apache (the one shipped in OpenBSD base system) config files
+  are placed under <code>/var/www/conf</code>.</p>
+<ul>
+<li>Main config file is <code>/var/www/conf/httpd.conf</code>.</li>
+<li>Module config files are placed under <code>/var/www/conf/modules/</code>.</li>
+<li>Root directory used to store web applications is <code>/var/www/</code>,
+  document root is <code>/var/www/htdocs/</code>.</li>
+<li>Log files are placed under <code>/var/www/logs/</code>.</li>
+</ul>
+</li>
+</ul>
+<h2 id="cluebringer"><strike>Cluebringer</strike></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Policyd/Cluebringer were removed since iRedMail-0.9.3.</p>
+</div>
+<p>Main config file:</p>
+<ul>
+<li>RHEL/CentOS: <code>/etc/policyd/cluebringer.conf</code>, <code>/etc/policyd/webui.conf</code> (web admin panel).</li>
+<li>Debian/Ubuntu: <code>/etc/cluebringer/cluebringer.conf</code>, <code>/etc/cluebringer/cluebringer-webui.conf</code> (web admin panel).</li>
+<li>FreeBSD: <code>/usr/local/etc/cluebringer.conf</code>, <code>/usr/local/etc/apache24/cluebringer.conf</code> (web admin panel).</li>
+<li>OpenBSD: Not applicable, cluebringer is not available on OpenBSD.</li>
+</ul>
+<p>Init script:</p>
+<ul>
+<li>RHEL/CentOS: <code>/etc/init.d/cbpolicyd</code></li>
+<li>Debian/Ubuntu: <code>/etc/init.d/postfix-cluebringer</code></li>
+<li>FreeBSD: <code>/usr/local/etc/rc.d/policyd2</code></li>
+<li>OpenBSD: N/A. we don't have Cluebringer installed on OpenBSD.</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

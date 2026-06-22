@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Backup and restore</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="backup-and-restore">Backup and restore</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="backup.restore.html#backup-and-restore">Backup and restore</a><ul>
+<li><a href="backup.restore.html#backup">Backup</a><ul>
+<li><a href="backup.restore.html#backup-mailboxes">Backup mailboxes</a></li>
+<li><a href="backup.restore.html#backup-mail-accounts">Backup mail accounts</a></li>
+<li><a href="backup.restore.html#backup-additional-data-manually">Backup additional data manually</a></li>
+</ul>
+</li>
+<li><a href="backup.restore.html#restore">Restore</a><ul>
+<li><a href="backup.restore.html#how-to-restore-sql-databases">How to restore SQL databases</a><ul>
+<li><a href="backup.restore.html#after-restored-databases">After restored databases</a></li>
+</ul>
+</li>
+<li><a href="backup.restore.html#ldap">LDAP</a><ul>
+<li><a href="backup.restore.html#how-to-restore-openldap-backup">How to restore OpenLDAP backup</a></li>
+<li><a href="backup.restore.html#how-to-restore-openbsd-ldapd8-backup">How to restore OpenBSD ldapd(8) backup</a></li>
+<li><a href="backup.restore.html#after-ldap-restore">After LDAP restore</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="backup">Backup</h2>
+<h3 id="backup-mailboxes">Backup mailboxes</h3>
+<p>All mailboxes are stored under <code>/var/vmail/vmail1</code> by default, this path is
+configurable during iRedMail installation, so the real directory may be
+different on your server.</p>
+<p>Mail messages are stored in Maildir format by default, that means one mail
+message is one plain text file (but mail body is encoded), you can backup
+mailboxes with tool like <code>rsync</code> or other backup tools.</p>
+<p>After restored mailboxes, <code>/var/vmail/vmail1</code> must be owned by user <code>vmail</code>,
+group <code>vmail</code>, permission <code>0700</code> on iRedMail server.</p>
+<h3 id="backup-mail-accounts">Backup mail accounts</h3>
+<p>iRedMail has daily cron job to backup mail accounts which are stored in
+SQL/LDAP database, you can run command below as <code>root</code> user to verify it:</p>
+<pre><code class="language-shell">crontab -l -u root
+</code></pre>
+<p>Sample output on an iRedMail server with OpenLDAP backend:</p>
+<pre><code># iRedMail: Backup OpenLDAP data every day on 03:01 AM
+1   3   *   *   *   /bin/bash /var/vmail/backup/backup_openldap.sh
+
+# iRedMail: Backup MySQL databases every day on 03:10 AM
+10   3   *   *   *   /bin/bash /var/vmail/backup/backup_mysql.sh
+</code></pre>
+<p>Notes:</p>
+<ul>
+<li>Backup files are stored under directory <code>/var/vmail/backup</code> by default, if
+  you want to change it, please update parameter <code>BACKUP_ROOTDIR</code> in
+  backup script (e.g. <code>/var/vmail/backup/backup_mysql.sh</code>).</li>
+<li>SQL backup is a plain SQL file for each database.</li>
+<li>LDAP backup is only a plain file in LDIF format.</li>
+<li>Backup files are compressed with <code>bzip2</code> by default, you can decompress them
+  with command <code>bunzip2</code>. for example, <code>bunzip2 file_name.bz2</code>.</li>
+<li>It's ok to run the backup scripts manually.</li>
+</ul>
+<h3 id="backup-additional-data-manually">Backup additional data manually</h3>
+<ul>
+<li>
+<p>DKIM keys. They're stored under <code>/var/lib/dkim/</code> by default. If you don't
+  backup them, it's ok to generate new keys and you must update DNS record
+  (<code>dkim._domainkey.[YOUR_MAIL_DOMAIN]</code>) with new DKIM key. Refer to another
+  document to generate DKIM key and update DNS record:
+  <a href="sign.dkim.signature.for.new.domain.html">Sign DKIM signature on outgoing emails for new mail domain</a>.</p>
+</li>
+<li>
+<p>SOGo (Calendar, Contacts, Tasks): check SOGo official document:
+  <a href="http://wiki.sogo.nu/backupRestore">http://wiki.sogo.nu/backupRestore</a></p>
+<ul>
+<li>since iRedMail-0.9.7, iRedMail will setup a daily cron job to backup SOGo
+  data during iRedMail installation.</li>
+<li>
+<p>When restoring (with <code>sogo-tool</code>), you have to first restore all users
+  and their folders, then their preferences. Afterwards you have to restore
+  all preferences again to get back shared calendars.</p>
+<p>That is because first it sets the sharing privileges on the folders
+(which have to exist, before you can set them). The sharing will not
+work in most cases, because the privileges of the origin is not yet set.
+Only the second restore of the preferences can set the shared folders,
+because now the privileges are OK.</p>
+<p>Make sure to restart memcached between the two restores of the
+privileges, else SOGo will use old infos from the first run.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>OpenLDAP backend:</p>
+<ul>
+<li>If you enabled additional LDAP schema files in OpenLDAP, you should
+  backup them, copy them to new server and enable them. Otherwise you
+  cannot import backup LDIF file due to missing required LDAP attributes.</li>
+</ul>
+</li>
+</ul>
+<h2 id="restore">Restore</h2>
+<h3 id="how-to-restore-sql-databases">How to restore SQL databases</h3>
+<p>You can simply restore plain SQL files backed up by above backup scripts.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you're restoring on a <strong>NEW</strong> iRedMail server, do <strong>NOT</strong>
+restore the database which is named <code>mysql</code> exported from old server, it
+contains SQL usernames and passwords used in many components (e.g. Postfix,
+Dovecot, Roundcube webmail) on old server. New iRedMail server already has
+the same SQL accounts with different passwords, so please do not restore
+<code>mysql</code> database, otherwise almost all services won't work due to incorrect
+SQL credentials.</p>
+</div>
+<p>Let's take SQL database <code>iredapd</code> for example. Assume the backup file is
+<code>/var/vmail/backup/mysql/2021/11/19/iredapd-2021-11-19-23-02-01.sql.bz2</code>.</p>
+<ul>
+<li>
+<p>The backup file was compressed with <code>bzip2</code> (with <code>.bz2</code> extension in file
+  name), please decompress it with command <code>bunzip2</code> first:</p>
+<p><code>bunzip2 /var/vmail/backup/mysql/2021/11/19/iredapd-2021-11-19-23-02-01.sql.bz2</code></p>
+<p>You should get decompressed file <code>/var/vmail/backup/mysql/2021/11/19/iredapd-2021-11-19-23-02-01.sql</code></p>
+</li>
+<li>
+<p>Login to MySQL / MariaDB server as the SQL root user.</p>
+</li>
+<li>Restore the decompressed SQL file:</li>
+</ul>
+<pre><code>USE iredapd;
+SOURCE /var/vmail/backup/mysql/2021/11/19/iredapd-2021-11-19-23-02-01.sql;
+</code></pre>
+<p>That's it.</p>
+<p>You should restore other databases with same steps but different
+backup files. Again, <strong>do not restore the database named <code>mysql</code></strong>.</p>
+<h4 id="after-restored-databases">After restored databases</h4>
+<p>If you're restoring from an old iRedMail release, you need to update SQL
+structure first.</p>
+<p>For example, If you're restoring iRedMail from <code>0.9.1</code> to <code>0.9.5</code>, you must
+check upgrade tutorials for iRedMail-0.9.1 and newer releases, then apply all
+SQL structure changes mentioned in the upgrade tutorials.</p>
+<p>You can find <a href="iredmail.releases.html">all iRedMail upgrade tutorials here</a>.</p>
+<h3 id="ldap">LDAP</h3>
+<h4 id="how-to-restore-openldap-backup">How to restore OpenLDAP backup</h4>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>Data dumped with <code>slapcat</code> command must be restored with <code>slapadd</code> command.</li>
+<li>Data exported with <code>ldapsearch</code> command can be imported with <code>ldapadd</code> command.</li>
+</ul>
+</div>
+<p>Backup script runs command <code>slapcat</code> to dump whole LDAP tree as a backup copy,
+it must be restored with command <code>slapadd</code>.</p>
+<p>Below example shows how to restore a LDAP backup on RHEL/CentOS 6.x, files and
+directories may be different on other Linux/BSD distributions, you can find
+the correct ones in this tutorial:
+<a href="file.locations.html#openldap">Locations of configuration and log files of major components</a>.</p>
+<ul>
+<li>
+<p>LDAP backups are stored under <code>/var/vmail/backup/ldap/[YEAR]/[MONTH]/</code> by
+  default, for example, <code>/var/vmail/backup/ldap/2015/05/</code>. And it's compressed
+  with <code>bzip2</code> command to save disk space. we must decompress it first.</p>
+</li>
+<li>
+<p>Go to the backup directory, find the latest backup. here we use backup file
+  <code>2015-05-10-03:01:01.ldif.bz2</code> for example.</p>
+</li>
+</ul>
+<pre><code># cd /var/vmail/backup/ldap/2015/05/
+# bunzip2 2015-05-10-03:01:01.ldif.bz2
+# ls -l 2015-05-10-03:01:01.ldif
+-rw-r--r-- 1 root root 7352 May 10 03:01 2015-05-10-03:01:01.ldif
+</code></pre>
+<ul>
+<li>
+<p>Find passwords for <code>cn=vmail,dc=xx,dc=xx</code> and <code>cn=vmailadmin,dc=xx,dc=xx</code>
+  in the root directory of iRedMail installation directory on <strong>NEW</strong> iRedMail
+  server. for example, <code>/root/iRedMail-0.9.0/iRedMail.tips</code>. Notes:</p>
+<ul>
+<li>They're plain passwords, not hashed or encrypted.</li>
+<li>You can also find <code>cn=vmail</code>'s password in Postfix config files under
+  <code>/etc/postfix/mysql</code> (MySQL/MariaDB backend) or
+  <code>/etc/postfix/pgsql</code> (PostgreSQL backend).</li>
+<li>You can also find <code>cn=vmailadmin</code>'s password in
+  <a href="file.locations.html#iredadmin">iRedAdmin config file</a>.</li>
+</ul>
+</li>
+</ul>
+<p>Below is sample copy in file <code>iRedMail.tips</code>.</p>
+<pre><code>OpenLDAP:
+    ...
+    * LDAP bind dn (read-only): cn=vmail,dc=example,dc=com, password: py2BQwM0zoRM5nciK68AlP8dyu2Mq6
+    * LDAP admin dn (used for iRedAdmin): cn=vmailadmin,dc=example,dc=com, password: 9wr0mHeVYz2uaxSAGBLucVkOgYPSBB
+</code></pre>
+<ul>
+<li>Now hash them with command <code>slappasswd</code>:</li>
+</ul>
+<pre><code># slappasswd -h '{ssha}' -s 'py2BQwM0zoRM5nciK68AlP8dyu2Mq6'    # &lt;- cn=vmail's password
+{SSHA}eJEO2yGVryVw+mZ/Qd2HMSyrl6u9WDhd
+
+# slappasswd -h '{ssha}' -s '9wr0mHeVYz2uaxSAGBLucVkOgYPSBB'    # &lt;- cn=vmailadmin's password
+{SSHA}lWt6zjOOUq+2WUmiAea2FXLB4oHMYvIb
+</code></pre>
+<ul>
+<li>
+<p>Open the backup file <code>2015-05-10-03:01:01.ldif</code> with your favourite text
+  editor, find <code>usePassword</code> line of <code>cn=vmail</code> and <code>cn=vmailadmin</code>.
+  <strong>Important notes</strong>:</p>
+<ul>
+<li>A line that begins with a SPACE denotes that the characters following the
+  space are part of the previous line.</li>
+<li>There're two colons after <code>userPassword</code> string (<code>userPassword::</code>).</li>
+</ul>
+</li>
+</ul>
+<p>Below is a sample copy in <code>2015-05-10-03:01:01.ldif</code>:</p>
+<pre><code>dn: cn=vmail,dc=iredmail,dc=org
+...
+userPassword:: e1NTSEF7F8AwbjVqeER1R1dXVmREN1RJU8NtdnFHN0hnekdWYzVHSG9iWEE9PQ=  # &lt;- remove this line
+ =                                                                              # &lt;- remove this line
+...
+
+dn: cn=vmailadmin,dc=iredmail,dc=org
+userPassword:: e1NTSEF9alZi8E12dS9FNllaMktteFh7YkZham1mM3Jqc21cdEFsZjJIeEE9PQ=  # &lt;- remove this line
+ =                                                                              # &lt;- remove this line
+...
+</code></pre>
+<p>Replace these two <code>userPassword</code> lines by the newly generated ssha passwords,
+save your change, exit your text editor.</p>
+<pre><code>dn: cn=vmail,dc=iredmail,dc=org
+...
+userPassword: {SSHA}eJEO2yGVryVw+mZ/Qd2HMSyrl6u9WDhd
+...
+
+dn: cn=vmailadmin,dc=iredmail,dc=org
+userPassword: {SSHA}lWt6zjOOUq+2WUmiAea2FXLB4oHMYvIb
+...
+</code></pre>
+<p><strong>Important note</strong>:  There's only <strong>ONE</strong> colon after <code>userPassword</code> string
+(<code>userPassword:</code>).</p>
+<ul>
+<li>OpenLDAP service must be stopped while restoring backup. So we stop it first (Note: OpenLDAP service name may be different on your machine, for example, <code>ldap</code>, <code>slapd</code>, etc, please use the correct one):</li>
+</ul>
+<pre><code># systemctl stop slapd
+</code></pre>
+<ul>
+<li>
+<p>If you enabled additional LDAP schema files on old server, you <code>MUST</code> copy
+  these schema files to new server, and enable them in OpenLDAP on new server,
+  also add new indexes for attributes defined in these additional LDAP schema
+  files if necessary. Otherwise you may not be able to import backup LDIF file
+  due to missing required attributes.</p>
+</li>
+<li>
+<p>Remove all files under OpenLDAP data directory defined in LDAP config file
+  <code>slapd.conf</code> (parameter <code>directory</code>) except file <code>DB_CONFIG</code> (this file
+  doesn't exist if you're running <code>mdb</code> backend, so you can ignore it if you're
+  running <code>mdb</code> backend).
+  For example:</p>
+</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">About file DB_CONFIG</p>
+<p>File <code>DB_CONFIG</code> is present if you're running <code>bdb</code> backend.
+But <code>mdb</code> backend doesn't need any config file for database, so you can
+ignore this file if you're running <code>mdb</code> backend.</p>
+</div>
+<pre><code># File: /etc/openldap/slapd.conf
+
+...
+database    bdb
+suffix      dc=iredmail,dc=org
+directory   /var/lib/ldap/iredmail.org
+...
+</code></pre>
+<p>So you should remove all files under directory <code>/var/lib/ldap/iredmail.org</code>
+except <code>/var/lib/ldap/iredmail.org/DB_CONFIG</code>.</p>
+<pre><code># cd /var/lib/ldap/iredmail.org/
+# mv DB_CONFIG ~
+# rm -rf /var/lib/ldap/iredmail.org/*
+# mv ~/DB_CONFIG .
+</code></pre>
+<ul>
+<li>Start OpenLDAP service immediately, then stop it again. It will create
+  necessary files required by backend db (<code>dbd</code> in our case, <code>database dbd</code>).</li>
+</ul>
+<pre><code># systemctl start slapd
+# systemctl stop slapd
+</code></pre>
+<ul>
+<li>Make sure OpenLDAP server is <strong>NOT</strong> running, then restore backup LDIF file
+  with command <code>slapadd</code>.</li>
+</ul>
+<pre><code># slapadd -f /etc/openldap/slapd.conf -l /var/vmail/backup/ldap/2015/05/2015-05-10-03:01:01.ldif
+</code></pre>
+<pre><code>You may see a message like `The first database does not allow slapadd;
+using the first available one (2)`, it's safe to ignore it since the
+first one is database `monitor` which is created and maintained by
+OpenLDAP internally.
+</code></pre>
+<ul>
+<li>It's OK to start OpenLDAP server now. It may report errors like below:</li>
+</ul>
+<pre><code># systemctl restart slapd
+Stopping slapd:                                            [  OK  ]
+/var/lib/ldap/iredmail.org/mailMessageStore.bdb is not owned[WARNING]&quot;
+/var/lib/ldap/iredmail.org/objectClass.bdb is not owned by &quot;[WARNING]
+...
+Checking configuration files for slapd:  config file testing succeeded
+                                                           [  OK  ]
+Starting slapd:                                            [  OK  ]
+</code></pre>
+<p>If you see above warning about improper file ownership, please set correct file
+owner on newly created db files immediately, then restart OpenLDAP service:</p>
+<pre><code># chown ldap:ldap /var/lib/ldap/iredmail.org/*
+# systemctl restart slapd
+</code></pre>
+<p>If you're restoring LDAP data from an old iRedMail server, you should add
+missing LDAP attribute/values, which are introduced in newer iRedMail releases,
+by following step below: <a href="backup.restore.html#after-ldap-restore">After LDAP Restore</a>.</p>
+<h4 id="how-to-restore-openbsd-ldapd8-backup">How to restore OpenBSD ldapd(8) backup</h4>
+<p>iRedMail-0.9.5 and later releases ships script
+<code>/var/vmail/backup/backup_ldapd.sh</code> for daily backup. It backs up data with
+command <code>ldapsearch</code> (not <code>slapcat</code> - which is used for OpenLDAP), so you have
+to restore its data with command <code>ldapadd</code>.</p>
+<ul>
+<li>Stop ldapd service first.</li>
+</ul>
+<pre><code>rcctl stop ldapd
+</code></pre>
+<ul>
+<li>Remove all files under ldapd data directory <code>/var/db/ldap/</code>.</li>
+<li>Start ldapd service.</li>
+</ul>
+<pre><code>rcctl start ldapd
+</code></pre>
+<ul>
+<li>
+<p>Import backup LDIF file:</p>
+<ul>
+<li>Please replace <code>cn=Manager,dc=xx,dc=xx</code> by the real LDAP root dn.</li>
+<li>Please replace <code>/path/to/backup.ldif</code> by the real path of backup LDIF file.</li>
+</ul>
+</li>
+</ul>
+<pre><code># ldapadd -x -D 'cn=Manager,dc=xx,dc=xx' -W -f /path/to/backup.ldif
+</code></pre>
+<p>If you're restoring LDAP data from an old iRedMail server, you should add
+missing LDAP attribute/values, which are introduced in newer iRedMail releases,
+by following step below: <a href="backup.restore.html#after-ldap-restore">After LDAP Restore</a>.</p>
+<h4 id="after-ldap-restore">After LDAP restore</h4>
+<p>If you're restoring from an old iRedMail release, you need to add missing LDAP
+attribute/values, which are introduced in new iRedMail releases, by running
+Python scripts below: <a href="https://github.com/iredmail/iRedMail/tree/master/update/ldap">https://github.com/iredmail/iRedMail/tree/master/update/ldap</a></p>
+<p>For example:</p>
+<ul>
+<li>
+<p>If you're restoring iRedMail from <code>0.9.1</code> to <code>0.9.5</code>, you must run all update
+  scripts for iRedMail-0.9.1 and newer releases. In this case, only file
+  <code>updateLDAPValues_094_to_095.py</code> listed in above link is required.</p>
+</li>
+<li>
+<p>If you're restoring iRedMail from <code>0.8.6</code> to <code>0.9.5</code>, you need 3 files:</p>
+<ul>
+<li><code>updateLDAPValues_086_to_087.py</code></li>
+<li><code>updateLDAPValues_087_to_090.py</code></li>
+<li><code>updateLDAPValues_094_to_095.py</code></li>
+</ul>
+</li>
+</ul>
+<p>Please open the file you need to run, for example, <code>updateLDAPValues_094_to_095.py</code>,
+find parameters like below:</p>
+<pre><code>uri = 'ldap://127.0.0.1:389'
+basedn = 'o=domains,dc=example,dc=com'
+bind_dn = 'cn=Manager,dc=example,dc=com'
+bind_pw = 'passwd'
+</code></pre>
+<p>Please update them with the correct LDAP prefix (<code>dc=xx,dc=xx</code>) and bind
+password, then run it with <code>python</code> command:</p>
+<pre><code>python updateLDAPValues_094_to_095.py
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

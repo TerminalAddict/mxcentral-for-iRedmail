@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Turn on debug mode in SOGo</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="debug.sogo-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="turn-on-debug-mode-in-sogo">Turn on debug mode in SOGo</h1>
+<p>In <a href="file.locations.html#sogo">SOGo config file</a>, you can find several debug
+options, like below:</p>
+<pre><code>    // Enable verbose logging. Reference:
+    // http://www.sogo.nu/nc/support/faq/article/how-to-enable-more-verbose-logging-in-sogo.html
+    //SOGoDebugRequests = YES;
+    //SOGoEASDebugEnabled = YES;
+    //ImapDebugEnabled = YES;
+    //LDAPDebugEnabled = YES;
+    //MySQL4DebugEnabled = YES;
+    //PGDebugEnabled = YES;
+</code></pre>
+<p>Please uncomment the one you need, then restart SOGo service. You can find
+debug log in its log file <code>/var/log/sogo/sogo.log</code>.</p>
+<p>If you need source code level debugging, please read this tutorial instead:
+<a href="https://sogo.nu/support/faq/how-do-i-debug-sogo.html">How do I debug SOGo?</a>.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

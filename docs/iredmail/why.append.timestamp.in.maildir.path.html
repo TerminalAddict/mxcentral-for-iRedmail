@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Why append timestamp in maildir path</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="why.append.timestamp.in.maildir.path-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="why-append-timestamp-in-maildir-path">Why append timestamp in maildir path</h1>
+<p>iRedMail appends a timestamp to user's maildir path by default, people asked
+many times why we do this, and here's why. :)</p>
+<p>Think about this situation:</p>
+<ul>
+<li>
+<p>Employee <strong>Michael Jordan</strong> has email address <code>mj@domain.ltd</code>. Without timestamp
+  in maildir path, his maildir path should be <code>/var/vmail/vmail1/domain.ltd/mj/</code>.</p>
+</li>
+<li>
+<p>Michael left company someday, your company removed his mail account, and
+  scheduled to remove his mailbox in certain years (either according to local
+  law to keep it, or you just want to save a backup copy).</p>
+</li>
+<li>
+<p>A new talent, <strong>Mike Jackson</strong>, joined your company, and he wants to use
+  <code>mj@domain.ltd</code> since it is not used by anyone else right now. You created it
+  for him. Without timestamp in maildir path, his maildir path will be
+  same as <strong>Michael Jordan</strong>'s which is <code>/var/vmail/vmail1/domain.ltd/mj/</code>.
+  In this case, <strong>Mike Jackson</strong> will see all old emails left in <strong>Michael Jordan</strong>'s
+  mailbox.</p>
+</li>
+</ul>
+<p>To avoid this issue, iRedMail appends a timestamp in maildir path to make sure
+all users have their own unique maildir paths.</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>If you create mail user with iRedAdmin or iRedAdmin-Pro, it's tuneable:</p>
+<ul>
+<li><a href="iredadmin-pro.customize.maildir.path.html">Customize maildir path</a></li>
+</ul>
+</div><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

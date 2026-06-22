@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Use OpenLDAP as address book in Microsoft Outlook</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="use-openldap-as-address-book-in-microsoft-outlook">Use OpenLDAP as address book in Microsoft Outlook</h1>
+<p>Tested with Outlook 2007:</p>
+<ul>
+<li>on account settings choose address book tab</li>
+<li>click <code>New</code></li>
+<li>choose <code>Internet directory service (LDAP)</code></li>
+<li>Input the server name or IP address.</li>
+<li>Check the box <code>This server requires me to logon</code></li>
+<li>Input the full LDAP dn of your mail account as login username. For example: <code>mail=www@testserver.com,ou=Users,domainName=testserver.com,o=domains,dc=testserver,dc=com</code>, dont forget to input the correct user password.</li>
+<li>Click <code>More Settings</code></li>
+<li>Leave by default</li>
+<li>Click <code>Search</code></li>
+<li>Choose <code>Custom</code> and input the LDAP dn or your mail domain: <code>ou=Users,domainName=testserver.com,o=domains,dc=testserver,dc=com</code></li>
+<li>Done.</li>
+</ul>
+<p>Please make sure network port <code>389</code> (OpenLDAP service) is open to external
+network on your iRedMail server, it's blocked in iRedMail by default..</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

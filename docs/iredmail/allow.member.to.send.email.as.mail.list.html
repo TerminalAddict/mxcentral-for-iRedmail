@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Allow member to send email as mailing list or mail alias</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="allow.member.to.send.email.as.mail.list-it_IT.html">Italiano</a> / <a href="allow.member.to.send.email.as.mail.list-zh_CN.html">简体中文</a> /</p>
+</div>
+<h1 id="allow-member-to-send-email-as-mailing-list-or-mail-alias">Allow member to send email as mailing list or mail alias</h1>
+<p>To allow member of mailing list (or mail alias) account to send email as this
+mailing list (or mail alias), please follw steps below:</p>
+<ul>
+<li>Remove <code>reject_sender_login_mismatch</code> in Postfix config file <code>/etc/postfix/main.cf</code>.</li>
+<li>Enable iRedAPD plugin <code>reject_sender_login_mismatch</code> in iRedAPD config file
+  <code>/opt/iredapd/settings.py</code>.</li>
+<li>Add new setting in <code>/opt/iredapd/settings.py</code> to allow member to send email
+  as mail list or mail alias:</li>
+</ul>
+<pre><code>ALLOWED_LOGIN_MISMATCH_LIST_MEMBER = True
+</code></pre>
+<ul>
+<li>Restart both Postfix and iRedAPD services.</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

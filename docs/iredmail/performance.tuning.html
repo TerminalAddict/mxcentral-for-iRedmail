@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Performance tuning</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="performance.tuning-it_IT.html">Italiano</a> / <a href="performance.tuning-lv_LV.html">Latvian</a> / <a href="performance.tuning-zh_CN.html">简体中文</a> /</p>
+</div>
+<h1 id="performance-tuning">Performance tuning</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="performance.tuning.html#performance-tuning">Performance tuning</a><ul>
+<li><a href="performance.tuning.html#setup-a-dns-server-in-lan-or-localhost-to-cache-dns-queries">Setup a DNS server in LAN or localhost to cache DNS queries</a></li>
+<li><a href="performance.tuning.html#enable-postscreen-service-to-help-reduce-spam">Enable postscreen service to help reduce spam</a></li>
+<li><a href="performance.tuning.html#update-amavisd-postfix-config-files-to-process-more-emails-concurrently">Update Amavisd + Postfix config files to process more emails concurrently</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>If you're running a busy mail server (many inbound/outbound emails every day),
+you can follow below suggestions for better performance.</p>
+<h3 id="setup-a-dns-server-in-lan-or-localhost-to-cache-dns-queries">Setup a DNS server in LAN or localhost to cache DNS queries</h3>
+<p>Mail services <strong>heavily</strong> rely on DNS service and perform many many DNS queries,
+a cache DNS server in LAN or localhost helps <strong>A LOT</strong>:</p>
+<ul>
+<li>It speeds up DNS queries. This helps a lot to speed up mail flow.</li>
+<li>It reduces DNS queries to DNSBL servers, so that you can continue using their
+  excellent service without exceeding the max query limit.</li>
+</ul>
+<h3 id="enable-postscreen-service-to-help-reduce-spam">Enable postscreen service to help reduce spam</h3>
+<ul>
+<li><a href="enable.postscreen.html">Enable postscreen service</a></li>
+</ul>
+<p>If you don't want to use postscreen service, you can <a href="enable.dnsbl.html">enable DNSBL service</a>
+instead, it helps a lot too. Although both <code>postscreen</code> and pure DNSBL services
+uses the same DNSBL servers, but <code>postscreen</code> offers additional solutions to
+reduce spam, so postscreen is better.</p>
+<p>postscreen and DNSBL service help catch a lot spam before putting the spams
+in local mail queue, so they save much system resource.</p>
+<h3 id="update-amavisd-postfix-config-files-to-process-more-emails-concurrently">Update Amavisd + Postfix config files to process more emails concurrently</h3>
+<ul>
+<li><a href="concurrent.processing.html">Process more emails concurrently</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

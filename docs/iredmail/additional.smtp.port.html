@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Allow internal network devices to send email with insecure connection</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="additional.smtp.port-it_IT.html">Italiano</a> /</p>
+</div>
+<h1 id="allow-internal-network-devices-to-send-email-with-insecure-connection">Allow internal network devices to send email with insecure connection</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="additional.smtp.port.html#allow-internal-network-devices-to-send-email-with-insecure-connection">Allow internal network devices to send email with insecure connection</a><ul>
+<li><a href="additional.smtp.port.html#purpose">Purpose</a></li>
+<li><a href="additional.smtp.port.html#open-additional-smtp-port-in-postfix">Open additional smtp port in Postfix</a></li>
+<li><a href="additional.smtp.port.html#update-firewall-rules-to-deny-access-from-external-network">Update firewall rules to deny access from external network</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="purpose">Purpose</h2>
+<p>If you have some network devices like printer, firewall, and they need to
+send out notification or report email with insecure smtp connection, please
+try steps below to get it working without breaking default security settings.</p>
+<h2 id="open-additional-smtp-port-in-postfix">Open additional smtp port in Postfix</h2>
+<p>Since iRedMail-0.9.3, with default iRedMail settings, port 25 is used for
+postscreen service, all clients are forced to submit through port 587 with
+STARTTLS for secure connection.</p>
+<p>To support network devices which doesn't support STARTTLS and SSL, we can ask
+Postfix to listen on additional port for smtp service by appending below line
+in <code>/etc/postfix/master.cf</code> (on Linux/OpenBSD) or
+<code>/usr/local/etc/postfix/master.cf</code> (on FreeBSD):</p>
+<pre><code>2525      inet  n       -       -       -       -       smtpd
+  -o syslog_name=postfix/2525
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_sasl_security_options=noanonymous
+  -o smtpd_tls_security_level=may
+  -o smtpd_sender_restrictions=permit_mynetworks,permit_sasl_authenticated,reject
+</code></pre>
+<ul>
+<li><code>2525</code> is the new port number for smtp service, you're free to change it to
+  your favourite port number.</li>
+<li><code>smtpd_tls_security_level=may</code> allows both secure (TLS) and insecure connections.</li>
+</ul>
+<p>Restarting Postfix service is required. After restarting, you can check whether
+it's listening on this new port:</p>
+<pre><code>netstat -ntlp | grep 2525
+</code></pre>
+<p>Now update your network devices to send email through this port number,
+without STARTTLS and SSL.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>SMTP authentication is still required to send email.</p>
+</div>
+<h2 id="update-firewall-rules-to-deny-access-from-external-network">Update firewall rules to deny access from external network</h2>
+<p>It's dangerous to expose this new port number to external network, so you must
+update your firewall rules to deny access from external network to this new
+port number.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

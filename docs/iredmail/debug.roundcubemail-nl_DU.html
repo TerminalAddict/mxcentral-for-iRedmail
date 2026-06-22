@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Zet debug modus aan in Roundcube webmail</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="debug.roundcubemail.html">English</a> /</p>
+</div>
+<h1 id="zet-debug-modus-aan-in-roundcube-webmail">Zet debug modus aan in Roundcube webmail</h1>
+<p>Volg alstublieft eerst de tutorial om het Roundcube configuratiebestand te vinden
+(<code>config/config.inc.php</code>):
+<a href="file.locations.html#roundcube-webmail">Locations of configuration and log files of major components</a></p>
+<p>Daarna kan je onderstaande instellingen toevoegen aan <code>config/config.inc.php</code>:</p>
+<pre><code>// system error reporting, sum of: 1 = log; 4 = show
+$config['debug_level'] = 4;
+
+// Log SQL queries
+$config['sql_debug'] = true;
+
+// Log IMAP conversation
+$config['imap_debug'] = true;
+
+// Log LDAP conversation
+$config['ldap_debug'] = true;
+
+// Log SMTP conversation
+$config['smtp_debug'] = true;
+</code></pre>
+<p>Je moet de web service niet herstarten.</p>
+<p>Roundcube is geconfigureerd (door iRedMail) om te loggen naar het Postfix logbestand, dat is
+<code>/var/log/maillog</code> of <code>/var/log/mail.log</code>.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

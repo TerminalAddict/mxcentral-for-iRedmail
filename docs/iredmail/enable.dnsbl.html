@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Enable DNSBL service in Postfix to reduce spam</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="enable-dnsbl-service-in-postfix-to-reduce-spam">Enable DNSBL service in Postfix to reduce spam</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>If you're running a high-traffic mail server, you'd better setup a local
+DNS server to cache DNS queries, because free RBL services like
+<code>zen.spamhaus.org</code> may improperly reply if your server exceed the DNS
+query limit. Also, mail service higly relies on DNS queries, so a local
+DNS server speeds up the mail flow.</p>
+</div>
+<p>You can enable additional DNSBL services in Postfix to reduce spam. We use
+<code>zen.spamhaus.org</code> for example below.</p>
+<ul>
+<li>Open Postfix config file <code>/etc/postfix/main.cf</code> or
+  <code>/usr/local/etc/postfix/main.cf</code> (on FreeBSD), append
+  <code>reject_rbl_client zen.spamhaus.org</code> to parameter <code>smtpd_recipient_restrictions</code>.
+  Final setting looks like below:</li>
+</ul>
+<pre><code>smtpd_recipient_restrictions =
+    ...
+    reject_unauth_destination
+    reject_rbl_client zen.spamhaus.org=127.0.0.[2..11]
+    reject_rbl_client b.barracudacentral.org=127.0.0.2
+</code></pre>
+<p>It must be placed after <code>reject_unauth_destination</code>. You can add more DNSBL
+services after <code>reject_unauth_destination</code>, and they will be queried in the
+specified order.</p>
+<p>Postfix will perform DNS query against <code>zen.spamhaus.org</code>, and wait for the
+response code, only <code>127.0.0.2</code> to <code>127.0.0.11</code> are meaningful, so we use
+<code>=127.0.0.[2..11]</code> to tell Postfix only reject clients when we get those
+response code.</p>
+<ul>
+<li>If you have postscreen service enabled, you should add DNSBL services for
+  postscreen service instead, so please don't use any <code>reject_rbl_client</code> in
+  <code>smtpd_recipient_restrictions</code> parameter, but use below one instead:</li>
+</ul>
+<pre><code>postscreen_dnsbl_sites =
+    zen.spamhaus.org=127.0.0.[2..11]*3
+    b.barracudacentral.org=127.0.0.2*2
+</code></pre>
+<ul>
+<li>Restart or reload Postfix service is required.</li>
+</ul>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="enable.postscreen.html">Enable postscreen service</a></li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="http://www.postfix.org/postconf.5.html#reject_rbl_client">Postfix Configuration Parameters: reject_rbl_client</a></li>
+<li>
+<p><a href="http://www.spamhaus.org">Spamhaus website</a></p>
+<ul>
+<li><a href="https://www.spamhaus.org/organization/dnsblusage/">Spamhaus DNSBL Usage Terms</a></li>
+</ul>
+</li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

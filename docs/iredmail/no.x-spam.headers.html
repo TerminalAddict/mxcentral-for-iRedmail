@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Amavisd + SpamAssassin not working? no mail header (X-Spam-*) inserted</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="no.x-spam.headers-it_IT.html">Italiano</a> /</p>
+</div>
+<h1 id="amavisd-spamassassin-not-working-no-mail-header-x-spam-inserted">Amavisd + SpamAssassin not working? no mail header (X-Spam-*) inserted</h1>
+<blockquote>
+<p>Amavisd config file is different on different Linux/BSD distributions, you can
+find the correct one for your server in this tutorial:
+<a href="file.locations.html#amavisd">Locations of configuration and log files of major components</a></p>
+</blockquote>
+<p>If you just want to know whether Amavisd + SpamAssassin are working, you can
+add setting below to Amavisd config file, then restart Amavisd service. Amavisd
+will log verbose message for each processed message in its log file.</p>
+<pre><code>$log_templ = $log_verbose_templ;
+</code></pre>
+<p>Sample log:</p>
+<pre><code>Oct 12 21:26:34 d8 amavis[1389]: (01389-01) Passed CLEAN {RelayedInternal},
+ORIGINATING/MYNETS LOCAL [172.16.100.1]:54180 ESMTP/ESMTP &lt;postmaster@a.cn&gt; -&gt;
+&lt;amavis@d8.iredmail.org&gt;, (), Queue-ID: 2F322E003E, mail_id: 47G-u3kjLkOz, b:
+3tnIDXRGW, Hits: -0.428, size: 316, queued_as: 58A90DFC34, Subject: &quot;mail subject&quot;,
+From: &lt;postmaster@a.cn&gt;, helo=test.com, Tests: [ALL_TRUSTED=-1,INVALID_DATE=0.432,
+MISSING_MID=0.14], autolearn=no autolearn_force=no, autolearnscore=0.572,
+dkim_new=dkim:a.cn, 19162 ms
+</code></pre>
+<p>The "Tests:" flag includes spam scanning result from SpamAssassin.</p>
+<p>If you want Amavisd to insert <code>X-Spam-*</code> headers in each email, please decrease
+Amavisd setting <code>$sa_tag_level_deflt</code> (in Amavisd config file )to a very low
+score, e.g. <code>-999</code>, then restart Amavisd service:</p>
+<pre><code>$sa_tag_level_deflt  = -999;
+</code></pre>
+<p>That means Amavisd will insert <code>X-Spam-Flag</code> and other <code>X-Spam-*</code> headers when
+email score &gt;= <code>-999</code>.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

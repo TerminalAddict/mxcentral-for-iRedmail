@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 0.9.3 to 0.9.4</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-093-to-094">Upgrade iRedMail from 0.9.3 to 0.9.4</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#upgrade-iredmail-from-093-to-094">Upgrade iRedMail from 0.9.3 to 0.9.4</a><ul>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#general-all-backends-should-apply-these-steps">General (All backends should apply these steps)</a><ul>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#upgrade-iredapd-postfix-policy-server-to-the-latest-180">Upgrade iRedAPD (Postfix policy server) to the latest 1.8.0</a></li>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#upgrade-iredadmin-open-source-edition-to-the-latest-stable-release">Upgrade iRedAdmin (open source edition) to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#upgrade-roundcube-webmail-to-the-latest-stable-release">Upgrade Roundcube webmail to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#fixed-no-daily-cron-job-to-backup-sqlldap-database">Fixed: No daily cron job to backup SQL/LDAP database</a></li>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#freebsd-fix-incorrect-file-permission-of-etcmailmailerconf">FreeBSD: Fix incorrect file permission of /etc/mail/mailer.conf</a></li>
+<li><a href="upgrade.iredmail.0.9.3-0.9.4.html#openbsd-fixed-not-open-port-25-in-firewall-rule">OpenBSD: Fixed: Not open port 25 in firewall rule</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>2016-01-25: Initial publish.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-steps">General (All backends should apply these steps)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code># File: /etc/iredmail-release
+
+0.9.4
+</code></pre>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-180">Upgrade iRedAPD (Postfix policy server) to the latest 1.8.0</h3>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<p>Detailed release notes are available <a href="iredapd.releases.html">here</a>.</p>
+<h3 id="upgrade-iredadmin-open-source-edition-to-the-latest-stable-release">Upgrade iRedAdmin (open source edition) to the latest stable release</h3>
+<p>Please follow this tutorial to upgrade iRedAdmin open source edition to the
+latest stable release:
+<a href="migrate.or.upgrade.iredadmin.html">Upgrade iRedAdmin to the latest stable release</a></p>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release">Upgrade Roundcube webmail to the latest stable release</h3>
+<p>Please follow Roundcube official tutorial to upgrade Roundcube webmail to the
+latest stable release immediately: <a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</p>
+<p>Note: package <code>rsync</code> must be installed on your server before upgrading.</p>
+<h3 id="fixed-no-daily-cron-job-to-backup-sqlldap-database">Fixed: No daily cron job to backup SQL/LDAP database</h3>
+<p>In iRedMail-0.9.3, there's no daily cron job to backup SQL/LDAP databases.
+Please add them manually with command <code>crontab -e -u root</code>.</p>
+<blockquote>
+<p>If you downloaded iRedMail-0.9.3 right after it had been released, the daily
+cron job which is used to backup SQL/LDAP database is missing. We re-packed
+iRedMail-0.9.3 with this fix to avoid trouble for users. So if don't have this
+cron job, please add it by following steps below. If you already have it,
+it's safe to ignore steps below.</p>
+<p>Notes:</p>
+<ul>
+<li>
+<p>Please make sure the path to backup scripts
+  (<code>/var/vmail/backup/backup_XXX.sh</code>) are correct.</p>
+</li>
+<li>
+<p>On FreeBSD and OpenBSD, the path of <code>bash</code> shell is <code>/usr/local/bin/bash</code>.</p>
+</li>
+</ul>
+</blockquote>
+<ul>
+<li>For OpenLDAP backend, you need 2 daily cron jobs, one for SQL database, one
+  another one for LDAP:</li>
+</ul>
+<pre><code># iRedMail: Backup OpenLDAP data (at 03:00 AM)
+0   3   *   *   *   /bin/bash /var/vmail/backup/backup_openldap.sh
+
+# iRedMail: Backup MySQL databases (at 03:30AM)
+30   3   *   *   *   /bin/bash /var/vmail/backup/backup_mysql.sh
+</code></pre>
+<ul>
+<li>For MySQL/MariaDB backends, you need 1 daily cron job:</li>
+</ul>
+<pre><code># iRedMail: Backup MySQL databases (at 03:30AM)
+30   3   *   *   *   /bin/bash /var/vmail/backup/backup_mysql.sh
+</code></pre>
+<ul>
+<li>For PostgreSQL backend, you need 1 daily cron job:</li>
+</ul>
+<pre><code># iRedMail: Backup PostgreSQL databases (at 03:01AM)
+1   3   *   *   *   /bin/bash /var/vmail/backup/backup_pgsql.sh
+</code></pre>
+<h3 id="freebsd-fix-incorrect-file-permission-of-etcmailmailerconf">FreeBSD: Fix incorrect file permission of /etc/mail/mailer.conf</h3>
+<blockquote>
+<p>This is applicable to only FreeBSD.</p>
+</blockquote>
+<p>iRedMail generates /etc/mail/mailer.conf with permission 0600 during
+installation, but it should be world-readable. Please fix this issue with
+command below:</p>
+<pre><code>chmod +r /etc/mail/mailer.conf
+</code></pre>
+<h3 id="openbsd-fixed-not-open-port-25-in-firewall-rule">OpenBSD: Fixed: Not open port 25 in firewall rule</h3>
+<blockquote>
+<p>This is applicable to only OpenBSD.</p>
+</blockquote>
+<p>The sample PF firewall rule shipped in iRedMail-0.9.3 doesn't enable port 25
+by default, please add service name <code>smtp</code> in <code>mail_services=</code> manually, then
+reload pf rules.</p>
+<ul>
+<li>Add service name <code>smtp</code> in parameter <code>mail_services=</code> in <code>/etc/pf.conf</code>:</li>
+</ul>
+<pre><code>mail_services=&quot;{ ... smtp}&quot;
+</code></pre>
+<ul>
+<li>Reload pf firewall:</li>
+</ul>
+<pre><code># pfctl -d
+# pfctl -ef /etc/pf.conf
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

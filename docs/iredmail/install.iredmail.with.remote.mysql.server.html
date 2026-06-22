@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Install iRedMail with a remote MySQL server</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="install.iredmail.with.remote.mysql.server-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="install-iredmail-with-a-remote-mysql-server">Install iRedMail with a remote MySQL server</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="install.iredmail.with.remote.mysql.server.html#install-iredmail-with-a-remote-mysql-server">Install iRedMail with a remote MySQL server</a><ul>
+<li><a href="install.iredmail.with.remote.mysql.server.html#summary">Summary</a></li>
+<li><a href="install.iredmail.with.remote.mysql.server.html#requirements">Requirements</a></li>
+<li><a href="install.iredmail.with.remote.mysql.server.html#install-iredmail">Install iRedMail</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="summary">Summary</h2>
+<p>This article introduces how to install iRedMail-<strong>0.9.6</strong> with an existing remote
+MySQL server.</p>
+<p>We use below server IP addresses in our example:</p>
+<ul>
+<li><code>192.168.1.100</code>: Remote MySQL server.</li>
+<li><code>192.168.1.200</code>: iRedMail server. We're going to install the latest iRedMail
+  on this server.</li>
+</ul>
+<p>iRedMail won't install MySQL server (RPM/DEB package) on localhost with remote
+MySQL server, but MySQL client tools are still required for remote SQL
+connection.</p>
+<h2 id="requirements">Requirements</h2>
+<p>In our case, remote MySQL server runs on server <code>192.168.1.100</code>. It must accept
+remote connection from iRedMail server <strong>BEFORE</strong> installing iRedMail, and we
+must create a new SQL user with password and proper privileges for remote login
+from iRedMail server (<code>192.168.1.200</code> in our case).</p>
+<ul>
+<li>Make sure your remote MySQL server accepts remote connection from iRedMail
+  server. For example, you can check it with command <code>netstat</code>:</li>
+</ul>
+<pre><code># netstat -ntlp | grep 3306
+tcp        0      0 0.0.0.0:3306            0.0.0.0:*               LISTEN      2479/mysqld
+</code></pre>
+<p>If MySQL server is listening on only 127.0.0.1, please update parameter
+<code>bind-address</code> in MySQL config file <code>my.cnf</code> to make sure it listens on all
+available IPv4 addresses like below, restarting MySQL service is required:</p>
+<ul>
+<li>On Red Hat Enterprise Linux, CentOS, openSUSE, OpenBSD, it's <code>/etc/my.cnf</code>.</li>
+<li>On Debian, Ubuntu, it's <code>/etc/mysql/my.cnf</code>.</li>
+<li>On FreeBSD, it's <code>/var/db/mysql/my.cnf</code>.</li>
+</ul>
+<pre><code># If you comment out this parameter, it listens on all available IPv6 addresses
+bind-address = 0.0.0.0
+</code></pre>
+<ul>
+<li>
+<p>Make sure remote MySQL request will not be blocked by network firewall like
+  iptables (Linux), ipfw (FreeBSD) or PF (OpenBSD).</p>
+</li>
+<li>
+<p>Create a new SQL user (<code>admin_iredmail</code>) with new password (<code>admin_password</code>)
+  and all privileges on remote MySQL server (of course you must choose another
+  strong password):</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This SQL user will be used for daily backup, please do not delete it
+after iRedMail installation.</p>
+</div>
+</li>
+</ul>
+<pre><code>-- Run on remote MySQL server as root user
+GRANT ALL PRIVILEGES ON *.* TO 'admin_iredmail'@'192.168.1.200' IDENTIFIED BY 'admin_password' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+FLUSH HOSTS;
+</code></pre>
+<p>With above commands, MySQL user <code>admin_iredmail</code> is allowed to connect from IP
+address <code>192.168.1.200</code> with password <code>admin_password</code>.</p>
+<p><strong>Notes</strong>:</p>
+<ul>
+<li><code>WITH GRANT OPTION</code> in above SQL command is required.</li>
+<li>Of course you can use <code>root</code> or other MySQL user as remote MySQL user name
+  in above SQL command, but a custom user name should be better to help you
+  understand what it's used for, and less confuse with default <code>root</code> user.</li>
+<li>You must replace <code>192.168.1.200</code> by the real IP address of your iRedMail
+  server in above command.</li>
+</ul>
+<p>If you tried to install iRedMail with this remote MySQL server before, please
+backup existing databases <strong>on remote MySQL server first</strong>, then drop them and
+delete related MySQL users, because they will be created by iRedMail
+automatically on remote MySQL server:</p>
+<pre><code>-- Run on remote MySQL server as root user
+DROP DATABASE amavisd;
+DROP DATABASE iredadmin;
+DROP DATABASE iredapd;
+DROP DATABASE roundcubemail;
+DROP DATABASE sogo;
+DROP DATABASE vmail;
+
+DROP USER 'amavisd'@'192.168.1.200';
+DROP USER 'iredadmin'@'192.168.1.200';
+DROP USER 'iredapd'@'192.168.1.200';
+DROP USER 'roundcube'@'192.168.1.200';
+DROP USER 'sogo'@'192.168.1.200';
+DROP USER 'vmail'@'192.168.1.200';
+DROP USER 'vmailadmin'@'192.168.1.200';
+</code></pre>
+<h2 id="install-iredmail">Install iRedMail</h2>
+<p>Please follow iRedMail installation guide strictly, but start iRedMail
+installer with below command instead of the original one (<code>bash iRedMail.sh</code>):</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you use an IPv6 address for remote MySQL server address , please
+surround it with <code>[]</code> like this: <code>[fd01:2345:6789:1::1]</code>.</p>
+</div>
+<pre><code>USE_EXISTING_MYSQL='YES' \
+    MYSQL_SERVER_ADDRESS='192.168.1.100' \
+    MYSQL_SERVER_PORT='3306' \
+    MYSQL_ROOT_USER='admin_iredmail' \
+    MYSQL_ROOT_PASSWD='admin_password' \
+    MYSQL_GRANT_HOST='192.168.1.200' \
+    bash iRedMail.sh
+</code></pre>
+<p>It will launch iRedMail installation wizard as usual.</p>
+<p>Parameters we used in above command line:</p>
+<ul>
+<li><code>USE_EXISTING_MYSQL</code>: Remote MySQL server address.</li>
+<li><code>MYSQL_SERVER_ADDRESS</code>: Remote MySQL server address.</li>
+<li><code>MYSQL_SERVER_PORT</code>: Remote MySQL server port. Default is <code>3306</code>.</li>
+<li><code>MYSQL_ROOT_USER</code>: MySQL user name we created on remote MySQL server before installing iRedMail.</li>
+<li><code>MYSQL_ROOT_PASSWD</code>: MySQL password that we created on remote MySQL server before installing iRedMail.</li>
+<li><code>MYSQL_GRANT_HOST</code>: Hostname or IP address of iRedMail server.</li>
+</ul>
+<p>iRedMail will create new SQL users for applications like Postfix, Amavisd,
+Roundcube webmail, etc, and grant proper privileges to them which will connect
+from iRedMail server.</p>
+<p>One more optional parameter is <code>INITIALIZE_SQL_DATA</code>. If you don't want
+iRedMail installer to initialize any sql records, please set
+<code>INITIALIZE_SQL_DATA=NO</code>. This way iRedMail installer will just configure
+related config files to use remote MySQL server.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

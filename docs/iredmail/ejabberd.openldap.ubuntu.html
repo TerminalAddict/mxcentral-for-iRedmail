@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Integrate ejabberd with iRedMail</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="integrate-ejabberd-with-iredmail">Integrate ejabberd with iRedMail</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="ejabberd.openldap.ubuntu.html#integrate-ejabberd-with-iredmail">Integrate ejabberd with iRedMail</a><ul>
+<li><a href="ejabberd.openldap.ubuntu.html#install-ejabberd">Install Ejabberd</a></li>
+<li><a href="ejabberd.openldap.ubuntu.html#configure-ejabberd">Configure ejabberd</a><ul>
+<li><a href="ejabberd.openldap.ubuntu.html#use-a-proper-ldap-bind-dnpassword-to-query-accounts">Use a proper LDAP bind dn/password to query accounts</a></li>
+<li><a href="ejabberd.openldap.ubuntu.html#configure-ejabberd_1">Configure ejabberd</a></li>
+<li><a href="ejabberd.openldap.ubuntu.html#start-ejabberd-service">Start ejabberd service</a></li>
+<li><a href="ejabberd.openldap.ubuntu.html#config-iptables">Config iptables</a></li>
+<li><a href="ejabberd.openldap.ubuntu.html#web-access-ejabberd-admin-console">Web Access Ejabberd Admin Console</a></li>
+<li><a href="ejabberd.openldap.ubuntu.html#xmpp-clients">XMPP Clients</a></li>
+<li><a href="ejabberd.openldap.ubuntu.html#xmpp-federation-and-dns-link">XMPP Federation and DNS Link</a></li>
+</ul>
+</li>
+<li><a href="ejabberd.openldap.ubuntu.html#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="install-ejabberd">Install Ejabberd</h2>
+<pre><code>apt-get install ejabberd
+</code></pre>
+<h2 id="configure-ejabberd">Configure ejabberd</h2>
+<h3 id="use-a-proper-ldap-bind-dnpassword-to-query-accounts">Use a proper LDAP bind dn/password to query accounts</h3>
+<p>iRedMail generates a LDAP bind dn <code>cn=vmail,dc=xxx,dc=xxx</code> with read-only
+access to all mail accounts, we use it in ejabberd to query accounts.</p>
+<p>Password of <code>cn=vmail,dc=xxx,dc=xxx</code> was generated randomly during iRedMail
+installation, you can find the full dn and password in
+<code>/etc/postfix/ldap/catchall_maps.cf</code>:</p>
+<pre><code># grep 'bind_' /etc/postfix/ldap/catchall_maps.cf
+bind_dn         = cn=vmail,dc=example,dc=com
+bind_pw         = InYTi8qGjamTb6Me2ESwbb6rxQUs5y
+</code></pre>
+<h3 id="configure-ejabberd_1">Configure ejabberd</h3>
+<p>Ejabberd's configuration files are written in Erlang syntax, which might be difficult to comprehend. Thankfully, the modifications we need to make are relatively minor and straightforward. The main ejabberd configuration file is located at /etc/ejabberd/ejabberd.cfg. We'll cover each relevant option in turn.</p>
+<p>In Erlang, comments begin with the % sign.</p>
+<ul>
+<li>Setting admin and domain, now we setting <code>www@example.com</code> as admin.</li>
+<li>Auth not use internal.</li>
+<li>LDAP auth</li>
+</ul>
+<p>Open /etc/ejabberd/ejabberd.cfg and set correct values:</p>
+<pre><code>%% Admin user
+{acl, admin, {user, &quot;www&quot;, &quot;example.com&quot;}}.
+
+%% Hostname
+{hosts, [&quot;example.com&quot;]}.
+
+%% Comment out this line (to not use internal auth method)
+%{auth_method, internal}.
+
+%
+% Add below lines at the bottom.
+%
+
+% Authenticate against LDAP.
+{auth_method, ldap}.
+{ldap_servers, [&quot;127.0.0.1&quot;]}.
+% {ldap_encrypt, tls}.
+{ldap_port, 389}.
+{ldap_base, &quot;o=domains,dc=example,dc=com&quot;}.
+{ldap_rootdn, &quot;cn=vmail,dc=example,dc=com&quot;}.
+{ldap_password, &quot;InYTi8qGjamTb6Me2ESwbb6rxQUs5y&quot;}.
+
+% LDAP filter used to query mail accounts
+%
+% If you prefer to restrict ejabberd service to certain users, you can append
+% filter rule `enabledService=ejabberd` like below, then add LDAP attribute/value
+% pair `enabledService=ejabberd` to these users.
+%{ldap_filter, &quot;(&amp;(objectClass=mailUser)(accountStatus=active)(enabledService=ejabberd))&quot;}.
+{ldap_filter, &quot;(&amp;(objectClass=mailUser)(accountStatus=active))&quot;}.
+{ldap_uids, [{&quot;mail&quot;, &quot;%u@%d&quot;}]}.
+</code></pre>
+<h3 id="start-ejabberd-service">Start ejabberd service</h3>
+<pre><code># /etc/init.d/ejabberd start
+Starting jabber server: ejabberd.
+
+# ejabberdctl status
+Node ejabberd@u910 is started. Status: started
+ejabberd is running
+</code></pre>
+<h3 id="config-iptables">Config iptables</h3>
+<p>Ejabberd uses some standard ports:</p>
+<ul>
+<li>5222 Main client port</li>
+<li>5223 Obsolete secure jabber port</li>
+<li>5269 Server to server port</li>
+<li>5280 Web administration</li>
+</ul>
+<p>Open <code>/etc/default/iptables</code>, append rules below:</p>
+<pre><code>-A INPUT -p tcp --dport 5222 -j ACCEPT
+-A INPUT -p tcp --dport 5223 -j ACCEPT
+-A INPUT -p tcp --dport 5269 -j ACCEPT
+-A INPUT -p tcp --dport 5280 -j ACCEPT
+</code></pre>
+<p>Restart the iptables service.</p>
+<pre><code>/etc/init.d/iptables restart
+</code></pre>
+<h3 id="web-access-ejabberd-admin-console">Web Access Ejabberd Admin Console</h3>
+<p>Now you can access <a href="http://192.168.1.10:5280/admin/">http://192.168.1.10:5280/admin/</a></p>
+<p>Login in the ejabberd web admin, We have seting www@example.com as admin for the ejabberd server</p>
+<p>You can not create user in webadmin. If you want to create user, you need first add user in iRedAdmin, then enable the jabber service for the user in phpldapadmin.</p>
+<p>If you want to add the second virtual domain, you need first create a new domain in iRedAdmin, then modify /etc/ejabberd/ejabberd.cfg .</p>
+<ul>
+<li>Open <code>/etc/ejabberd/ejabberd.cfg</code> and set correct values:</li>
+</ul>
+<pre><code>% Hostname
+{hosts, [&quot;example.com&quot;,&quot;test.com&quot;]}.
+</code></pre>
+<h3 id="xmpp-clients">XMPP Clients</h3>
+<p>There're many free and open source XMPP clients available, you can choose the
+one you prefer listed on this page: <a href="http://xmpp.org/software/clients.html">http://xmpp.org/software/clients.html</a></p>
+<p>On Linux/BSD, Pidgin is a good choice: <a href="http://pidgin.im">http://pidgin.im</a></p>
+<h3 id="xmpp-federation-and-dns-link">XMPP Federation and DNS Link</h3>
+<p>To ensure that your ejabberd instance will federate properly with the rest of
+the XMPP network, we must set the SRV records for the domain to point to the
+server where the ejabberd instance is running. We need two records, which can
+be created in the DNS Management tool of your choice:</p>
+<pre><code>_xmpp-client._tcp.example.net. 86400 IN SRV 5 0 5222 example.net.
+_xmpp-server._tcp.example.net. 86400 IN SRV 5 0 5269 example.net.
+</code></pre>
+<p>For more examples, please read this tutorial: <a href="http://wiki.xmpp.org/web/SRV_Records">http://wiki.xmpp.org/web/SRV_Records</a></p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><a href="debug.openldap.html">Debug OpenLDAP</a></li>
+<li>Monitor the OpenLDAP and Ejabberd log files</li>
+</ol><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

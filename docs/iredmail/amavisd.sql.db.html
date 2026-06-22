@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Explanation of Amavisd SQL database</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="explanation-of-amavisd-sql-database">Explanation of Amavisd SQL database</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="amavisd.sql.db.html#explanation-of-amavisd-sql-database">Explanation of Amavisd SQL database</a><ul>
+<li><a href="amavisd.sql.db.html#summary">Summary</a></li>
+<li><a href="amavisd.sql.db.html#details">Details</a><ul>
+<li><a href="amavisd.sql.db.html#lookup_sql_dsn">@lookup_sql_dsn</a></li>
+<li><a href="amavisd.sql.db.html#todo-storage_sql_dsn">TODO: @storage_sql_dsn</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="summary">Summary</h2>
+<p>Amavisd has two settings to use its SQL tables:</p>
+<ul>
+<li>
+<p><code>@storage_sql_dsn</code> uses 4 sql tables (<code>msgs</code>, <code>msgrcpt</code>, <code>maddr</code>,
+  <code>quarantine</code>), and it's used to store:</p>
+<ul>
+<li>basic info of inbound and outbound message. e.g. mail subject,
+  sender address, recipient address, timestamp, etc. Note: no mail body.</li>
+<li>quarantined mails. Note: it stores full message of quarantined mail,
+  including mail body.</li>
+</ul>
+</li>
+<li>
+<p><code>@lookup_sql_dsn</code>: uses 4 sql tables (<code>mailaddr</code>, <code>policy</code>, <code>users</code>,
+  <code>wblist</code>), and it's used to store:</p>
+<ul>
+<li>per-account spam policy</li>
+<li>per-account white/blacklists</li>
+</ul>
+<p>Note: iRedMail has addition sql table <code>outbound_wblist</code> to store
+white/blacklists for outbound emails, but it's used by iRedAPD (plugin
+<code>amavisd_wblist</code>), not by Amavisd.</p>
+</li>
+</ul>
+<h2 id="details">Details</h2>
+<h3 id="lookup_sql_dsn"><code>@lookup_sql_dsn</code></h3>
+<ul>
+<li>
+<p>Table <code>amavisd.mailaddr</code> stores email addresses <strong>NOT</strong> hosted on your server.</p>
+<p>Note: value of column <code>mailaddr.email</code> could be something like below:</p>
+<ul>
+<li><code>@.</code>: a catch-all address.</li>
+<li><code>@domain.com</code>: entire domain.</li>
+<li><code>@.domain.com</code>: entire domain and all its sub-domains.</li>
+<li><code>user@domain.com</code>: a single email address.</li>
+<li><code>user@*</code>: email addresses start with <code>user@</code>. Note: This is used by iRedAPD, not Amavisd.</li>
+<li><code>192.168.1.2</code>: a single IP address. Note: This is used by iRedAPD, not Amavisd.</li>
+<li><code>192.168.*.2</code>: wildcard IP address. Note: This is used by iRedAPD, not Amavisd.</li>
+</ul>
+<p>The addresses are used in several tables:</p>
+<ul>
+<li><code>amavisd.wblist</code>: used by Amavisd. If sender (of inbound message) is
+  blacklisted, Amavisd will quarantine this email. But if you have iRedAPD
+  plugin <code>amavisd_wblist</code> enabled, this smtp session will be rejected before
+  queued by Postfix, so Amavisd doesn't know this rejected message at all.</li>
+<li><code>amavisd.outbound_wblist</code>. New in iRedMail-0.9.3, used by iRedAPD plugin
+  <code>amavisd_wblist</code> for white/blacklisting for outbound message.</li>
+</ul>
+</li>
+<li>
+<p><code>amavisd.users</code> stores mail addresses hosted on your server. <strong>NOTE</strong>: you
+  don't need to sync all existing mail users in this table, just add mail users
+  you want to define a per-account spam policy in this table.</p>
+<p>Value of column <code>users.email</code> uses same format as <code>amavisd.mailaddr</code> mentioned above.</p>
+</li>
+<li>
+<p><code>amavisd.wblist</code> stores white/blacklists for inbound message. <code>wblist.sid</code>
+  (sender id) refers to <code>mailaddr.id</code>, <code>wblist.rid</code> (recipient id) refers to
+  <code>users.id</code>.</p>
+</li>
+<li>
+<p><code>amavisd.outbound_wblist</code> stores white/blacklists for outbound message.
+  <code>outbound_wblist.sid</code> (sender id) refers to <code>users.id</code>, <code>outbound_wblist.rid</code>
+  (recipient id) refers to <code>mailaddr.id</code>.</p>
+<p>Note: this table is used by iRedAPD, not Amavisd.</p>
+</li>
+<li>
+<p><code>amavisd.policy</code>: used to define per-recipient spam policy, and max message
+  size limit.</p>
+</li>
+</ul>
+<h3 id="todo-storage_sql_dsn">TODO: <code>@storage_sql_dsn</code></h3>
+<ul>
+<li><code>maddr</code></li>
+<li><code>msgs</code></li>
+<li><code>msgrcpt</code></li>
+<li><code>quarantine</code></li>
+</ul>
+<p>Amavisd is configured to stores quarantined emails in SQL db, you can get
+raw email from table <code>quarantine</code>.</p>
+<p>Structure of <code>quarantine</code>:</p>
+<pre><code>MariaDB [amavisd]&gt; desc quarantine;
++---------------+------------------+------+-----+---------+-------+
+| Field         | Type             | Null | Key | Default | Extra |
++---------------+------------------+------+-----+---------+-------+
+| partition_tag | int(11)          | NO   | PRI | 0       |       |
+| mail_id       | varbinary(16)    | NO   | PRI | NULL    |       |
+| chunk_ind     | int(10) unsigned | NO   | PRI | NULL    |       |
+| mail_text     | blob             | NO   |     | NULL    |       |
++---------------+------------------+------+-----+---------+-------+
+</code></pre>
+<p>Large email will be splited to multiple sql records, ordered by <code>chunk_ind</code>,
+and <code>mail_text</code> is the mail message.</p>
+<p>You can query it like below, then concat value of <code>mail_text</code> column one by
+one to get full email message with all headers and body:</p>
+<pre><code>SELECT mail_text FROM quarantine WHERE mail_id='&lt;mail-id&gt;' ORDER BY chunk_ind ASC;
+</code></pre>
+<p>Since Amavisd will store basic info of every inbound/outbound email, the SQL
+database will grow bigger and bigger, iRedMail setups a daily cron job to
+clean up old records with script shipped in iRedAdmin (available in both
+iRedAdmin open source edition and iRedAdmin-Pro): <code>tools/cleanup_amavisd_db.py</code>.</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

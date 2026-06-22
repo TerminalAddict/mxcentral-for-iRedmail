@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Change mail attachment size</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="change.mail.attachment.size-it_IT.html">Italiano</a> / <a href="change.mail.attachment.size-zh_CN.html">简体中文</a> /</p>
+</div>
+<h1 id="change-mail-attachment-size">Change mail attachment size</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="change.mail.attachment.size.html#change-mail-attachment-size">Change mail attachment size</a><ul>
+<li><a href="change.mail.attachment.size.html#change-message-size-limit-in-postfix">Change message size limit in postfix</a></li>
+<li><a href="change.mail.attachment.size.html#change-message-size-limit-in-iredapd">Change message size limit in iRedAPD</a></li>
+<li><a href="change.mail.attachment.size.html#change-php-settings-to-upload-large-file">Change PHP settings to upload large file</a></li>
+<li><a href="change.mail.attachment.size.html#roundcube-webmail">Roundcube webmail</a></li>
+<li><a href="change.mail.attachment.size.html#change-upload-file-size-in-nginx">Change upload file size in Nginx</a></li>
+<li><a href="change.mail.attachment.size.html#change-file-size-limits-in-sogo">Change file size limits in SOGo</a></li>
+<li><a href="change.mail.attachment.size.html#change-attachment-size-limit-in-microsoft-outlook">Change attachment size limit in Microsoft Outlook</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>Mail attachment size is configured in multiple places with default iRedMail settings:</p>
+<ul>
+<li>Postfix is the MTA, it checks the size of each received and sent message.</li>
+<li>Dovecot is the LDA (local delivery agent), it checks mailbox size (a.k.a. mailbox quota)</li>
+<li>Nginx / Apache is web server, if you upload mail attachment via webmail, web
+  server checks the size of uploaded mail attachment.</li>
+<li>Roundcube webmail, SOGo have their own message size limit settings, but
+  they're not enabled by iRedMail by default, so they use web server upload
+  size instead.</li>
+<li>Desktop mail client application like Outlook may have its own message size
+  limit.</li>
+</ul>
+<h2 id="change-message-size-limit-in-postfix">Change message size limit in postfix</h2>
+<p>Postfix is MTA, so we have to change its setting to transfer mail with large
+attachment.</p>
+<p>For example, to allow mail with 100Mb attachment, please change both
+<code>message_size_limit</code> and <code>mailbox_size_limit</code> settings like below:</p>
+<pre><code># postconf -e message_size_limit=104857600
+# postconf -e mailbox_size_limit=104857600
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>They don't have to be same. but <code>mailbox_size_limit</code> (size of the mailbox)
+  MUST be equal to or LARGER than <code>message_size_limit</code> (size of single email
+  message).</li>
+<li>Postfix is configured to pipe received email to Dovecot for local mail
+  delivery, so the <code>mailbox_size_limit</code> setting is not used, but we still
+  need this setting to surpress Postfix warning while starting Postfix
+  service.</li>
+</ul>
+</div>
+<p>Restart postfix to make it work:</p>
+<pre><code># /etc/init.d/postfix restart
+</code></pre>
+<p><strong>NOTES</strong>:</p>
+<ul>
+<li><code>104857600</code> is 100 (MB) x 1024 (KB) x 1024 (Byte).</li>
+<li>Mail will be encoded by mail user agent (Outlook, Thunderbird, etc) before
+  transferred, the actual message size will be larger than 100MB, you can
+  simplily increase above setting to 110Mb or 120Mb to make it work as expected.</li>
+<li>If <code>mailbox_size_limit</code> is smaller than <code>message_size_limit</code>, you will get
+  error message in Postfix log file like this: <code>fatal: main.cf configuration
+  error: mailbox_size_limit is smaller than message_size_limit</code>.</li>
+</ul>
+<p>If you use mail clients such as Outlook, thunderbird to send mails, it's now
+ok to sent large attachment with above setting.</p>
+<h2 id="change-message-size-limit-in-iredapd">Change message size limit in iRedAPD</h2>
+<blockquote>
+<ul>
+<li>iRedAPD is a Postfix policy server developed and maintained by iRedMail team.</li>
+<li>With default iRedMail setting, no message size limit is set.</li>
+<li>For more details, please check tutorial: <a href="manage.iredapd.html">Manage iRedAPD</a>.</li>
+</ul>
+</blockquote>
+<p>With plugin <code>throttle</code> enabled in iRedAPD config file (<code>/opt/iredapd/settings.py</code>),
+iRedAPD will query throttle settings from SQL database (SQL table <code>iredapd.throttle</code>),
+if there's a global, per-domain or per-user message size limit set for sender
+or recipient, it will performs the check.</p>
+<p>Both Postfix and iRedAPD check the size of single message, if the message size reaches
+the limit of either Postfix setting or iRedAPD throttle setting, the email will
+be rejected.</p>
+<p>You can set the throttle with iRedAdmin-Pro, or with SQL command tool, for more
+details, please check plugin source file, it's documented with examples and
+explanation: <a href="https://github.com/iredmail/iRedAPD/blob/master/plugins/throttle.py">Throttle plugin</a>.</p>
+<p>If you have Roundcube webmail, please change two more settings:</p>
+<h2 id="change-php-settings-to-upload-large-file">Change PHP settings to upload large file</h2>
+<p>Please also update PHP config file <code>php.ini</code> to allow uploading large file:</p>
+<ul>
+<li>on RHEL/CentOS: it's <code>/etc/php.ini</code></li>
+<li>on Debian/Ubuntu, it's <code>/etc/php/&lt;7.x&gt;/fpm/php.ini</code> (Please replace <code>&lt;7.x&gt;</code>
+  by the real version number on your server).<ul>
+<li>on Ubuntu 16.04 and later releases, it's <code>/etc/php/7.0/apache2/php.ini</code>
+  for Apache, or <code>/etc/php/7.0/fpm/php.ini</code> for Nginx + php-fpm.</li>
+</ul>
+</li>
+<li>on FreeBSD, it's <code>/usr/local/etc/php.ini</code> for Apache, or
+  <code>/etc/php5/fpm/php.ini</code> for Nginx.</li>
+<li>on OpenBSD, it's <code>/etc/php-5.4.ini</code>. If you're running different PHP release,
+  the version number <code>5.4</code> will be different.</li>
+</ul>
+<pre><code>memory_limit = 200M;
+upload_max_filesize = 100M;
+post_max_size = 100M;
+</code></pre>
+<p>Note:</p>
+<ul>
+<li>If you're running Nginx as web server, restarting php-fpm service is required.</li>
+<li>If you're running Apache as web server, restarting Apache service is required.</li>
+</ul>
+<h2 id="roundcube-webmail">Roundcube webmail</h2>
+<p>Roundcube 1.3.0 and later releases use its own setting <code>max_message_size</code> to
+limit message size, please add or update this parameter in its config file:</p>
+<ul>
+<li>on RHEL/CentOS, it's <code>/opt/www/roundcubemail/config/config.inc.php</code>.
+  Old iRedMail releases use <code>/var/www/roundcubemail/config/config.inc.php</code>.</li>
+<li>on Debian/Ubuntu, it's <code>/opt/www/roundcubemail/config/config.inc.php</code>.
+  Old iRedMail releases use <code>/usr/share/apache2/roundcubemail/config/config.inc.php</code>.</li>
+<li>on FreeBSD, it's <code>/usr/local/www/roundcubemail/config/config.inc.php</code></li>
+<li>on OpenBSD, it's <code>/opt/www/roundcubemail/config/config.inc.php</code>.
+  Old iRedMail releases use <code>/var/www/roundcubemail/config.inc.php</code>.</li>
+</ul>
+<pre><code>$config['max_message_size'] = '100M';
+</code></pre>
+<p>Note: Roundcube preserves some percentage of the max message size
+(search <code>1.33</code> on <a href="https://github.com/roundcube/roundcubemail/blob/master/program/actions/mail/compose.php#L1484">this page</a>, so if you set the max to <code>100M</code>, it tells you only <code>75MB</code> is
+allowed (<code>100 / 1.33</code>). This is better because email messsage will be encoded
+before sending to MTA and the encoded attachment is larger than the original file.</p>
+<h2 id="change-upload-file-size-in-nginx">Change upload file size in Nginx</h2>
+<p>Find setting <code>client_max_body_size</code> in Nginx config file
+<code>/etc/nginx/conf-enabled/client_max_body_size.conf</code>, change the size to a
+proper value to match your need.</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Old iRedMail releases set this parameter in <code>/etc/nginx/nginx.conf</code>.</p>
+</div>
+<pre><code>client_max_body_size 100m;
+</code></pre>
+<p>Reloading or restarting Nginx service is required.</p>
+<h2 id="change-file-size-limits-in-sogo">Change file size limits in SOGo</h2>
+<p>SOGo config file is <code>/etc/sogo/sogo.conf</code> (Linux/OpenBSD) or
+<code>/usr/local/etc/sogo/sogo.conf</code> (FreeBSD), 2 settings are relevant to message size:</p>
+<ul>
+<li>SOGo-3.x introduces parameter <code>WOMaxUploadSize</code> to limit upload file size.</li>
+<li>SOGo-3.2.5 introduces parameter <code>SOGoMaximumMessageSizeLimit</code> to limit single
+  message size.</li>
+</ul>
+<pre><code>    // set the maximum allowed size for content being sent to SOGo using a PUT or
+    // a POST call. This can also limit the file attachment size being uploaded
+    // to SOGo when composing a mail.
+    //
+    //  - The value is in kilobyte.
+    //  - By default, the value is 0, or disabled so no limit will be set.
+    WOMaxUploadSize = 102400;
+
+    // Parameter used to set the maximum allowed email message size when
+    // composing a mail.
+    // The value is in kilobytes. By default, the value is 0, or disabled so
+    // no limit will be set.
+    SOGoMaximumMessageSizeLimit = 102400;
+</code></pre>
+<p>Restarting SOGo service is required if you changed any setting in SOGo config file.</p>
+<h2 id="change-attachment-size-limit-in-microsoft-outlook">Change attachment size limit in Microsoft Outlook</h2>
+<p>Outlook has its own attachment size limit, and will raise error like <code>The
+attachment size exceeds the allowable limit.</code></p>
+<p>To modify the default attachment limit size in Outlook on Windows system,
+follow these steps:</p>
+<ul>
+<li>Exit Outlook.</li>
+<li>Start Registry Editor.</li>
+<li>Locate and then select one of the following registry subkeys:<ul>
+<li>Manually create the path in the registry if it does not currently exist.</li>
+<li>`14.01 means Outlook version number, it may be different on your system.</li>
+</ul>
+</li>
+</ul>
+<pre><code>HKEY_CURRENT_USER\Software\Microsoft\Office\14.0\Outlook\Preferences
+HKEY_CURRENT_USER\Software\Policies\Microsoft\Office\14.0\Outlook\Preferences
+</code></pre>
+<ul>
+<li>
+<p>Add the following registry data under this subkey:</p>
+<ul>
+<li>Value type: DWORD</li>
+<li>Value name: MaximumAttachmentSize</li>
+<li>Value data: An integer that specifies the total maximum allowable
+  attachment size. For example, specify 30720 (Decimal) to configure a
+  30-MB limit.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>Specify a value of zero (0) if you want to configure no limit for attachments.</li>
+<li>Specify a value that is less than 20 MB if you want to configure a limit
+  that is less than the default 20 MB.</li>
+</ul>
+</li>
+<li>
+<p>Exit Registry Editor</p>
+</li>
+<li>Start Outlook.</li>
+</ul>
+<p>Reference: <a href="https://support.microsoft.com/en-us/kb/2222370">https://support.microsoft.com/en-us/kb/2222370</a></p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

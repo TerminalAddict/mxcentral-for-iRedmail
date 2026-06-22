@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 0.7.2 to 0.7.3</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-072-to-073">Upgrade iRedMail from 0.7.2 to 0.7.3</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.0.7.2-0.7.3.html#upgrade-iredmail-from-072-to-073">Upgrade iRedMail from 0.7.2 to 0.7.3</a><ul>
+<li><a href="upgrade.iredmail.0.7.2-0.7.3.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.0.7.2-0.7.3.html#general-all-backends-should-apply-these-upgrade-steps">General (All backends should apply these upgrade steps)</a></li>
+<li><a href="upgrade.iredmail.0.7.2-0.7.3.html#openldap-backend-special">OpenLDAP backend special</a><ul>
+<li><a href="upgrade.iredmail.0.7.2-0.7.3.html#add-enabledservicelda-required-by-dovecot-2x">Add enabledService=lda, required by Dovecot 2.x.</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.0.7.2-0.7.3.html#mysql-backend-special">MySQL backend special</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<blockquote>
+<p>We provide remote upgrade service, check
+<a href="https://www.iredmail.org/support.html">the price</a> and
+<a href="https://www.iredmail.org/contact.html">contact us</a>.</p>
+</blockquote>
+<ul>
+<li>2011-08-23: Add upgrade tutorial or links for iRedAdmin (open source edition), phpMyAdmin, Roundcube.</li>
+<li>2011-08-17: initial public.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-upgrade-steps">General (All backends should apply these upgrade steps)</h2>
+<ul>
+<li>Please follow phpMyAdmin official tutorial to upgrade phpMyAdmin: http://www.phpmyadmin.net/documentation/#upgrading</li>
+<li>Please follow Roundcube official tutorial to upgrade Roundcube Webmail: <a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">https://github.com/roundcube/roundcubemail/wiki/Upgrade</a></li>
+</ul>
+<h2 id="openldap-backend-special">OpenLDAP backend special</h2>
+<h3 id="add-enabledservicelda-required-by-dovecot-2x">Add <code>enabledService=lda</code>, required by Dovecot 2.x.</h3>
+<p><strong>Note</strong>: If you're running dovecot-1.1.x, or 1.2.x, then please stay on that
+version, but it's still recommended to add this missing value for existing
+users. It won't impact current mail services.</p>
+<p><strong>Note</strong>: Dovecot-2.x is the default version on RHEL/CentOS/Scieitnfic Linux 6.x.</p>
+<p>Dovecot-2.x requires <code>enabledService=enablelda</code> for receiving email for virtual
+mail users, so we should add it if users doesn't have it.</p>
+<ul>
+<li>Download python script used to adding missing values.</li>
+</ul>
+<pre><code># cd /root/
+# wget http://iredmail.googlecode.com/hg/extra/update/updateLDAPValues_072_to_073.py
+</code></pre>
+<ul>
+<li>Open <code>updateLDAPValues_072_to_073.py</code>, config LDAP server related settings in file head. e.g.</li>
+</ul>
+<pre><code># Part of file: updateLDAPValues_072_to_073.py
+
+uri = 'ldap://127.0.0.1:389'
+basedn = 'o=domains,dc=iredmail,dc=org'
+bind_dn = 'cn=vmailadmin,dc=iredmail,dc=org'
+bind_pw = 'passwd'
+</code></pre>
+<p>You can find required LDAP credential in iRedAdmin config file or <code>iRedMail.tips</code>
+file under your iRedMail installation directory. Using either
+<code>cn=Manager,dc=xx,dc=xx</code> or <code>cn=vmailadmin,dc=xx,dc=xx</code> as bind dn is ok.</p>
+<ul>
+<li>Execute this script, it will add missing values for mail accounts:</li>
+</ul>
+<pre><code># python updateLDAPValues_072_to_073.py
+</code></pre>
+<h2 id="mysql-backend-special">MySQL backend special</h2>
+<ul>
+<li>Add new column: <code>mailbox.enablelda</code>, required by Dovecot 2.x, used to replace
+  <code>mailbox.enabledeliver</code>.</li>
+</ul>
+<pre><code>$ mysql -uroot -p
+mysql&gt; USE vmail;
+mysql&gt; ALTER TABLE mailbox ADD COLUMN enablelda TINYINT(1) NOT NULL DEFAULT 1;
+mysql&gt; ALTER TABLE mailbox ADD INDEX enablelda (enablelda);
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

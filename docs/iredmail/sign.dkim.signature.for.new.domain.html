@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Sign DKIM signature on outgoing emails for new mail domain</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="sign.dkim.signature.for.new.domain-it_IT.html">Italiano</a> /</p>
+</div>
+<h1 id="sign-dkim-signature-on-outgoing-emails-for-new-mail-domain">Sign DKIM signature on outgoing emails for new mail domain</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="sign.dkim.signature.for.new.domain.html#sign-dkim-signature-on-outgoing-emails-for-new-mail-domain">Sign DKIM signature on outgoing emails for new mail domain</a><ul>
+<li><a href="sign.dkim.signature.for.new.domain.html#use-existing-dkim-key-for-new-mail-domain">Use existing DKIM key for new mail domain</a></li>
+<li><a href="sign.dkim.signature.for.new.domain.html#generate-new-dkim-key-for-new-mail-domain">Generate new DKIM key for new mail domain</a></li>
+<li><a href="sign.dkim.signature.for.new.domain.html#use-one-dkim-key-for-all-mail-domains">Use one DKIM key for all mail domains</a></li>
+<li><a href="sign.dkim.signature.for.new.domain.html#references">References</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<blockquote>
+<p>Don't know what DKIM is? Check our tutorial here:
+ <a href="setup.dns.html#dkim-record-for-your-mail-domain-name">What is a DKIM DNS record</a>.</p>
+<p>Don't know where Amavisd config file is? check this tutorial:
+<a href="file.locations.html#amavisd">Locations of configuration and log files of major components</a>.</p>
+</blockquote>
+<p>iRedMail configures Amavisd to sign outgoing emails for the first mail domain
+you added during iRedMail installation. If you added new mail domain, you
+should update Amavisd config file to sign DKIM signature for it.</p>
+<p>Let's say your first mail domain added during iRedMail installation is
+<code>mydomain.com</code>, and new mail domain is <code>new_domain.com</code>, please follow below
+steps to enable DKIM signing for outgoing emails of this domain.</p>
+<h2 id="use-existing-dkim-key-for-new-mail-domain">Use existing DKIM key for new mail domain</h2>
+<p>if you already have a working DKIM and valid DKIM DNS record, it's ok to
+use this existing DKIM key to sign emails sent by other hosted mail domains.
+This way, you don't need to ask your customer who owns this new domain to add
+DKIM DNS record.</p>
+<ul>
+<li>Find below setting in Amavisd config file <code>amavisd.conf</code> (find its <a href="file.locations.html">location
+  on different Linux/BSD distributions</a>):</li>
+</ul>
+<pre><code>dkim_key('mydomain.com', &quot;dkim&quot;, &quot;/var/lib/dkim/mydomain.com.pem&quot;);
+
+@dkim_signature_options_bysender_maps = ( {
+    ...
+    &quot;mydomain.com&quot;  =&gt; { d =&gt; &quot;mydomain.com&quot;, a =&gt; 'rsa-sha256', ttl =&gt; 10*24*3600 },
+    ...
+});
+</code></pre>
+<p>Copy the <code>dkim_key('mydomain.com........</code> line, changing to new hostname, but keep same cert path.  You should now have 2 lines starting with <code>dkim_key</code> with differetent domains, but same file path.</p>
+<p>Next, add one line in <code>@dkim_signature_options_bysender_maps</code>, after <code>"mydomain.com"</code>
+line like below:</p>
+<pre><code>@dkim_signature_options_bysender_maps = ( {
+    ...
+    &quot;mydomain.com&quot;  =&gt; { d =&gt; &quot;mydomain.com&quot;, a =&gt; 'rsa-sha256', ttl =&gt; 10*24*3600 },
+    &quot;new_domain.com&quot;  =&gt; { d =&gt; &quot;mydomain.com&quot;, a =&gt; 'rsa-sha256', ttl =&gt; 10*24*3600 },
+    ...
+});
+</code></pre>
+<ul>
+<li>Restart Amavisd service.</li>
+<li>Test with <code>amavisd testkeys</code> and both domains should print with a <code>pass</code></li>
+</ul>
+<h2 id="generate-new-dkim-key-for-new-mail-domain">Generate new DKIM key for new mail domain</h2>
+<p>If you or your customer prefer to use their own DKIM key, you can generate
+a new DKIM key and ask your customer to add DKIM DNS record. Refer to our
+tutorial to <a href="setup.dns.html#dkim-record-for-your-mail-domain-name">add DKIM DNS record</a>.</p>
+<ul>
+<li>
+<p>Generate new DKIM key (key length <code>1024</code>) for new domain, and set correct
+  file owner and permission</p>
+<ul>
+<li>on RHEL/CentOS, the command is <code>amavisd</code>, user/group is <code>amavis:amavis</code>.</li>
+<li>on Debian/Ubuntu, the command is <code>amavisd-new</code>, user/group is <code>amavis:amavis</code>.</li>
+<li>on FreeBSD, the command is <code>amavisd</code>, user/group is <code>vscan:vscan</code>.</li>
+<li>on OpenBSD, the command is <code>amavisd</code>, user/group is <code>_vscan:_vscan</code>.</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-shell">amavisd-new genrsa /var/lib/dkim/new_domain.com.pem 1024
+chown amavis:amavis /var/lib/dkim/new_domain.com.pem
+chmod 0400 /var/lib/dkim/new_domain.com.pem
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>on different Linux/BSD distributions, the command may be <code>amavisd</code></li>
+<li>on RHEL/CentOS, you must specify the config file on command line like this:</li>
+</ul>
+<p><code># amavisd -c /etc/amavisd/amavisd.conf genrsa /var/lib/dkim/new_domain.com.pem</code></p>
+<ul>
+<li>Not all DNS vendors support 2048-bit key length as TXT type record, so
+  iRedMail generates the key in 1024-bit. If you want to use 2048-bit
+  instead, please specify the key length on command line:</li>
+</ul>
+<p><code># amavisd -c /etc/amavisd/amavisd.conf genrsa /var/lib/dkim/new_domain.com.pem 2048</code></p>
+</div>
+<ul>
+<li>Find below setting in Amavisd config file <code>amavisd.conf</code>:</li>
+</ul>
+<pre><code>dkim_key('mydomain.com', &quot;dkim&quot;, &quot;/var/lib/dkim/mydomain.com.pem&quot;);
+</code></pre>
+<p>Add one line after above line like below:</p>
+<pre><code>dkim_key('new_domain.com', &quot;dkim&quot;, &quot;/var/lib/dkim/new_domain.com.pem&quot;);
+</code></pre>
+<ul>
+<li>Find below setting in Amavisd config file <code>amavisd.conf</code>:</li>
+</ul>
+<pre><code>@dkim_signature_options_bysender_maps = ( {
+    ...
+    &quot;mydomain.com&quot;  =&gt; { d =&gt; &quot;mydomain.com&quot;, a =&gt; 'rsa-sha256', ttl =&gt; 10*24*3600 },
+    ...
+});
+</code></pre>
+<p>Add one line after <code>"mydomain.com"</code> line like below:</p>
+<pre><code>@dkim_signature_options_bysender_maps = ( {
+    ...
+    &quot;mydomain.com&quot;  =&gt; { d =&gt; &quot;mydomain.com&quot;, a =&gt; 'rsa-sha256', ttl =&gt; 10*24*3600 },
+    &quot;new_domain.com&quot;  =&gt; { d =&gt; &quot;new_domain.com&quot;, a =&gt; 'rsa-sha256', ttl =&gt; 10*24*3600 },
+    ...
+});
+</code></pre>
+<ul>
+<li>Restart Amavisd service.</li>
+</ul>
+<p>Again, don't forget to add DKIM DNS record for this new domain. The value of
+DKIM record can be checked with command below:</p>
+<pre><code class="language-shell"># amavisd-new showkeys
+</code></pre>
+<p>After added DKIM DNS record, please verify it with command:</p>
+<pre><code class="language-shell"># amavisd-new testkeys
+</code></pre>
+<p>Note: DNS vendor usually cache DNS records for 2 hours, so if above command
+shows "invalid" instead of "pass", you should try again later.</p>
+<h2 id="use-one-dkim-key-for-all-mail-domains">Use one DKIM key for all mail domains</h2>
+<p>If you want to use one DKIM key for all mail domains, please follow steps below:</p>
+<ul>
+<li>Make sure you have at least one DKIM key configured like below in Amavisd
+  config file (<code>amavisd.conf</code>):</li>
+</ul>
+<pre><code>dkim_key('mydomain.com', &quot;dkim&quot;, &quot;/var/lib/dkim/mydomain.com.pem&quot;);
+</code></pre>
+<ul>
+<li>Find parameter <code>@dkim_signature_options_bysender_maps</code>, and set it to:</li>
+</ul>
+<pre><code>@dkim_signature_options_bysender_maps = ({
+    # catch-all (one dkim key for all domains)
+    '.' =&gt; {d =&gt; 'mydomain.com',
+            a =&gt; 'rsa-sha256',
+            c =&gt; 'relaxed/simple',
+            ttl =&gt; 30*24*3600 },
+});
+</code></pre>
+<ul>
+<li>Restart Amavisd serivce.</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li>Amavisd official document: <a href="http://www.ijs.si/software/amavisd/amavisd-new-docs.html#dkim">Setting up DKIM mail signing and verification</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>调试 Amavisd 和 SpamAssassin</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="debug.amavisd.html">English</a> / <a href="debug.amavisd-nl_DU.html">Nederlands</a> /</p>
+</div>
+<h1 id="amavisd-spamassassin">调试 Amavisd 和 SpamAssassin</h1>
+<p>找到<a href="file.locations.html#amavisd">Amavisd 配置文件</a>，修改 <code>$log_level</code> 参数，
+然后重启 amavisd 服务。</p>
+<pre><code>$log_level = 5;              # 日志等级：0 到 5，或 -d
+</code></pre>
+<p>如果需要调试 SpamAssassin，请同时修改 <code>$sa_debug</code> 参数：</p>
+<pre><code>$sa_debug = 1;
+</code></pre>
+<p>在 iRedMail 里，Amavisd 会记录日志到 <a href="file.locations.html#postfix">Postfix 日志文件</a>。</p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

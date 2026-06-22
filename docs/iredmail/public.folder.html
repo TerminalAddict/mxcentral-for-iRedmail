@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>How to create and manage public folder</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="how-to-create-and-manage-public-folder">How to create and manage public folder</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This tutorial is applicable for Dovecot 2.3. <a href="https://doc.dovecot.org/2.4.1/core/config/shared_mailboxes.html#public-shared-mailboxes">Dovecot 2.4 uses slightly
+different config syntax</a>.</p>
+</div>
+<div class="toc">
+<ul>
+<li><a href="public.folder.html#how-to-create-and-manage-public-folder">How to create and manage public folder</a><ul>
+<li><a href="public.folder.html#enable-public-folder-in-dovecot">Enable public folder in Dovecot</a></li>
+<li><a href="public.folder.html#manage-access-control-with-doveadm">Manage Access Control with doveadm</a></li>
+<li><a href="public.folder.html#troubleshooting">Troubleshooting</a></li>
+<li><a href="public.folder.html#use-someones-mailbox-as-public-folder">Use someone's mailbox as public folder</a></li>
+<li><a href="public.folder.html#references">References</a></li>
+<li><a href="public.folder.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>iRedMail has setting for public folder in <code>/etc/dovecot/dovecot.conf</code>,
+what you need to do is:</p>
+<ul>
+<li>enable the setting for public folder</li>
+<li>choose a preferred directory as public folder</li>
+<li>set proper ACL rules to control the access</li>
+</ul>
+<p>In this tutorial, we will show you how to share a public folder named <code>TestFolder</code>.</p>
+<h2 id="enable-public-folder-in-dovecot">Enable public folder in Dovecot</h2>
+<p>Find sample settings like below in Dovecot config file <code>/etc/dovecot/dovecot.conf</code>:</p>
+<pre><code># Public mailboxes.
+# Refer to Dovecot wiki page for more details:
+# http://wiki2.dovecot.org/SharedMailboxes/Public
+#namespace {
+#    type = public
+#    separator = /
+#    prefix = Public/
+#
+#    # CONTROL=: Mark this public folder as read-only mailbox
+#    # INDEX=: Per-user \Seen flag
+#    location = maildir:/var/vmail/public/:CONTROL=~/Maildir/public:INDEX=~/Maildir/public
+#
+#    # Allow users to subscribe to the public folders.
+#    subscriptions = yes
+#}
+</code></pre>
+<p>Remove comment marks (<code>#</code>) for above <code>namespace {}</code> block, like below:</p>
+<pre><code># Public mailboxes.
+# Refer to Dovecot wiki page for more details:
+# http://wiki2.dovecot.org/SharedMailboxes/Public
+namespace {
+    type = public
+    separator = /
+    prefix = Public/
+
+    # CONTROL=: Mark this public folder as read-only mailbox
+    # INDEX=: Per-user \Seen flag
+    location = maildir:/var/vmail/public/:CONTROL=~/Maildir/public:INDEX=~/Maildir/public
+
+    # Allow users to subscribe to the public folders.
+    subscriptions = yes
+}
+</code></pre>
+<p>If you want to share the public folder to all users hosted on same server,
+please also remove the comment mark in below line in <code>dovecot.conf</code>:</p>
+<pre><code>    acl_anyone = allow
+</code></pre>
+<p>Restarting Dovecot service is required after changed its config file.</p>
+<p>Important notes:</p>
+<ul>
+<li>With above setting, it uses <code>/var/vmail/public</code> as public folder. You're free
+  to change it to a preferred directory. We use <code>/var/vmail/public/</code> in this
+  tutorial for example.</li>
+<li>Please make sure the public folder is owned by user/group <code>vmail:vmail</code>
+  with permission <code>0700</code>.</li>
+</ul>
+<p>Now let's create required folder and our first shared folder <code>TestFolder</code>.</p>
+<pre><code>mkdir -p /var/vmail/public/.TestFolder
+chown -R vmail:vmail /var/vmail/public/.TestFolder
+chmod -R 0700 /var/vmail/public/.TestFolder
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Notes</p>
+<ul>
+<li>
+<p>There's a dot in folder name while creating it, it's <code>.TestFolder</code>, not
+  <code>TestFolder</code>. All folders with a prefixed dot will be considered as an
+  IMAP folder by Dovecot with iRedMail default settings.</p>
+</li>
+<li>
+<p>There are no <code>cur/</code>, <code>new/</code> or <code>tmp/</code> directories directly under the
+  <code>/var/mail/public/</code> folder, because the <code>Public/</code> namespace isn't a
+  mailbox itself. If you create them manually, it does become a selectable
+  mailbox.</p>
+</li>
+</ul>
+</div>
+<p>With steps above, if you login to webmail (or other IMAP client) as any mail
+user hosted on same server, there's no visible public folder at all -- this is
+correct, because no one has permission to access this folder right now.</p>
+<h2 id="manage-access-control-with-doveadm">Manage Access Control with <code>doveadm</code></h2>
+<p>Before we set any permission, let's check the access control of this public
+folder first with command <code>doveadm acl get</code>:</p>
+<pre><code>doveadm acl get -A &quot;Public/TestFolder&quot;
+</code></pre>
+<p>You can see output like below, no access control at all:</p>
+<pre><code>Username ID Global Rights
+</code></pre>
+<p>Below is list of all available permissions. Please check <a href="http://wiki2.dovecot.org/ACL">Dovecot web
+site</a> for more details or update.</p>
+<div class="admonition note">
+<p class="admonition-title">Permissions</p>
+<table>
+<thead>
+<tr>
+<th>Permission name (short)</th>
+<th>Permission name (full)</th>
+<th>Comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>l</td>
+<td>lookup</td>
+<td>Mailbox is visible in mailbox list. Mailbox can be subscribed to.</td>
+</tr>
+<tr>
+<td>r</td>
+<td>read</td>
+<td>Mailbox can be opened for reading.</td>
+</tr>
+<tr>
+<td>w</td>
+<td>write</td>
+<td>Message flags and keywords can be changed, except <code>\Seen</code> and <code>\Deleted</code></td>
+</tr>
+<tr>
+<td>s</td>
+<td>write-seen</td>
+<td><code>\Seen</code> flag can be changed</td>
+</tr>
+<tr>
+<td>t</td>
+<td>write-deleted</td>
+<td><code>\Deleted</code> flag can be changed</td>
+</tr>
+<tr>
+<td>i</td>
+<td>insert</td>
+<td>Messages can be written or copied to the mailbox</td>
+</tr>
+<tr>
+<td>p</td>
+<td>post</td>
+<td>Messages can be posted to the mailbox by LDA, e.g. from Sieve scripts</td>
+</tr>
+<tr>
+<td>e</td>
+<td>expunge</td>
+<td>Messages can be expunged</td>
+</tr>
+<tr>
+<td>k</td>
+<td>create</td>
+<td>Mailboxes can be created (or renamed) directly under this mailbox</td>
+</tr>
+<tr>
+<td>x</td>
+<td>delete</td>
+<td>Mailbox can be deleted</td>
+</tr>
+<tr>
+<td>a</td>
+<td>admin</td>
+<td>Administration rights to the mailbox (currently: ability to change ACLs for mailbox)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>With shell command below, we grant some permissions to user
+<code>postmaster@test.com</code> (again, this user is hosted on same server):</p>
+<pre><code>doveadm acl set &quot;Public/TestFolder&quot; &quot;user=postmaster@test.com&quot; lookup read write write-seen write-deleted insert delete expunge create
+</code></pre>
+<p>Check the ACl with <code>doveadm</code> again:</p>
+<pre><code># doveadm acl get -A &quot;Public/TestFolder&quot;
+Username        ID                       Global Rights
+postmaster@a.cn user=postmaster@test.com        create delete expunge insert lookup read write
+</code></pre>
+<p>If you now login to webmail (or other IMAP client) as user <code>postmaster@test.com</code>,
+you can see a new folder <code>TestFolder</code>.</p>
+<p>With shell command below, we grant all users (with the <code>-A</code> argument) hosted on
+same server <code>lookup</code>, and <code>read</code> permissions:</p>
+<pre><code>doveadm acl set -A &quot;Public/TestFolder&quot; &quot;anyone&quot; lookup read
+</code></pre>
+<p>Check the ACl with <code>doveadm</code> now:</p>
+<pre><code># doveadm acl get -A &quot;Public/TestFolder&quot;
+Username        ID                       Global Rights
+postmaster@a.cn anyone                          lookup read
+postmaster@a.cn user=postmaster@test.com        create delete expunge insert lookup read write
+</code></pre>
+<p>If you login to webmail (or other IMAP client) as any user hosted on same
+server, you can see a new folder <code>TestFolder</code>.</p>
+<p>With shell command below we delete access control for user <code>postmaster@test.com</code>:</p>
+<pre><code>doveadm acl delete -A &quot;Public/TestFolder&quot; &quot;user=postmaster@test.com&quot;
+</code></pre>
+<p>For more details about ACL control, please read Dovecot tutorials mentioned in
+<a href="public.folder.html#references">References</a> below.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ul>
+<li>
+<p>If public folder doesn't work as expected, please <a href="debug.dovecot.html">turn on debug mode in
+  Dovecot</a> to get debug message. If you don't understand
+  the debug message, you can post them to our <a href="https://forum.iredmail.org/">online support forum</a>
+  to get help.</p>
+</li>
+<li>
+<p>It's also a good idea to run <code>doveadm</code> command with <code>-D</code> flag to turn on
+  verbose logging, like below:</p>
+</li>
+</ul>
+<pre><code>doveadm -D acl ...
+</code></pre>
+<h2 id="use-someones-mailbox-as-public-folder">Use someone's mailbox as public folder</h2>
+<p>If you want to use someone's mailbox as public folder, here's a simplest way to
+achieve it.</p>
+<p>Let's say you want to share user <code>public@domain.com</code>'s mailbox as public folder
+<code>PublicMailbox</code>, and its maildir path is
+<code>/var/vmail/vmail1/domain.com/p/u/b/public-20160714100502/Maildir/</code>. What you
+need to do are:</p>
+<ul>
+<li>creating a symbol link to this maildir path like below</li>
+<li>set proper ACL with <code>doveadm acl</code> (check steps above)</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>There's a dot prepended in public mailbox name, it's <code>public/.PublicMailbox</code>,
+not <code>public/PublicMailbox</code>.</p>
+</div>
+<pre><code>ln -s /var/vmail/vmail1/domain.com/p/u/b/public-20160714100502/Maildir /var/vmail/public/.PublicMailbox
+</code></pre>
+<h2 id="references">References</h2>
+<ul>
+<li>
+<p>Dovecot official documents:</p>
+<ul>
+<li><a href="http://wiki2.dovecot.org/SharedMailboxes/Public">Public Mailboxes</a></li>
+<li><a href="http://wiki2.dovecot.org/ACL">Access Control Lists</a></li>
+<li><a href="http://wiki2.dovecot.org/Tools/Doveadm/ACL">Manage Access Control List with doveadm</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="mailbox.sharing.html">Mailbox sharing</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

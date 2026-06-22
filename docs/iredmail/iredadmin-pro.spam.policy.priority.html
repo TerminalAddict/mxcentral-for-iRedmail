@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>iRedAdmin-Pro: Priority of spam policy used in iRedMail & iRedAdmin-Pro</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="iredadmin-pro-priority-of-spam-policy-used-in-iredmail-iredadmin-pro">iRedAdmin-Pro: Priority of spam policy used in iRedMail &amp; iRedAdmin-Pro</h1>
+<p>With <code>@lookup_sql_dsn =</code> enabled in Amavisd config file, Amavisd will lookup
+spam policies from SQL database <code>amavisd</code> for different accounts. The
+priorities of different spam policies are:</p>
+<ol>
+<li>Highest: per-user spam policy set in user profile page</li>
+<li>Lower: per-domain spam policy set in domain profile page</li>
+<li>Even lower: global spam policy set in iRedAdmin-Pro: "System -&gt; Anti Spam -&gt; Global Spam Policy"</li>
+<li>Lowest: server wide spam policy defined in Amavisd config file.</li>
+</ol>
+<p>References:</p>
+<ul>
+<li><a href="amavisd.sql.db.html">Explanation of Amavisd SQL database</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

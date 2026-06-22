@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Use a bought SSL certificate</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="use-a-bought-ssl-certificate">Use a bought SSL certificate</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="use.a.bought.ssl.certificate.html#use-a-bought-ssl-certificate">Use a bought SSL certificate</a><ul>
+<li><a href="use.a.bought.ssl.certificate.html#get-a-ssl-certificate">Get a SSL certificate</a><ul>
+<li><a href="use.a.bought.ssl.certificate.html#request-a-free-cert-from-lets-encrypt">Request a free cert from Let's Encrypt</a></li>
+<li><a href="use.a.bought.ssl.certificate.html#buy-from-a-trusted-ssl-vendor">Buy from a trusted SSL vendor</a></li>
+</ul>
+</li>
+<li><a href="use.a.bought.ssl.certificate.html#use-the-bought-cert">Use the bought cert</a><ul>
+<li><a href="use.a.bought.ssl.certificate.html#replace-cert-files">Replace cert files</a></li>
+<li><a href="use.a.bought.ssl.certificate.html#restart-network-services">Restart network services</a></li>
+</ul>
+</li>
+<li><a href="use.a.bought.ssl.certificate.html#verify-the-cert">Verify the cert</a></li>
+<li><a href="use.a.bought.ssl.certificate.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>iRedMail generates a self-signed SSL certificate during installation, it's
+fine if you just want to secure the network connections (POP3/IMAP/SMTP over
+TLS, HTTPS), but mail clients or web browsers will promot a annoying message
+to warn you this self-signed certificate is not trusted. To avoid this
+annoying message, you have to buy a SSL certificate from SSL certificate
+provider. Search <code>buy ssl certificate</code> in Google will give you many SSL
+providers, choose the one you prefer.</p>
+<h2 id="get-a-ssl-certificate">Get a SSL certificate</h2>
+<h3 id="request-a-free-cert-from-lets-encrypt">Request a free cert from Let's Encrypt</h3>
+<p>We have another tutorial to show you to request a free cert from Let's Encrypt:
+<a href="letsencrypt.html">Request a free cert from Let's Encrypt</a>.</p>
+<h3 id="buy-from-a-trusted-ssl-vendor">Buy from a trusted SSL vendor</h3>
+<p>To buy ssl cert from a trusted vendor, you need to generate a new SSL
+key and signing request file on your server with <code>openssl</code> command:</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Do NOT use key length smaller than <code>2048</code> bit, it's insecure.</p>
+</div>
+<pre><code># openssl req -new -newkey rsa:2048 -nodes -keyout privkey.pem -out server.csr
+</code></pre>
+<p>This command will generate two files:</p>
+<ul>
+<li><code>privkey.pem</code>: the private key for the decryption of your SSL certificate.</li>
+<li><code>server.csr</code>: the certificate signing request (CSR) file used to apply
+  for your SSL certificate. <strong>This file is required by SSL certificate
+  provider.</strong></li>
+</ul>
+<p>The openssl command will prompt for the following X.509 attributes of the
+certificate:</p>
+<ul>
+<li><code>Country Name (2 letter code)</code>: Use the two-letter code without punctuation
+  for country. for example: US, CA, CN.</li>
+<li><code>State or Province Name (full name)</code>: Spell out the state completely; do not
+  abbreviate the state or province name, for example: California.</li>
+<li><code>Locality Name (eg, city)</code>: City or town name, for example: Berkeley.</li>
+<li><code>Organization Name (eg, company)</code>: Your company name.</li>
+<li><code>Organizational Unit Name (eg, section)</code>: The name of the department or
+  organization unit making the request.</li>
+<li><code>Common Name (e.g. server FQDN or YOUR name)</code>: server FQDN or your name.</li>
+<li><code>Email Address []</code>: your full email address.</li>
+<li><code>A challenge password []</code>: type a password for this ssl certificate.</li>
+<li><code>An optional company name []</code>: an optional company name.</li>
+</ul>
+<p><strong>NOTE</strong>: Some certificates can only be used on web servers using the <code>Common Name</code>
+specified during enrollment. For example, a certificate for the domain
+<code>domain.com</code> will receive a warning if accessing a site named <code>www.domain.com</code>
+or <code>secure.domain.com</code>, because <code>www.domain.com</code> and <code>secure.domain.com</code> are
+different from <code>domain.com</code>.</p>
+<p>Now you have two files: <code>privkey.pem</code> and <code>server.csr</code>. Go to the website of
+your preferred SSL privider, it will ask you to upload <code>server.csr</code> file to
+issue an SSL certificate.</p>
+<p>Usually, SSL provider will give you 2 files:</p>
+<ul>
+<li><code>cert.pem</code></li>
+<li><code>fullchain.pem</code> (some SSL providers use name <code>server.ca-bundle</code>)</li>
+</ul>
+<p>We need above 2 files, and <code>privkey.pem</code>. Upload them to your server, you can
+store them in any directory you like, recommended directories are:</p>
+<ul>
+<li>on RHEL/CentOS: <code>cert.pem</code> and <code>fullchain.pem</code> should be placed under
+  <code>/etc/pki/tls/certs/</code>, <code>privkey.pem</code> should be <code>/etc/pki/tls/private/</code>.</li>
+<li>on Debian/Ubuntu, FreeBSD: <code>cert.pem</code> and <code>fullchain.pem</code> should be
+  placed under <code>/etc/ssl/certs/</code>, <code>privkey.pem</code> should be <code>/etc/ssl/private/</code>.</li>
+<li>on OpenBSD: <code>/etc/ssl/</code>.</li>
+</ul>
+<h2 id="use-the-bought-cert">Use the bought cert</h2>
+<p>The easiest and quickest way to use the bought cert is replacing
+the self-signed SSL cert generated by iRedMail installer, then
+restart services which use the cert files.</p>
+<h3 id="replace-cert-files">Replace cert files</h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you deployed iRedMail with the iRedMail Easy platform, ssl cert files
+are stored under <code>/opt/iredmail/ssl/</code>:</p>
+<ul>
+<li><code>key.pem</code>: private key</li>
+<li><code>cert.pem</code>: certificate</li>
+<li><code>combined.pem</code>: full chain</li>
+</ul>
+</div>
+<ul>
+<li>On RHEL/CentOS:</li>
+</ul>
+<pre><code>mv /etc/pki/tls/certs/iRedMail.crt{,.bak}       # Backup. Rename iRedMail.crt to iRedMail.crt.bak
+mv /etc/pki/tls/private/iRedMail.key{,.bak}     # Backup. Rename iRedMail.key to iRedMail.key.bak
+cp fullchain.pem /etc/pki/tls/certs/iRedMail.crt
+cp privkey.pem /etc/pki/tls/private/iRedMail.key
+</code></pre>
+<ul>
+<li>On Debian/Ubuntu, FreeBSD and OpenBSD:</li>
+</ul>
+<pre><code>mv /etc/ssl/certs/iRedMail.crt{,.bak}       # Backup. Rename iRedMail.crt to iRedMail.crt.bak
+mv /etc/ssl/private/iRedMail.key{,.bak}     # Backup. Rename iRedMail.key to iRedMail.key.bak
+cp fullchain.pem /etc/ssl/certs/iRedMail.crt
+cp privkey.pem /etc/ssl/private/iRedMail.key
+</code></pre>
+<h3 id="restart-network-services">Restart network services</h3>
+<p>Required services:</p>
+<ul>
+<li>Postfix</li>
+<li>Dovecot</li>
+<li>Nginx or Apache</li>
+</ul>
+<p>Depends on the backend you chose during iRedMail installation, you may need to
+restart:</p>
+<ul>
+<li>MySQL or MariaDB</li>
+<li>PostgreSQL</li>
+<li>OpenLDAP</li>
+</ul>
+<h2 id="verify-the-cert">Verify the cert</h2>
+<ul>
+<li>To verify ssl cert used in Postfix (SMTP server) and Dovecot, please launch a
+  mail client application (MUA, e.g. Outlook, Thunderbird) and create an email
+  account, make sure you correctly configured the MUA to connect to mail
+  server. If SSL cert is not valid, MUA will warn you.</li>
+<li>For Apache / Nginx web server, you can access your website with favourite web
+  browser, the browser should show you the ssl cert status. Or, use other
+  website to help test it, for example:
+  <a href="https://www.ssllabs.com/ssltest/index.html">https://www.ssllabs.com/ssltest/index.html</a> (input your web host name, then
+  submit and wait for a result).</li>
+</ul>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="letsencrypt.html">Request a free cert from Let's Encrypt</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

@@ -1,0 +1,73 @@
+# Local deploy configuration.
+Makefile.local
+
+# Environment and secrets.
+.env
+.env.*
+!.env.example
+auth.json
+*.pem
+*.key
+*.crt
+*.p12
+*.sql
+*.sqlite
+*.sqlite3
+*.bak
+
+# Composer and Node dependencies.
+vendor/
+node_modules/
+mxcentral-for-iRedmail/vendor/
+mxcentral-for-iRedmail/node_modules/
+
+# Laravel local configuration and runtime state.
+mxcentral-for-iRedmail/.env
+mxcentral-for-iRedmail/.env.*
+!mxcentral-for-iRedmail/.env.example
+mxcentral-for-iRedmail/auth.json
+mxcentral-for-iRedmail/storage/*.key
+mxcentral-for-iRedmail/storage/pail/
+mxcentral-for-iRedmail/storage/framework/*
+!mxcentral-for-iRedmail/storage/framework/.gitignore
+!mxcentral-for-iRedmail/storage/framework/cache/
+!mxcentral-for-iRedmail/storage/framework/sessions/
+!mxcentral-for-iRedmail/storage/framework/testing/
+!mxcentral-for-iRedmail/storage/framework/views/
+!mxcentral-for-iRedmail/storage/framework/locks/
+mxcentral-for-iRedmail/storage/framework/cache/*
+!mxcentral-for-iRedmail/storage/framework/cache/.gitignore
+mxcentral-for-iRedmail/storage/framework/sessions/*
+!mxcentral-for-iRedmail/storage/framework/sessions/.gitignore
+mxcentral-for-iRedmail/storage/framework/testing/*
+!mxcentral-for-iRedmail/storage/framework/testing/.gitignore
+mxcentral-for-iRedmail/storage/framework/views/*
+!mxcentral-for-iRedmail/storage/framework/views/.gitignore
+mxcentral-for-iRedmail/storage/framework/locks/*
+!mxcentral-for-iRedmail/storage/framework/locks/.gitignore
+mxcentral-for-iRedmail/storage/logs/*
+!mxcentral-for-iRedmail/storage/logs/.gitignore
+mxcentral-for-iRedmail/bootstrap/cache/*.php
+!mxcentral-for-iRedmail/bootstrap/cache/.gitignore
+
+# Build artifacts.
+mxcentral-for-iRedmail/public/build/
+mxcentral-for-iRedmail/public/hot
+mxcentral-for-iRedmail/public/storage/
+
+# Test and tool caches.
+.phpunit.result.cache
+.phpunit.cache/
+mxcentral-for-iRedmail/.phpunit.result.cache
+mxcentral-for-iRedmail/.phpunit.cache/
+mxcentral-for-iRedmail/.codex/
+
+# Logs and OS/editor files.
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.cursor/
+.nova/
+.zed/

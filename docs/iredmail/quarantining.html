@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Quarantining</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><div class="admonition note">
+<p class="admonition-title">This tutorial is available in other languages. <a href="https://github.com/iredmail/docs">Help translate more</a></p>
+<p><a href="quarantining-it_IT.html">Italiano</a> /</p>
+</div>
+<h1 id="quarantining">Quarantining</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="quarantining.html#quarantining">Quarantining</a><ul>
+<li><a href="quarantining.html#update-amavisd-policy-settings">Update Amavisd policy settings</a></li>
+<li><a href="quarantining.html#configure-iredadmin-pro-to-manage-quarantined-mails">Configure iRedAdmin-Pro to manage quarantined mails</a><ul>
+<li><a href="quarantining.html#notify-users-about-quarantined-mails">Notify users about quarantined mails</a></li>
+</ul>
+</li>
+<li><a href="quarantining.html#screenshots">Screenshots</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>Amavisd is configured to query policy from SQL database, global policy is
+created during iRedMail installation, quarantining related settings are
+disabled by default, you can easily enable quarantining with this tutorial.</p>
+<h2 id="update-amavisd-policy-settings">Update Amavisd policy settings</h2>
+<p>With OpenLDAP, MySQL and MariaDB backends, Amavisd queries MySQL/MariaDB
+database <code>amavisd</code> to get policy, so we use MySQL commands for example in this
+tutorial. Most commands work for PostgreSQL.</p>
+<pre><code>USE amavisd;
+
+-- quarantine spam
+UPDATE policy set spam_lover='N', bypass_spam_checks='N' WHERE policy_name='@.';
+
+-- quarantine virus
+UPDATE policy set virus_lover='N', bypass_virus_checks='N' WHERE policy_name='@.';
+
+-- quarantine email which contains banned file types
+UPDATE policy set banned_files_lover='N', bypass_banned_checks='N' WHERE policy_name='@.';
+
+-- quarantine email which has bad headers.
+UPDATE policy set bad_header_lover='N', bypass_header_checks='N' WHERE policy_name='@.';
+</code></pre>
+<p>Restarting amavisd service is <strong>NOT</strong> required.</p>
+<h2 id="configure-iredadmin-pro-to-manage-quarantined-mails">Configure iRedAdmin-Pro to manage quarantined mails</h2>
+<p>Update iRedAdmin-Pro config file, make sure you have correct settings for Amavisd:</p>
+<ul>
+<li>on Red Hat Enterprise Linux, CentOS, Scientific Linux, it's <code>/var/www/iredadmin/settings.py</code>.</li>
+<li>on Debian, Ubuntu, it's <code>/opt/www/iredadmin/settings.py</code> or <code>/usr/share/apache2/iredadmin/settings.py</code>.</li>
+<li>on FreeBSD, it's <code>/usr/local/www/iredadmin/settings.py</code>.</li>
+<li>on OpenBSD, it's <code>/var/www/iredadmin/settings.py</code>.</li>
+</ul>
+<pre><code class="language-python"># File: settings.py
+
+amavisd_db_host = '127.0.0.1'
+amavisd_db_port = 3306
+amavisd_db_name = 'amavisd'
+amavisd_db_user = 'amavisd'
+amavisd_db_password = 'password'
+
+# Log basic info of inbound/outbound, no mail body stored.
+amavisd_enable_logging = True
+
+# Quarantining management
+amavisd_enable_quarantine = True
+amavisd_quarantine_port = 9998
+
+# Per-recipient policy lookup
+amavisd_enable_policy_lookup = True
+</code></pre>
+<p>Restarting Apache web server or <code>uwsgi</code> service (if you're running Nginx as
+web server) is required.</p>
+<p>You can now login to iRedAdmin-Pro, and manage quarantined messages via menu
+<code>System -&gt; Quarantined Mails</code>. Choose action in drop-down menu list to release
+or delete them.</p>
+<p>Screenshots attached at the bottom.</p>
+<h3 id="notify-users-about-quarantined-mails">Notify users about quarantined mails</h3>
+<p>iRedAdmin-Pro ships script <code>tools/notify_quarantined_recipients.py</code> to notify
+users which have email quarantined in SQL database.</p>
+<p>Default notification email contains basic info of each quarantined email:</p>
+<ul>
+<li>mail subject</li>
+<li>sender</li>
+<li>recipient</li>
+<li>spam level (score)</li>
+<li>mail arrived time</li>
+</ul>
+<p>The notification email message is read from (HTML) template file
+<code>tools/notify_quarantined_recipients.html</code>, if you want to modify it, please
+copy it to <code>tools/notify_quarantined_recipients.html.custom</code> then modify it.
+During upgrading iRedAdmin-Pro, this custom file will be copied to
+new iRedAdmin-Pro directory, so you won't lose your customization.</p>
+<p>Several parameters are required by this script in iRedAdmin-Pro config file:</p>
+<pre><code># SMTP server address, port, username, password used to send notification mail.
+NOTIFICATION_SMTP_SERVER = 'localhost'
+NOTIFICATION_SMTP_PORT = 587
+NOTIFICATION_SMTP_STARTTLS = True
+NOTIFICATION_SMTP_USER = 'no-reply@localhost.local'
+NOTIFICATION_SMTP_PASSWORD = ''
+NOTIFICATION_SMTP_DEBUG_LEVEL = 0
+
+# URL of your iRedAdmin-Pro login page which will be shown in notification
+# email, so that user can login to manage quarantined emails.
+# Sample: 'https://your_server.com/iredadmin/'
+#
+# Note: mail domain must have self-service enabled, otherwise normal
+#       mail user cannot login to iRedAdmin-Pro for self-service.
+NOTIFICATION_URL_SELF_SERVICE = 'https://[your_server]/iredadmin/'
+
+# Subject of notification email. Available placeholders:
+#   - %(total)d -- number of quarantined mails in total
+NOTIFICATION_QUARANTINE_MAIL_SUBJECT = '[Attention] You have %(total)d emails quarantined and not delivered to mailbox'
+</code></pre>
+<p>To notify user periodly, please add a cron job for root user to run
+<code>tools/notify_quarantined_recipients.py</code>. For example, every 6 hours ('6 hours'
+is just an example, the period is totally up to you):</p>
+<pre><code>1 */6 * * * /usr/bin/python3 /var/www/iredadmin/tools/notify_quarantined_recipients.py --force-all &gt;/dev/null
+</code></pre>
+<p>Don't forget to use the correct path to <code>notify_quarantined_recipients.py</code> on your server.</p>
+<p>You can also run this script manually to notify users. for example,
+on RHEL/CentOS:</p>
+<pre><code>cd /var/www/iredadmin/tools/
+python3 notify_quarantined_recipients.py --force-all
+</code></pre>
+<p><code>notify_quarantined_recipients.py</code> supports few arguments:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--force-all</code></td>
+<td>Send notification to all users which have email quarantined</td>
+</tr>
+<tr>
+<td><code>--force-all-time</code></td>
+<td>Notify users for their all quarantined emails instead of just new ones since last notification.</td>
+</tr>
+<tr>
+<td><code>--notify-backupmx</code></td>
+<td>Send notification to all recipients under backup mx domain</td>
+</tr>
+</tbody>
+</table>
+<h2 id="screenshots">Screenshots</h2>
+<ul>
+<li>View quarantined mails:</li>
+</ul>
+<p><img alt="" src="images/iredadmin/system_maillog_quarantined.png" /></p>
+<ul>
+<li>Expand quarantined mail to view mail body and headers.</li>
+</ul>
+<p><img alt="" src="images/iredadmin/system_maillog_quarantined_expanded.png" /></p><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 1.1 to 1.2</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-11-to-12">Upgrade iRedMail from 1.1 to 1.2</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.1.1-1.2.html#upgrade-iredmail-from-11-to-12">Upgrade iRedMail from 1.1 to 1.2</a><ul>
+<li><a href="upgrade.iredmail.1.1-1.2.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</a><ul>
+<li><a href="upgrade.iredmail.1.1-1.2.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release">Upgrade iRedAPD (Postfix policy server) to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#upgrade-roundcube-webmail-to-the-latest-stable-release-143">Upgrade Roundcube webmail to the latest stable release (1.4.3)</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#upgrade-netdata-to-the-latest-stable-release-1211">Upgrade netdata to the latest stable release (1.21.1)</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#fixed-mail-delivery-abort-if-program-altermime-is-not-available">Fixed: mail delivery abort if program 'altermime' is not available</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#for-openldap-backend">For OpenLDAP backend</a><ul>
+<li><a href="upgrade.iredmail.1.1-1.2.html#improved-last-login-track">Improved last login track</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#fixed-can-not-store-mail-subject-with-emoji-characters-in-amavisd-database">Fixed: can not store mail subject with emoji characters in amavisd database</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#optional-fail2ban-store-banned-ip-addresses-in-sql-database">[OPTIONAL] Fail2ban: Store banned IP addresses in SQL database</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#for-mysqlmariadb-backends">For MySQL/MariaDB backends</a><ul>
+<li><a href="upgrade.iredmail.1.1-1.2.html#improved-last-login-track_1">Improved last login track</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#fixed-can-not-store-mail-subject-with-emoji-characters-in-amavisd-database_1">Fixed: can not store mail subject with emoji characters in amavisd database</a></li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#optional-fail2ban-store-banned-ip-addresses-in-sql-database_1">[OPTIONAL] Fail2ban: Store banned IP addresses in SQL database</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.1-1.2.html#for-postgresql-backend">For PostgreSQL backend</a><ul>
+<li><a href="upgrade.iredmail.1.1-1.2.html#optional-fail2ban-store-banned-ip-addresses-in-sql-database_2">[OPTIONAL] Fail2ban: Store banned IP addresses in SQL database</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Apr 18, 2020: Add link of tutorial: <a href="track.user.last.login.html">Track user last login time</a>.</li>
+<li>Apr 17, 2020: initial release.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code>1.2
+</code></pre>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release">Upgrade iRedAPD (Postfix policy server) to the latest stable release</h3>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release-143">Upgrade Roundcube webmail to the latest stable release (1.4.3)</h3>
+<div class="admonition warning">
+<p class="admonition-title">Roundcube 1.4</p>
+<p>Since Roundcube 1.3, at least <strong>PHP 5.4</strong> is required. If your server is
+running PHP 5.3 and cannot upgrade to 5.4, please upgrade Roundcube
+the latest 1.2 branch instead.</p>
+</div>
+<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</li>
+</ul>
+<h3 id="upgrade-netdata-to-the-latest-stable-release-1211">Upgrade netdata to the latest stable release (1.21.1)</h3>
+<p>If you have netdata installed, you can upgrade it by following this tutorial:
+<a href="upgrade.netdata.html">Upgrade netdata</a>.</p>
+<h3 id="fixed-mail-delivery-abort-if-program-altermime-is-not-available">Fixed: mail delivery abort if program 'altermime' is not available</h3>
+<p>The script <code>mlmmj-amime-receive</code> has a bug which may abort mail delivery if
+program <code>altermime</code> is not available on the system, this update fixes it.</p>
+<p>Run commands below to update file <code>/usr/bin/mlmmj-amime-receive</code> (Linux) or
+<code>/usr/local/bin/mlmmj-amime-receive</code> (FreeBSD/OpenBSD):</p>
+<p>On Linux:</p>
+<pre><code>cd /usr/bin/
+wget -O mlmmj-amime-receive https://github.com/iredmail/iRedMail/raw/1.2/samples/mlmmj/mlmmj-amime-receive
+chown mlmmj:mlmmj mlmmj-amime-receive
+chmod 0550 mlmmj-amime-receive
+</code></pre>
+<p>On FreeBSD or OpenBSD:</p>
+<pre><code>cd /usr/local/bin/
+wget -O mlmmj-amime-receive https://github.com/iredmail/iRedMail/raw/1.2/samples/mlmmj/mlmmj-amime-receive
+chown mlmmj:mlmmj mlmmj-amime-receive
+chmod 0550 mlmmj-amime-receive
+</code></pre>
+<h2 id="for-openldap-backend">For OpenLDAP backend</h2>
+<h3 id="improved-last-login-track">Improved last login track</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>User last login track is optional if you didn't implement it while
+upgrading iRedMail to 1.0. Here's the full tutorial to implement last login
+track: <a href="track.user.last.login.html">Track user last login time</a>.</p>
+</div>
+<p>In iRedMail-1.0, Dovecot is configured to store the time of user last login via
+IMAP/POP3 in SQL database <code>iredadmin</code>, but it only tracks either POP3 or IMAP
+login. In iRedMail-1.2, it tracks both. Please follow steps below to implement
+this improvement.</p>
+<ul>
+<li>Open file <code>/etc/dovecot/dovecot.conf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/dovecot/dovecot.conf</code> (FreeBSD), find the <code>last_login_key</code>
+  parameter and replace it by below one:</li>
+</ul>
+<pre><code>    last_login_key = last-login/%s/%u/%d
+</code></pre>
+<ul>
+<li>Open file <code>/etc/dovecot/dovecot-last-login.conf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/dovecot/dovecot-last-login.conf</code> (FreeBSD), <strong>remove</strong> existing
+  <code>map {}</code> block and <strong>add</strong> 2 new <code>map {}</code> blocks used to track
+  POP3/IMAP/LMTP/LDA services.</li>
+</ul>
+<pre><code>map {
+    pattern = shared/last-login/imap/$user/$domain
+    table = last_login
+    value_field = imap
+    value_type = uint
+
+    fields {
+        username = $user
+        domain = $domain
+    }
+}
+
+map {
+    pattern = shared/last-login/pop3/$user/$domain
+    table = last_login
+    value_field = pop3
+    value_type = uint
+
+    fields {
+        username = $user
+        domain = $domain
+    }
+}
+</code></pre>
+<ul>
+<li>Download prepared SQL file used to alter SQL tables:</li>
+</ul>
+<pre><code>wget -O /root/last_login.mysql https://github.com/iredmail/iRedMail/raw/1.2/update/1.2/last_login.mysql
+mysql iredadmin &lt; /root/last_login.mysql
+rm -f /root/last_login.mysql
+</code></pre>
+<ul>
+<li>Restarting Dovecot service is required.</li>
+</ul>
+<h3 id="fixed-can-not-store-mail-subject-with-emoji-characters-in-amavisd-database">Fixed: can not store mail subject with emoji characters in <code>amavisd</code> database</h3>
+<p>In <code>amavisd</code> database, column <code>msgs.subject</code> is defined as <code>VARCHAR(255)</code>, it
+doesn't support emoji characters. Please login to MySQL/MariaDB server as <code>root</code>
+user or <code>amavisd</code> user, then run SQL commands below to fix it:</p>
+<pre><code>USE amavisd;
+ALTER TABLE msgs MODIFY COLUMN subject VARBINARY(255) NOT NULL DEFAULT '';
+</code></pre>
+<h3 id="optional-fail2ban-store-banned-ip-addresses-in-sql-database">[OPTIONAL] Fail2ban: Store banned IP addresses in SQL database</h3>
+<p>If you're running iRedAdmin-Pro, it's very useful to store banned IP addresses
+in SQL database, then you can view and manage them with iRedAdmin-Pro directly.</p>
+<ul>
+<li><a href="fail2ban.sql.html">Fail2ban: Store banned IP addresses in SQL database</a></li>
+</ul>
+<h2 id="for-mysqlmariadb-backends">For MySQL/MariaDB backends</h2>
+<h3 id="improved-last-login-track_1">Improved last login track</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>User last login track is optional if you didn't implement it while
+upgrading iRedMail to 1.0. Here's the full tutorial to implement last login
+track: <a href="track.user.last.login.html">Track user last login time</a>.</p>
+</div>
+<p>In iRedMail-1.0, Dovecot is configured to store user last login time in SQL
+database <code>iredadmin</code>, but it only tracks either POP3 or IMAP login. In
+iRedMail-1.2, it tracks both. Please follow steps below to implement this
+improvement.</p>
+<ul>
+<li>Open file <code>/etc/dovecot/dovecot.conf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/dovecot/dovecot.conf</code> (FreeBSD), find the <code>last_login_key</code>
+  parameter and replace it by below one:</li>
+</ul>
+<pre><code>    last_login_key = last-login/%s/%u/%d
+</code></pre>
+<ul>
+<li>Open file <code>/etc/dovecot/dovecot-last-login.conf</code> (Linux/OpenBSD) or
+  <code>/usr/local/etc/dovecot/dovecot-last-login.conf</code> (FreeBSD), <strong>remove</strong> existing
+  <code>map {}</code> block and <strong>add</strong> 2 new <code>map {}</code> blocks used to track
+  POP3/IMAP/LMTP/LDA services.</li>
+</ul>
+<pre><code>map {
+    pattern = shared/last-login/imap/$user/$domain
+    table = last_login
+    value_field = imap
+    value_type = uint
+
+    fields {
+        username = $user
+        domain = $domain
+    }
+}
+
+map {
+    pattern = shared/last-login/pop3/$user/$domain
+    table = last_login
+    value_field = pop3
+    value_type = uint
+
+    fields {
+        username = $user
+        domain = $domain
+    }
+}
+</code></pre>
+<ul>
+<li>Download prepared SQL file used to alter SQL tables:</li>
+</ul>
+<pre><code>wget -O /root/last_login.mysql https://github.com/iredmail/iRedMail/raw/1.2/update/1.2/last_login.mysql
+mysql vmail &lt; /root/last_login.mysql
+rm -f /root/last_login.mysql
+</code></pre>
+<ul>
+<li>Restarting Dovecot service is required.</li>
+</ul>
+<h3 id="fixed-can-not-store-mail-subject-with-emoji-characters-in-amavisd-database_1">Fixed: can not store mail subject with emoji characters in <code>amavisd</code> database</h3>
+<p>In <code>amavisd</code> database, column <code>msgs.subject</code> is defined as <code>VARCHAR(255)</code>, it
+doesn't support emoji characters. Please login to MySQL/MariaDB server as <code>root</code>
+user or <code>amavisd</code> user, then run SQL commands below to fix it:</p>
+<pre><code>USE amavisd;
+ALTER TABLE msgs MODIFY COLUMN subject VARBINARY(255) NOT NULL DEFAULT '';
+</code></pre>
+<h3 id="optional-fail2ban-store-banned-ip-addresses-in-sql-database_1">[OPTIONAL] Fail2ban: Store banned IP addresses in SQL database</h3>
+<p>If you're running iRedAdmin-Pro, it's very useful to store banned IP addresses
+in SQL database, then you can view and manage them with iRedAdmin-Pro directly.</p>
+<ul>
+<li><a href="fail2ban.sql.html">Fail2ban: Store banned IP addresses in SQL database</a></li>
+</ul>
+<h2 id="for-postgresql-backend">For PostgreSQL backend</h2>
+<h3 id="optional-fail2ban-store-banned-ip-addresses-in-sql-database_2">[OPTIONAL] Fail2ban: Store banned IP addresses in SQL database</h3>
+<p>If you're running iRedAdmin-Pro, it's very useful to store banned IP addresses
+in SQL database, then you can view and manage them with iRedAdmin-Pro directly.</p>
+<ul>
+<li><a href="fail2ban.sql.html">Fail2ban: Store banned IP addresses in SQL database</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

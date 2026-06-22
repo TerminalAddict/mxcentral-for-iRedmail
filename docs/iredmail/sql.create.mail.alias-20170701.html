@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>SQL: Add a mail alias account</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="sql-add-a-mail-alias-account">SQL: Add a mail alias account</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="sql.create.mail.alias-20170701.html#sql-add-a-mail-alias-account">SQL: Add a mail alias account</a><ul>
+<li><a href="sql.create.mail.alias-20170701.html#create-mail-alias-account-with-iredadmin-pro">Create mail alias account with iRedAdmin-Pro</a></li>
+<li><a href="sql.create.mail.alias-20170701.html#create-mail-alias-account-with-sql-command-line">Create mail alias account with SQL command line</a></li>
+<li><a href="sql.create.mail.alias-20170701.html#access-policy">Access policy</a></li>
+<li><a href="sql.create.mail.alias-20170701.html#see-also">See also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<ul>
+<li>This document is applicable to iRedMail-0.9.6 and earlier releases.</li>
+<li>Here's <a href="sql.create.mail.alias.html">doc for iRedMail-0.9.7 and later releases</a>.</li>
+</ul>
+</div>
+<h2 id="create-mail-alias-account-with-iredadmin-pro">Create mail alias account with iRedAdmin-Pro</h2>
+<p>With iRedAdmin-Pro, you can easily add mail list account by click menu:
+<code>Add -&gt; Mail List</code> (or <code>Add -&gt; Alias</code> for SQL backends) in main
+navigation bar.</p>
+<p><img alt="" src="images/iredadmin/maillist_create.png" /></p>
+<h2 id="create-mail-alias-account-with-sql-command-line">Create mail alias account with SQL command line</h2>
+<p>To create an mail alias account, you can simply insert a SQL record in table
+<code>vmail.alias</code>. For example:</p>
+<pre><code class="language-mysql">sql&gt; USE vmail;
+sql&gt; INSERT INTO alias (address, goto, domain, islist) \
+     VALUES ('original@example.com', \
+             'user1@example.com,user2@example.com,user1@test.com', \
+             'example.com', \
+             1);
+</code></pre>
+<p><strong>NOTES</strong>:</p>
+<ul>
+<li>Please always use lower cases for email addresses.</li>
+<li>Multiple destination addresses must be separated by comma.</li>
+<li>If destination address is a mail user under domain hosted on localhost,
+  it must exist. Otherwise emails sent to alias account will be bounced after
+  expanded to destination addresses.</li>
+</ul>
+<h2 id="access-policy">Access policy</h2>
+<p>You can restrict which senders are allowed to send email to this mail alias
+account by adding proper policy name in SQL column <code>alias.accesspolicy</code>.
+For example:</p>
+<pre><code>sql&gt; UPDATE alias SET accesspolicy='domain' WHERE address='original@example.com';
+</code></pre>
+<p>Available access policies are:</p>
+<ul>
+<li><code>public</code>: no restrictions.</li>
+<li><code>domain</code>: all users under same domain are allowed to send email to this mail list.</li>
+<li><code>subdomain</code>: all users under same domain and sub-domains are allowed to send email to this mail list.</li>
+<li><code>membersonly</code>: only members of this mail list are allowd.</li>
+<li><code>allowedonly</code>: only moderators of this mail list are allowed. Moderators
+  are email addresses stored in SQL column <code>alias.moderators</code>. With iRedAPD-1.4.5,
+  it's ok to use <code>*@domain.com</code> as (one of) moderator for all users under
+  mail domain 'domain.com'.</li>
+<li><code>membersandmoderatorsonly</code>: only members and moderators of this mail list are allowed.</li>
+</ul>
+<p>Access restriction is implemented in iRedAPD (a simple Postfix policy server),
+iRedMail has it enabled by default. You'd better check its config file
+<code>/opt/iredapd/settings.py</code> to make sure plugin <code>sql_alias_access_policy</code> is
+enabled in parameter <code>plugins = []</code>.</p>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="ldap.add.mail.list.html">Create mailing list for OpenLDAP backend</a></li>
+</ul><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Upgrade iRedMail from 1.0 to 1.1</title>
+        <link rel="stylesheet" type="text/css" href="css/markdown.css" />
+    </head>
+    <body>
+
+    <div id="navigation">
+    <a href="https://www.iredmail.org" target="_blank">
+        <img alt="iRedMail web site"
+             src="images/logo-iredmail.png"
+             style="vertical-align: middle; height: 30px;"
+             />&nbsp;
+        <span>iRedMail</span>
+    </a>
+    &nbsp;&nbsp;//&nbsp;&nbsp;<a href="index.html">Document Index</a></div><h1 id="upgrade-iredmail-from-10-to-11">Upgrade iRedMail from 1.0 to 1.1</h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<ul>
+<li>iRedMail team recommends <a href="https://www.iredmail.org/ee.html">iRedMail Enterprise Edition</a> for deploying new email server.</li>
+<li>Check out the lightweight on-premises email archiving software developed by iRedMail team: <a href="https://spiderd.io/">Spider Email Archiver</a>.</li>
+</ul>
+</div>
+<div class="toc">
+<ul>
+<li><a href="upgrade.iredmail.1.0-1.1.html#upgrade-iredmail-from-10-to-11">Upgrade iRedMail from 1.0 to 1.1</a><ul>
+<li><a href="upgrade.iredmail.1.0-1.1.html#changelog">ChangeLog</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</a><ul>
+<li><a href="upgrade.iredmail.1.0-1.1.html#update-etciredmail-release-with-new-iredmail-version-number">Update /etc/iredmail-release with new iRedMail version number</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release">Upgrade iRedAPD (Postfix policy server) to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#upgrade-iredadmin-open-source-edition-to-the-latest-stable-release">Upgrade iRedAdmin (open source edition) to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#upgrade-mlmmjadmin-to-the-latest-stable-release">Upgrade mlmmjadmin to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#upgrade-roundcube-webmail-to-the-latest-stable-release">Upgrade Roundcube webmail to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#upgrade-netdata-to-the-latest-stable-release">Upgrade netdata to the latest stable release</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-modular-rsyslog-config-file-is-improper">Fixed: modular rsyslog config file is improper</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-sogo-backup-script-doesnt-relies-on-python-anymore">Fixed: SOGo backup script doesn't relies on Python anymore</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#for-openldap-backend">For OpenLDAP backend</a><ul>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-backup-mx-doesnt-work">Fixed: Backup MX doesn't work.</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-improper-ldap-query-filter">Fixed: improper LDAP query filter</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#improvement-openldap-backup-script-doesnt-relies-on-python-anymore">Improvement: OpenLDAP backup script doesn't relies on Python anymore</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#for-mysqlmariadb-backends">For MySQL/MariaDB backends</a><ul>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-backup-mx-doesnt-work_1">Fixed: Backup MX doesn't work.</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-mysql-backup-script-doesnt-relies-on-python-anymore">Fixed: MySQL backup script doesn't relies on Python anymore</a></li>
+</ul>
+</li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#for-postgresql-backend">For PostgreSQL backend</a><ul>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-incorrect-index-on-sql-table-vmailsender_relayhost">Fixed: incorrect index on SQL table vmail.sender_relayhost</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-backup-mx-doesnt-work_2">Fixed: Backup MX doesn't work.</a></li>
+<li><a href="upgrade.iredmail.1.0-1.1.html#fixed-postgresql-backup-script-doesnt-relies-on-python-anymore">Fixed: PostgreSQL backup script doesn't relies on Python anymore</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Remote Upgrade Assistance</p>
+<p>Check out our <a href="https://www.iredmail.org/support.html">remote upgrade support</a> if you need assistance.</p>
+</div>
+<h2 id="changelog">ChangeLog</h2>
+<ul>
+<li>Feb 10, 2020: initial release.</li>
+</ul>
+<h2 id="general-all-backends-should-apply-these-changes">General (All backends should apply these changes)</h2>
+<h3 id="update-etciredmail-release-with-new-iredmail-version-number">Update <code>/etc/iredmail-release</code> with new iRedMail version number</h3>
+<p>iRedMail stores the release version in <code>/etc/iredmail-release</code> after
+installation, it's recommended to update this file after you upgraded iRedMail,
+so that you can know which version of iRedMail you're running. For example:</p>
+<pre><code>1.1
+</code></pre>
+<h3 id="upgrade-iredapd-postfix-policy-server-to-the-latest-stable-release">Upgrade iRedAPD (Postfix policy server) to the latest stable release</h3>
+<p>Please follow below tutorial to upgrade iRedAPD to the latest stable release:
+<a href="upgrade.iredapd.html">Upgrade iRedAPD to the latest stable release</a></p>
+<h3 id="upgrade-iredadmin-open-source-edition-to-the-latest-stable-release">Upgrade iRedAdmin (open source edition) to the latest stable release</h3>
+<p>Please follow this tutorial to upgrade iRedAdmin open source edition to the
+latest stable release:
+<a href="migrate.or.upgrade.iredadmin.html">Upgrade iRedAdmin to the latest stable release</a></p>
+<h3 id="upgrade-mlmmjadmin-to-the-latest-stable-release">Upgrade mlmmjadmin to the latest stable release</h3>
+<p>Please follow below tutorial to upgrade mlmmjadmin to the latest stable release:
+<a href="upgrade.mlmmjadmin.html">Upgrade mlmmjadmin to the latest stable release</a></p>
+<h3 id="upgrade-roundcube-webmail-to-the-latest-stable-release">Upgrade Roundcube webmail to the latest stable release</h3>
+<div class="admonition warning">
+<p class="admonition-title">Roundcube 1.4</p>
+<p>Since Roundcube 1.3, at least <strong>PHP 5.4</strong> is required. If your server is
+running PHP 5.3 and cannot upgrade to 5.4, please upgrade Roundcube
+the latest 1.2 branch instead.</p>
+</div>
+<p>The latest Roundcube webmail 1.4.2 offers a shiny new web UI.
+Please follow Roundcube official tutorial to upgrade Roundcube webmail to the
+latest stable release (1.4.2):</p>
+<ul>
+<li><a href="https://github.com/roundcube/roundcubemail/wiki/Upgrade">How to upgrade Roundcube</a>.</li>
+</ul>
+<h3 id="upgrade-netdata-to-the-latest-stable-release">Upgrade netdata to the latest stable release</h3>
+<p>If you have netdata installed, you can upgrade it by following this tutorial:
+<a href="upgrade.netdata.html">Upgrade netdata</a>.</p>
+<h3 id="fixed-modular-rsyslog-config-file-is-improper">Fixed: modular rsyslog config file is improper</h3>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>This is applicable to only CentOS 7.</p>
+</div>
+<p>On CentOS 7, the modular rsyslog config file
+<code>/etc/rsyslog.d/1-iredmail-iredapd.conf</code> doesn't correctly filter iRedAPD log,
+please replace the <code>if</code> line by below one and restart rsyslog service:</p>
+<pre><code>if $syslogfacility-text == 'local5' and ($syslogtag startswith 'iredapd' or $msg startswith 'iredapd ') then -/var/log/iredapd/iredapd.log
+</code></pre>
+<h3 id="fixed-sogo-backup-script-doesnt-relies-on-python-anymore">Fixed: SOGo backup script doesn't relies on Python anymore</h3>
+<p>SOGo backup script <code>/var/vmail/backup/backup_sogo.sh</code> shipped in iRedMail-1.0
+and earlier releases relies on Python to calculate the date of old backup for
+removal, but not anymore in iRedMail-1.1. Please download the latest version
+and override the one on your system:</p>
+<pre><code>cd /var/vmail/backup/
+wget -O backup_sogo.sh https://github.com/iredmail/iRedMail/raw/1.1/tools/backup_sogo.sh
+chown root backup_sogo.sh
+chmod 0500 backup_sogo.sh
+</code></pre>
+<h2 id="for-openldap-backend">For OpenLDAP backend</h2>
+<h3 id="fixed-backup-mx-doesnt-work">Fixed: Backup MX doesn't work.</h3>
+<p>In iRedMail-1.0, the placeholder used by LDAP query for Backup MX domain is
+incorrect, please run commands below to fix it.</p>
+<pre><code>perl -pi -e 's#%d#%s#g' /etc/postfix/ldap/relay_domains.cf
+postfix reload
+</code></pre>
+<h3 id="fixed-improper-ldap-query-filter">Fixed: improper LDAP query filter</h3>
+<p>The LDAP query used in file <code>/etc/postfix/ldap/virtual_group_maps.cf</code>
+(Linux/OpenBSD) or <code>/usr/local/etc/postfix/ldap/virtual_group_maps.cf</code>
+(FreeBSD) is not accurate, it will cause missing external members of
+(not-subscribeable) mailing list with alias domain.
+Please follow steps below to fix it.</p>
+<ul>
+<li>Open file <code>/etc/postfix/ldap/virtual_group_maps.cf</code>
+  (Linux/OpenBSD) or <code>/usr/local/etc/postfix/ldap/virtual_group_maps.cf</code>, replace
+  the <code>query_filter =</code> line by below one:</li>
+</ul>
+<pre><code>query_filter    = (&amp;(accountStatus=active)(!(domainStatus=disabled))(enabledService=mail)(enabledService=deliver)(|(&amp;(|(memberOfGroup=%s)(shadowAddress=%s))(|(objectClass=mailUser)(objectClass=mailExternalUser)))(&amp;(memberOfGroup=%s)(!(shadowAddress=%s))(|(objectClass=mailAlias)(&amp;(objectClass=mailList)(!(enabledService=mlmmj)))))(&amp;(objectClass=mailList)(enabledService=mlmmj)(|(mail=%s)(shadowAddress=%s)))))
+</code></pre>
+<ul>
+<li>Save your change and restart or reload Postfix service.</li>
+</ul>
+<h3 id="improvement-openldap-backup-script-doesnt-relies-on-python-anymore">Improvement: OpenLDAP backup script doesn't relies on Python anymore</h3>
+<p>OpenLDAP backup scripts <code>/var/vmail/backup/backup_openldap.sh</code> and
+<code>backup_mysql.sh</code> shipped in iRedMail-1.0 and earlier releases relies on Python
+to calculate the date of old backup for removal, but not anymore in
+iRedMail-1.1. Please download the latest version and override the one on your
+system:</p>
+<pre><code>cd /var/vmail/backup/
+wget -O backup_openldap.sh https://github.com/iredmail/iRedMail/raw/1.1/tools/backup_openldap.sh
+wget -O backup_mysql.sh https://github.com/iredmail/iRedMail/raw/1.1/tools/backup_mysql.sh
+chown root backup_openldap.sh backup_mysql.sh
+chmod 0500 backup_openldap.sh backup_mysql.sh
+</code></pre>
+<h2 id="for-mysqlmariadb-backends">For MySQL/MariaDB backends</h2>
+<h3 id="fixed-backup-mx-doesnt-work_1">Fixed: Backup MX doesn't work.</h3>
+<p>In iRedMail-1.0, the placeholder used by SQL query for Backup MX domain is
+incorrect, please run commands below to fix it.</p>
+<pre><code>perl -pi -e 's#%d#%s#g' /etc/postfix/mysql/relay_domains.cf
+postfix reload
+</code></pre>
+<h3 id="fixed-mysql-backup-script-doesnt-relies-on-python-anymore">Fixed: MySQL backup script doesn't relies on Python anymore</h3>
+<p>Backup script <code>/var/vmail/backup/backup_mysql.sh</code> shipped in iRedMail-1.0
+and earlier releases relies on Python to calculate the date of old backup for
+removal, but not anymore in iRedMail-1.1. Please download the latest version
+and override the one on your system:</p>
+<pre><code>cd /var/vmail/backup/
+wget -O backup_mysql.sh https://github.com/iredmail/iRedMail/raw/1.1/tools/backup_mysql.sh
+chown root backup_mysql.sh
+chmod 0500 backup_mysql.sh
+</code></pre>
+<h2 id="for-postgresql-backend">For PostgreSQL backend</h2>
+<h3 id="fixed-incorrect-index-on-sql-table-vmailsender_relayhost">Fixed: incorrect index on SQL table <code>vmail.sender_relayhost</code></h3>
+<p>Column <code>sender_relayhost.account</code> should be unique index. Please follow steps below to fix it.</p>
+<ul>
+<li>Connect to PostgreSQL server as <code>postgres</code> user and connect to <code>vmail</code> database:<ul>
+<li>on Linux, it's <code>postgres</code> user</li>
+<li>on FreeBSD, it's <code>pgsql</code> user</li>
+<li>on OpenBSD, it's <code>_postgresql</code> user</li>
+</ul>
+</li>
+</ul>
+<pre><code>su - postgres
+psql -d vmail
+</code></pre>
+<ul>
+<li>Run SQL commands below:</li>
+</ul>
+<pre><code>DROP INDEX idx_sender_relayhost_account;
+CREATE UNIQUE INDEX idx_sender_relayhost_account ON sender_relayhost (account);
+</code></pre>
+<h3 id="fixed-backup-mx-doesnt-work_2">Fixed: Backup MX doesn't work.</h3>
+<p>In iRedMail-1.0, the placeholder used by SQL query for Backup MX domain is
+incorrect, please run commands below to fix it.</p>
+<pre><code>perl -pi -e 's#%d#%s#g' /etc/postfix/pgsql/relay_domains.cf
+postfix reload
+</code></pre>
+<h3 id="fixed-postgresql-backup-script-doesnt-relies-on-python-anymore">Fixed: PostgreSQL backup script doesn't relies on Python anymore</h3>
+<p>Backup script <code>/var/vmail/backup/backup_pgsql.sh</code> shipped in iRedMail-1.0
+and earlier releases relies on Python to calculate the date of old backup for
+removal, but not anymore in iRedMail-1.1. Please download the latest version
+and override the one on your system:</p>
+<pre><code>cd /var/vmail/backup/
+wget -O backup_pgsql.sh https://github.com/iredmail/iRedMail/raw/1.1/tools/backup_pgsql.sh
+chown root backup_pgsql.sh
+chmod 0500 backup_pgsql.sh
+</code></pre><div class="footer">
+    <p style="text-align: center; color: grey;">All documents are available in <a href="https://github.com/iredmail/docs/">GitHub repository</a>, and published under <a href="http://creativecommons.org/licenses/by-nd/3.0/us/" target="_blank">Creative Commons</a> license. You can <a href="https://github.com/iredmail/docs/archive/master.zip">download the latest version</a> for offline reading. If you found something wrong, please do <a href="https://www.iredmail.org/contact.html">contact us</a> to fix it.</p>
+</div></body></html>
