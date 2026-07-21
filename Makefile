@@ -7,10 +7,11 @@ APP_DIR := mxcentral-for-iRedmail
 
 .PHONY: deploy
 deploy:
-	ssh $(DEPLOY_HOST) 'mkdir -p "$(DEPLOY_PATH)" "$(DEPLOY_PATH)/bootstrap/cache" "$(DEPLOY_PATH)/storage/app" "$(DEPLOY_PATH)/storage/framework/cache" "$(DEPLOY_PATH)/storage/framework/sessions" "$(DEPLOY_PATH)/storage/framework/views" "$(DEPLOY_PATH)/storage/logs"'
+	ssh $(DEPLOY_HOST) 'mkdir -p "$(DEPLOY_PATH)" "$(DEPLOY_PATH)/bootstrap/cache" "$(DEPLOY_PATH)/database" "$(DEPLOY_PATH)/storage/app" "$(DEPLOY_PATH)/storage/framework/cache" "$(DEPLOY_PATH)/storage/framework/cache/data" "$(DEPLOY_PATH)/storage/framework/sessions" "$(DEPLOY_PATH)/storage/framework/views" "$(DEPLOY_PATH)/storage/logs"'
 	rsync -az --delete \
 		--exclude='.env' \
 		--exclude='.phpunit.result.cache' \
+		--exclude='/database/*.sqlite*' \
 		--exclude='/node_modules/' \
 		--exclude='/public/hot' \
 		--exclude='/storage/' \

@@ -51,6 +51,11 @@ Per-database `*_DB_HOST`, `*_DB_USERNAME`, and `*_DB_PASSWORD` variables are sti
 
 Do not commit `.env`. It contains live database credentials and host-specific command paths.
 
+MxCentral does not require a local Laravel application database for normal
+operation. Keep `SESSION_DRIVER=file`, `CACHE_STORE=array`, and
+`QUEUE_CONNECTION=sync` unless you intentionally create and migrate a separate
+Laravel database.
+
 ## Subdirectory Deployment
 
 The app can be mounted below any URL prefix, for example `https://domain.example/mxcentral`.

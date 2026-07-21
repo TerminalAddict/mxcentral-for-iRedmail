@@ -28,8 +28,21 @@ The deploy target:
 - creates required app/cache/storage directories
 - rsyncs the app to `/opt/www/mxcentral-for-iRedmail`
 - does not overwrite remote `.env` or remote `storage/`
+- does not deploy local `database/*.sqlite*` files
 - runs `chown -R www-data:www-data /opt/www/mxcentral-for-iRedmail`
 - runs `sudo -u www-data php artisan optimize:clear`
+
+If an older checkout fails during deploy with `Database file at path
+.../database/database.sqlite does not exist`, create or fix the server `.env`
+so it uses non-database Laravel runtime stores:
+
+```dotenv
+SESSION_DRIVER=file
+CACHE_STORE=array
+QUEUE_CONNECTION=sync
+```
+
+Then rerun `make deploy`.
 
 ## Install sudoers Include
 
@@ -104,6 +117,9 @@ Core paths and commands:
 APP_NAME="mxcentral-for-iRedmail"
 APP_URL=https://your-mail-host.example/mxcentral
 ASSET_URL=
+SESSION_DRIVER=file
+CACHE_STORE=array
+QUEUE_CONNECTION=sync
 
 IREDAPD_SETTINGS_PATH=/opt/iredapd/settings.py
 IREDAPD_RESTART_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart iredapd.service"
