@@ -15,6 +15,12 @@ $tasks = [
         'interval' => 6 * 60 * 60,
         'command' => ['quarantine:notify-recipients'],
     ],
+    [
+        'name' => 'iredmail-upgrade-check',
+        'description' => 'Check for published iRedMail and iRedAPD upgrades.',
+        'interval' => 24 * 60 * 60,
+        'command' => ['iredmail:check-upgrades'],
+    ],
 ];
 
 $options = getopt('', ['list', 'force', 'task:']) ?: [];
@@ -94,6 +100,7 @@ function runArtisan(string $basePath, array $arguments): int
 
     if (! is_resource($process)) {
         fwrite(STDERR, 'Cannot start command: '.implode(' ', $command)."\n");
+
         return 1;
     }
 

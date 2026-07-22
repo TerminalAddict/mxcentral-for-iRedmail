@@ -6,7 +6,7 @@ MXCentral uses one cron runner for scheduled jobs. Install one cron entry:
 * * * * * /usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php >/dev/null 2>&1
 ```
 
-The runner keeps per-task state in `storage/app/cron-state.json`, so it can be called every minute while each task controls its own interval. Quarantine notifications run every 6 hours.
+The runner keeps per-task state in `storage/app/cron-state.json`, so it can be called every minute while each task controls its own interval. Quarantine notifications run every 6 hours. iRedMail upgrade checks run every 24 hours.
 
 List configured tasks and due times:
 
@@ -18,6 +18,12 @@ Force one task to run now:
 
 ```sh
 /usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php --task=quarantine-notifications --force
+```
+
+Run the upgrade check immediately:
+
+```sh
+/usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php --task=iredmail-upgrade-check --force
 ```
 
 Test quarantine notifications directly without sending mail or updating notification state:

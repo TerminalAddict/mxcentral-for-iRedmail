@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\IredMail\IredMailUpgradeCheckService;
 use App\Services\IredMail\QuarantineNotificationService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -23,3 +24,29 @@ Artisan::command('quarantine:notify-recipients {--force-all : Notify recipients 
 
     return $result['failed'] === [] ? Command::SUCCESS : Command::FAILURE;
 })->purpose('Notify recipients who have quarantined mail visible in MXCentral.');
+
+Artisan::command('iredmail:check-upgrades {--dry-run : Check releases without sending notifications or updating notified-version state} {--no-notify : Check releases without sending admin email}', function (IredMailUpgradeCheckService $upgrades) {
+    $result = $upgrades->check(
+        dryRun: (bool) $this->option('dry-run'),
+        notify: ! (bool) $this->option('no-notify'),
+    );
+
+    $this->info('iRedMail installed: '.(data_get($result, 'iredmail.installed') ?: 'unknown'));
+    $this->info('iRedMail latest: '.(data_get($result, 'iredmail.latest') ?: 'unknown'));
+    $this->info('iRedAPD installed: '.(data_get($result, 'iredapd.installed') ?: 'unknown'));
+    $this->info('iRedAPD latest: '.(data_get($result, 'iredapd.latest') ?: 'unknown'));
+
+    if (($result['status'] ?? '') === 'failed') {
+        $this->error('Upgrade check failed: '.$result['error']);
+
+        return Command::FAILURE;
+    }
+
+    if (($result['iredmail']['upgrade_available'] ?? false) || ($result['iredapd']['upgrade_available'] ?? false)) {
+        $this->warn('Upgrade available.');
+    } else {
+        $this->info('No upgrade detected.');
+    }
+
+    return Command::SUCCESS;
+})->purpose('Check for published iRedMail and iRedAPD upgrades.');

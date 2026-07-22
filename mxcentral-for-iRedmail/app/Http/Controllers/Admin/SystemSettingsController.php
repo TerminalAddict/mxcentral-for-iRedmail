@@ -4,17 +4,19 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\IredMail\CurrentActor;
+use App\Services\IredMail\IredMailUpgradeCheckService;
 use App\Services\IredMail\SetupInspector;
 use App\Services\IredMail\SystemSettingsService;
 use Illuminate\Http\Request;
 
 final class SystemSettingsController extends Controller
 {
-    public function edit(SystemSettingsService $settings, SetupInspector $setup, CurrentActor $actor)
+    public function edit(SystemSettingsService $settings, SetupInspector $setup, IredMailUpgradeCheckService $upgrades, CurrentActor $actor)
     {
         return view('admin.system_settings', [
             'settings' => $settings->settings($actor),
             'setupChecks' => $setup->report(),
+            'upgradeStatus' => $upgrades->status(),
         ]);
     }
 

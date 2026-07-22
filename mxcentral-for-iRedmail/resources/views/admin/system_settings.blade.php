@@ -240,6 +240,86 @@
 </div>
 
 <div class="panel">
+    <h2>iRedMail Upgrade Check</h2>
+    <table class="summary-table">
+        <thead><tr><th>Component</th><th>Installed</th><th>Latest</th><th>Status</th></tr></thead>
+        <tbody>
+            <tr>
+                <td>iRedMail</td>
+                <td>{{ $upgradeStatus['iredmail']['installed'] ?: 'Unknown' }}</td>
+                <td>{{ $upgradeStatus['iredmail']['latest'] ?: 'Unknown' }}</td>
+                <td class="{{ ($upgradeStatus['iredmail']['upgrade_available'] ?? false) ? 'bad' : 'ok' }}">
+                    {{ ($upgradeStatus['iredmail']['upgrade_available'] ?? false) ? 'Upgrade available' : 'Current or unknown' }}
+                </td>
+            </tr>
+            <tr>
+                <td>iRedAPD</td>
+                <td>{{ $upgradeStatus['iredapd']['installed'] ?: 'Unknown' }}</td>
+                <td>{{ $upgradeStatus['iredapd']['latest'] ?: 'Unknown' }}</td>
+                <td class="{{ ($upgradeStatus['iredapd']['upgrade_available'] ?? false) ? 'bad' : 'ok' }}">
+                    {{ ($upgradeStatus['iredapd']['upgrade_available'] ?? false) ? 'Upgrade available' : 'Current or unknown' }}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="record-form__grid">
+        <div class="span-2">
+            <strong>Last check</strong>
+            <span class="field-hint">
+                @if(($upgradeStatus['status'] ?? '') === 'never')
+                    Not run yet.
+                @else
+                    {{ $upgradeStatus['checked_at'] ?: 'Unknown' }}.
+                    {{ ($upgradeStatus['status'] ?? '') === 'failed' ? 'Failed' : 'OK' }}.
+                @endif
+            </span>
+            @if(!empty($upgradeStatus['error']))
+                <span class="field-hint">Error: {{ $upgradeStatus['error'] }}</span>
+            @endif
+        </div>
+        <div class="span-2">
+            <strong>Version files</strong>
+            <span class="field-hint">iRedMail: {{ $upgradeStatus['iredmail']['installed_version_path'] ?? '/etc/iredmail-release' }}</span>
+            <span class="field-hint">iRedAPD: {{ $upgradeStatus['iredapd']['installed_version_path'] ?? '/opt/iredapd/libs/__init__.py' }}</span>
+        </div>
+        <div class="span-2">
+            <strong>Notification</strong>
+            <span class="field-hint">{{ $upgradeStatus['notification']['reason'] ?? 'No notification state.' }}</span>
+            @if(!empty($upgradeStatus['notification']['recipients']))
+                <span class="field-hint">Recipients: {{ implode(', ', $upgradeStatus['notification']['recipients']) }}</span>
+            @endif
+        </div>
+        <div class="span-2">
+            <strong>Manual check</strong>
+            <span class="field-hint">Run: php artisan iredmail:check-upgrades</span>
+            <span class="field-hint">Cron task: iredmail-upgrade-check, every 24 hours.</span>
+        </div>
+    </div>
+    @if(!empty($upgradeStatus['iredmail']['upgrade_path']))
+        <h3>iRedMail upgrade path</h3>
+        <table class="summary-table">
+            <thead><tr><th>From</th><th>To</th><th>Tutorial</th></tr></thead>
+            <tbody>
+                @foreach($upgradeStatus['iredmail']['upgrade_path'] as $step)
+                    <tr>
+                        <td>{{ $step['from'] }}</td>
+                        <td>{{ $step['to'] }}</td>
+                        <td><a href="{{ $step['url'] }}" target="_blank" rel="noopener">Open tutorial</a></td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @elseif($upgradeStatus['iredmail']['upgrade_available'] ?? false)
+        <p class="field-hint">No sequential iRedMail upgrade tutorial path was detected. Check release notes before upgrading.</p>
+    @endif
+    <div class="button-row">
+        <a class="button secondary" href="{{ $upgradeStatus['iredmail']['release_notes_url'] ?? 'https://docs.iredmail.org/iredmail.releases.html' }}" target="_blank" rel="noopener">iRedMail release notes</a>
+        <a class="button secondary" href="{{ $upgradeStatus['iredmail']['download_url'] ?? 'https://www.iredmail.org/download.html' }}" target="_blank" rel="noopener">iRedMail downloads</a>
+        <a class="button secondary" href="{{ $upgradeStatus['iredapd']['tags_url'] ?? 'https://github.com/iredmail/iRedAPD/tags' }}" target="_blank" rel="noopener">iRedAPD tags</a>
+    </div>
+</div>
+
+<div class="panel">
     <h2>Server Setup</h2>
     <table class="summary-table">
         <thead><tr><th>Check</th><th>Status</th><th>Message</th></tr></thead>
