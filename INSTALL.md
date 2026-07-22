@@ -258,6 +258,30 @@ The app `.env` must use:
 APP_URL=https://your-mail-host.example/mxcentral
 ```
 
+Install the provided nginx location template on the mail server:
+
+```sh
+ln -sfn /opt/www/mxcentral-for-iRedmail/docs/nginx/mxcentral.tmpl /etc/nginx/templates/mxcentral.tmpl
+```
+
+Then include it from the active iRedMail nginx server block, before any broad
+PHP catchall include:
+
+```nginx
+include /etc/nginx/templates/mxcentral.tmpl;
+```
+
+The provided file contains `location` blocks, so do not install it directly as
+`/etc/nginx/sites-available/mxcentral.conf` unless you wrap it inside a valid
+nginx `server { ... }` block.
+
+Test and reload nginx:
+
+```sh
+nginx -t
+systemctl reload nginx
+```
+
 ## Cron
 
 Install one cron entry on the mail server:
