@@ -136,7 +136,7 @@ Create a MySQL/MariaDB user for the app and use a strong unique password.
 This broad grant matches the current app behavior across the iRedMail databases:
 
 ```sql
-GRANT ALL PRIVILEGES ON `*`.* TO 'mxcentral'@'localhost' IDENTIFIED BY 'mxcentral-pass';
+GRANT ALL PRIVILEGES ON *.* TO 'mxcentral'@'localhost' IDENTIFIED BY 'mxcentral-pass';
 FLUSH PRIVILEGES;
 ```
 
@@ -148,7 +148,7 @@ mysql \
   -p \
   -e "
     GRANT ALL PRIVILEGES
-      ON \`*\`.*
+      ON *.*
       TO 'mxcentral'@'localhost'
       IDENTIFIED BY 'mxcentral-pass';
     FLUSH PRIVILEGES;
