@@ -359,12 +359,13 @@ check_sender_access pcre:/etc/postfix/sender_access.pcre
 
 Then it restarts iRedAPD and reloads Postfix.
 
-The UI accepts exact IPs and octet-boundary IPv4 CIDRs. Examples:
+The UI accepts exact IPs and IPv4 CIDRs. Examples:
 
 ```text
 192.168.1.1     -> /^192\.168\.1\.1$/ OK
 192.168.2.0/24  -> /^192\.168\.2\./ OK
 172.16.0.0/16   -> /^172\.16\./ OK
+103.123.164.0/22 -> generated PCRE matching 103.123.164.0 through 103.123.167.255
 ```
 
 ### Discard Recipients

@@ -367,7 +367,7 @@ final class SystemSettingsService
             }
 
             if (! $this->senderAccessRepresentableNetwork($network)) {
-                throw ValidationException::withMessages(['allowed_unauthenticated_networks' => "Use an exact IP address or an IPv4 CIDR network on an octet boundary (/8, /16, /24, or /32): {$network}"]);
+                throw ValidationException::withMessages(['allowed_unauthenticated_networks' => "Use an exact IP address or an IPv4 CIDR network: {$network}"]);
             }
 
             $networks[] = $network;
@@ -408,7 +408,9 @@ final class SystemSettingsService
             return (int) $prefix === 128;
         }
 
-        return in_array((int) $prefix, [8, 16, 24, 32], true);
+        $prefixLength = (int) $prefix;
+
+        return $prefixLength >= 0 && $prefixLength <= 32;
     }
 
     private function extractSenders(string $content): array
@@ -765,6 +767,10 @@ final class SystemSettingsService
             return $this->pcreLiteral($ip);
         }
 
+        if ($prefixLength === 0 || $prefixLength % 8 !== 0) {
+            return $this->pcreIpv4CidrPattern($ip, $prefixLength);
+        }
+
         $octets = explode('.', $ip);
         $kept = array_slice($octets, 0, (int) ($prefixLength / 8));
 
@@ -779,7 +785,152 @@ final class SystemSettingsService
 
         [, $prefix] = explode('/', $network, 2);
 
-        return (int) $prefix < 32;
+        $prefixLength = (int) $prefix;
+
+        return $prefixLength > 0 && $prefixLength < 32 && $prefixLength % 8 === 0;
+    }
+
+    private function pcreIpv4CidrPattern(string $ip, int $prefixLength): string
+    {
+        $ipLong = (int) sprintf('%u', ip2long($ip));
+        $mask = $prefixLength === 0 ? 0 : (0xffffffff << (32 - $prefixLength)) & 0xffffffff;
+        $start = $ipLong & $mask;
+        $end = $start | (~$mask & 0xffffffff);
+
+        return $this->pcreIpv4RangePattern(
+            array_map('intval', explode('.', long2ip($start))),
+            array_map('intval', explode('.', long2ip($end))),
+            0
+        );
+    }
+
+    /**
+     * Builds a compact enough PCRE pattern for an inclusive IPv4 address range.
+     *
+     * @param  array<int, int>  $start
+     * @param  array<int, int>  $end
+     */
+    private function pcreIpv4RangePattern(array $start, array $end, int $position): string
+    {
+        if ($position >= 4) {
+            return '';
+        }
+
+        if ($this->remainingOctetsCoverFullRange($start, $end, $position)) {
+            return $this->joinIpv4PatternParts(array_merge(
+                [$this->pcreOctetRangePattern($start[$position], $end[$position])],
+                array_fill(0, 3 - $position, $this->pcreAnyOctetPattern())
+            ));
+        }
+
+        if ($start[$position] === $end[$position]) {
+            return $this->joinIpv4PatternParts([
+                (string) $start[$position],
+                $this->pcreIpv4RangePattern($start, $end, $position + 1),
+            ]);
+        }
+
+        $parts = [];
+
+        $firstEnd = $start;
+        for ($index = $position + 1; $index < 4; $index++) {
+            $firstEnd[$index] = 255;
+        }
+        $parts[] = $this->joinIpv4PatternParts([
+            (string) $start[$position],
+            $this->pcreIpv4RangePattern($start, $firstEnd, $position + 1),
+        ]);
+
+        if ($start[$position] + 1 <= $end[$position] - 1) {
+            $parts[] = $this->joinIpv4PatternParts(array_merge(
+                [$this->pcreOctetRangePattern($start[$position] + 1, $end[$position] - 1)],
+                array_fill(0, 3 - $position, $this->pcreAnyOctetPattern())
+            ));
+        }
+
+        $lastStart = $end;
+        for ($index = $position + 1; $index < 4; $index++) {
+            $lastStart[$index] = 0;
+        }
+        $parts[] = $this->joinIpv4PatternParts([
+            (string) $end[$position],
+            $this->pcreIpv4RangePattern($lastStart, $end, $position + 1),
+        ]);
+
+        return '(?:'.implode('|', $parts).')';
+    }
+
+    /**
+     * @param  array<int, int>  $start
+     * @param  array<int, int>  $end
+     */
+    private function remainingOctetsCoverFullRange(array $start, array $end, int $position): bool
+    {
+        for ($index = $position + 1; $index < 4; $index++) {
+            if ($start[$index] !== 0 || $end[$index] !== 255) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  array<int, string>  $parts
+     */
+    private function joinIpv4PatternParts(array $parts): string
+    {
+        return implode('\.', array_filter($parts, fn (string $part) => $part !== ''));
+    }
+
+    private function pcreAnyOctetPattern(): string
+    {
+        return '(?:25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])';
+    }
+
+    private function pcreOctetRangePattern(int $start, int $end): string
+    {
+        if ($start === $end) {
+            return (string) $start;
+        }
+
+        $values = range($start, $end);
+        $runs = [];
+        $runStart = null;
+        $previous = null;
+
+        foreach ($values as $value) {
+            $text = (string) $value;
+            if ($runStart === null) {
+                $runStart = $text;
+                $previous = $text;
+                continue;
+            }
+
+            if (strlen($text) === strlen($previous) && substr($text, 0, -1) === substr($previous, 0, -1) && (int) substr($text, -1) === (int) substr($previous, -1) + 1) {
+                $previous = $text;
+                continue;
+            }
+
+            $runs[] = $this->pcreOctetRunPattern($runStart, $previous);
+            $runStart = $text;
+            $previous = $text;
+        }
+
+        if ($runStart !== null && $previous !== null) {
+            $runs[] = $this->pcreOctetRunPattern($runStart, $previous);
+        }
+
+        return count($runs) === 1 ? $runs[0] : '(?:'.implode('|', $runs).')';
+    }
+
+    private function pcreOctetRunPattern(string $start, string $end): string
+    {
+        if ($start === $end) {
+            return $start;
+        }
+
+        return substr($start, 0, -1).'['.substr($start, -1).'-'.substr($end, -1).']';
     }
 
     private function postfixSenderLoginMismatchPresent(string $content): bool
