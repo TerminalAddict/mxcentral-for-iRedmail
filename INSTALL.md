@@ -111,6 +111,29 @@ sudo -u www-data sh -c 'touch /etc/postfix/.mxcentral-acl-test && rm /etc/postfi
 
 Keep the remote `.env` on the server. `make deploy` does not overwrite it.
 
+Create a MySQL/MariaDB user for the app and use a strong unique password.
+This broad grant matches the current app behavior across the iRedMail databases:
+
+```sql
+GRANT ALL PRIVILEGES ON `*`.* TO 'mxcentral'@'localhost' IDENTIFIED BY 'mxcentral-pass';
+FLUSH PRIVILEGES;
+```
+
+Or run it directly from bash with a database admin account:
+
+```sh
+mysql \
+  -u db_admin_user \
+  -p \
+  -e "
+    GRANT ALL PRIVILEGES
+      ON \`*\`.*
+      TO 'mxcentral'@'localhost'
+      IDENTIFIED BY 'mxcentral-pass';
+    FLUSH PRIVILEGES;
+  "
+```
+
 Core paths and commands:
 
 ```dotenv
@@ -120,6 +143,11 @@ ASSET_URL=
 SESSION_DRIVER=file
 CACHE_STORE=array
 QUEUE_CONNECTION=sync
+
+IREDMAIL_DB_HOST=127.0.0.1
+IREDMAIL_DB_PORT=3306
+IREDMAIL_DB_USERNAME=mxcentral
+IREDMAIL_DB_PASSWORD=mxcentral-pass
 
 IREDAPD_SETTINGS_PATH=/opt/iredapd/settings.py
 IREDAPD_RESTART_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart iredapd.service"
