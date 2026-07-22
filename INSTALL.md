@@ -267,8 +267,31 @@ ln -sfn /opt/www/mxcentral-for-iRedmail/docs/nginx/mxcentral.tmpl /etc/nginx/tem
 Then include it from the active iRedMail nginx server block, before any broad
 PHP catchall include:
 
+```sh
+editor /etc/nginx/sites-enabled/00-default-ssl.conf
+```
+
+The server block should look similar to this:
+
 ```nginx
-include /etc/nginx/templates/mxcentral.tmpl;
+server {
+    listen 443 ssl http2;
+    #listen [::]:443 ssl http2;
+    server_name _;
+
+    root /var/www/html;
+    index index.php index.html;
+
+    include /etc/nginx/templates/misc.tmpl;
+    include /etc/nginx/templates/ssl.tmpl;
+    include /etc/nginx/templates/iredadmin.tmpl;
+    include /etc/nginx/templates/roundcube.tmpl;
+    include /etc/nginx/templates/sogo.tmpl;
+    include /etc/nginx/templates/netdata.tmpl;
+    include /etc/nginx/templates/mxcentral.tmpl;
+    include /etc/nginx/templates/php-catchall.tmpl;
+    include /etc/nginx/templates/stub_status.tmpl;
+}
 ```
 
 The provided file contains `location` blocks, so do not install it directly as
