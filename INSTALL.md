@@ -15,6 +15,22 @@ DEPLOY_HOST := root@mail.example.com
 DEPLOY_PATH := /opt/www/mxcentral-for-iRedmail
 ```
 
+## Get the Code
+
+Clone the repository onto your build/workstation with one of these options:
+
+```sh
+git clone git@github.com:TerminalAddict/mxcentral-for-iRedmail.git
+```
+
+```sh
+git clone https://github.com/TerminalAddict/mxcentral-for-iRedmail.git
+```
+
+```sh
+gh repo clone TerminalAddict/mxcentral-for-iRedmail
+```
+
 ## Deploy App
 
 From the repo root on the build/workstation:
