@@ -153,14 +153,14 @@ AMAVISD_CONFIG_PATH=/etc/amavis/conf.d/50-user
 AMAVISD_DKIM_DIRECTORY=/var/lib/dkim
 AMAVISD_DKIM_SELECTOR=mxcentral
 AMAVISD_DKIM_BITS=1024
-AMAVISD_GENRSA_COMMAND="amavisd genrsa"
-AMAVISD_SHOWKEYS_COMMAND="amavisd showkeys"
-AMAVISD_TESTKEYS_COMMAND="amavisd testkeys"
+AMAVISD_GENRSA_COMMAND="/usr/bin/sudo /usr/sbin/amavisd genrsa"
+AMAVISD_SHOWKEYS_COMMAND="/usr/bin/sudo /usr/sbin/amavisd showkeys"
+AMAVISD_TESTKEYS_COMMAND="/usr/bin/sudo /usr/sbin/amavisd testkeys"
 AMAVISD_RESTART_COMMAND="systemctl restart amavis"
 AMAVISD_DKIM_KEY_OWNER=amavis
 AMAVISD_DKIM_KEY_GROUP=amavis
-AMAVISD_DKIM_CHOWN_COMMAND=
-AMAVISD_DKIM_CHMOD_COMMAND=
+AMAVISD_DKIM_CHOWN_COMMAND="/usr/bin/sudo /usr/bin/chown"
+AMAVISD_DKIM_CHMOD_COMMAND="/usr/bin/sudo /usr/bin/chmod"
 ```
 
 The app only writes a marked MXCentral block in the amavisd config and appends DKIM sender mappings so existing iRedMail mappings remain intact. The web server user must be able to write the amavisd config and DKIM directory, or you must wrap the configured commands with narrow sudo permissions.
