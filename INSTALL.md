@@ -44,6 +44,27 @@ QUEUE_CONNECTION=sync
 
 Then rerun `make deploy`.
 
+## Create Server `.env` and App Key
+
+On the mail server, create the server-local `.env` file. Deploy deliberately
+does not overwrite this file because it contains host-specific secrets.
+
+Run the ownership fix before generating the Laravel app key so `www-data` can
+write the key into `.env`:
+
+```sh
+cd /opt/www/mxcentral-for-iRedmail
+cp .env.example .env
+chown -R www-data:www-data /opt/www/mxcentral-for-iRedmail
+sudo -u www-data php artisan key:generate
+```
+
+If you edit `.env` later as `root`, rerun:
+
+```sh
+chown www-data:www-data /opt/www/mxcentral-for-iRedmail/.env
+```
+
 ## Install sudoers Include
 
 On the mail server:
