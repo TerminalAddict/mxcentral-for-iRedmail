@@ -32,6 +32,17 @@ The deploy target:
 - runs `chown -R www-data:www-data /opt/www/mxcentral-for-iRedmail`
 - runs `sudo -u www-data php artisan optimize:clear`
 
+For updating multiple existing installs, use the generic rsync helper:
+
+```sh
+scripts/deploy-rsync.sh paul@mail.example.com /opt/www/mxcentral-for-iRedmail
+```
+
+The helper refuses to deploy unless the remote path already looks like an
+MxCentral deployment. It preserves remote `.env`, `storage/`, local SQLite
+databases, and runtime files, then checks ownership. If it cannot apply
+`www-data:www-data` ownership itself, run the command it prints on the server.
+
 If an older checkout fails during deploy with `Database file at path
 .../database/database.sqlite does not exist`, create or fix the server `.env`
 so it uses non-database Laravel runtime stores:
