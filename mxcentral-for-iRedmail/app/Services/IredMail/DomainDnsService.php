@@ -109,7 +109,7 @@ final class DomainDnsService
             return [
                 'ok' => false,
                 'label' => 'No server IP',
-                'details' => 'Set IREDMAIL_SPF_SERVER_IPS to the public outbound mail IP address.',
+                'details' => 'Set IREDMAIL_SPF_SERVER_IPS to the public outbound mail IP address, then run php artisan optimize:clear.',
                 'targets' => $targets,
             ];
         }

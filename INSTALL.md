@@ -202,6 +202,17 @@ SOGO_ROOT_TEMPLATE_TARGET=/var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SO
 SOGO_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart sogo.service"
 ```
 
+Set `IREDMAIL_SPF_SERVER_HOSTNAME` and `IREDMAIL_SPF_SERVER_IPS` to the real
+outbound mail hostname and public sending IPs. The DNS checker uses these
+values when expanding SPF `include:`, `ip4:`, `a`, and `mx` mechanisms.
+
+For example:
+
+```dotenv
+IREDMAIL_SPF_SERVER_HOSTNAME=mail.example.com
+IREDMAIL_SPF_SERVER_IPS=203.0.113.10
+```
+
 If a hosted domain sends DMARC aggregate or forensic reports to another
 domain, publish the external report authorization TXT record at:
 
