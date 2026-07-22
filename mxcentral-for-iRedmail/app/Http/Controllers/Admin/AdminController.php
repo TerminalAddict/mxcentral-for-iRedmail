@@ -109,10 +109,17 @@ final class AdminController extends Controller
         return back()->with('status', 'Catch-all destination removed.');
     }
 
-    public function deleteDomain(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
+    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, CurrentActor $actor, string $domain)
     {
+        $dkimCleanup = $dkim->cleanupRemovedDomain($actor, $domain);
         $accounts->deleteDomain($actor, $domain, (int) $request->input('keep_days', 0));
-        return back()->with('status', 'Domain deleted; mailbox paths logged.');
+
+        $message = 'Domain deleted; mailbox paths logged.';
+        if (($dkimCleanup['config']['changed'] ?? false) || ($dkimCleanup['keys']['deleted'] ?? []) !== []) {
+            $message .= ' DKIM signing config/key files cleaned up and amavisd restarted.';
+        }
+
+        return back()->with('status', $message);
     }
 
     public function generateDomainDkim(Request $request, DomainDkimService $dkim, CurrentActor $actor, string $domain)
@@ -120,8 +127,12 @@ final class AdminController extends Controller
         $result = $dkim->generate($actor, $domain, (int) $request->input('bits', 1024));
         $verb = ($result['rotated'] ?? false) ? 'rotated' : 'ready';
         $message = "DKIM key is {$verb} for {$result['domain']} using {$result['bits']} bits. Publish the TXT record shown below.";
-        if (($result['restart']['configured'] ?? false) && ! ($result['restart']['ok'] ?? false)) {
+        if (! ($result['restart']['configured'] ?? false)) {
+            $message .= ' Amavisd restart is not configured; restart amavis manually before relying on the new signature.';
+        } elseif (! ($result['restart']['ok'] ?? false)) {
             $message .= ' Amavisd restart failed; check the DKIM panel for details.';
+        } else {
+            $message .= ' Amavisd restarted.';
         }
 
         return back()->with('status', $message);

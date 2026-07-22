@@ -68,7 +68,7 @@ final class DomainDkimService
 
         $this->secureKeyFile($keyPath);
         $changed = $this->ensureAmavisdConfig($domain);
-        $restart = $changed ? $this->restartAmavisd() : ['configured' => $this->restartCommand() !== '', 'ok' => true, 'message' => 'No restart needed.'];
+        $restart = $this->restartAmavisd();
         $testkeys = $this->testKeys();
         $this->audit->log('update', ($rotated ? 'Rotated' : 'Generated')." {$bits}-bit DKIM key for {$domain} with selector ".$this->selector().'.', $domain);
 
@@ -81,6 +81,35 @@ final class DomainDkimService
             'restart' => $restart,
             'testkeys' => $testkeys,
             'status' => $this->status($actor, $domain),
+        ];
+    }
+
+    public function cleanupRemovedDomain(CurrentActor $actor, string $domain): array
+    {
+        abort_unless($actor->globalAdmin, 403);
+        $domain = IredMailAddress::domain($domain) ?? abort(404);
+
+        $config = $this->removeAmavisdConfig($domain);
+        $keys = $this->deleteKeyFiles($domain);
+        $needsRestart = $config['changed'] || $keys['deleted'] !== [];
+        $restart = $needsRestart
+            ? $this->restartAmavisd()
+            : ['configured' => $this->restartCommand() !== '', 'ok' => true, 'message' => 'No restart needed.'];
+
+        if ($needsRestart && ! ($restart['configured'] ?? false)) {
+            throw ValidationException::withMessages(['dkim' => 'DKIM cleanup changed files, but AMAVISD_RESTART_COMMAND is not configured. Restart amavis manually before deleting the domain.']);
+        }
+        if ($needsRestart && ! ($restart['ok'] ?? false)) {
+            throw ValidationException::withMessages(['dkim' => 'DKIM cleanup changed files, but amavisd restart failed: '.$restart['message']]);
+        }
+
+        $this->audit->log('delete', "Cleaned up DKIM config and key files for deleted domain {$domain}.", $domain);
+
+        return [
+            'domain' => $domain,
+            'config' => $config,
+            'keys' => $keys,
+            'restart' => $restart,
         ];
     }
 
@@ -138,6 +167,45 @@ final class DomainDkimService
         });
     }
 
+    private function removeAmavisdConfig(string $domain): array
+    {
+        $path = $this->configPath();
+
+        return $this->withFileLock($path, function () use ($path, $domain) {
+            if (! is_file($path)) {
+                return ['changed' => false, 'path' => $path, 'message' => "Amavisd config {$path} does not exist."];
+            }
+            if (! is_readable($path)) {
+                throw ValidationException::withMessages(['dkim' => "Cannot read amavisd config {$path}."]);
+            }
+            if (! $this->configWritable()) {
+                throw ValidationException::withMessages(['dkim' => "Cannot write amavisd config {$path}."]);
+            }
+
+            $original = (string) file_get_contents($path);
+            $domains = $this->configuredManagedDomains($original);
+            if (! isset($domains[$domain])) {
+                return ['changed' => false, 'path' => $path, 'message' => "{$domain} was not present in the mxcentral-managed DKIM block."];
+            }
+
+            unset($domains[$domain]);
+            ksort($domains);
+            $updated = $this->replaceManagedBlock($original, array_keys($domains));
+            if ($updated === $original) {
+                return ['changed' => false, 'path' => $path, 'message' => 'No amavisd config change needed.'];
+            }
+
+            if (@copy($path, $path.'.bak') === false) {
+                throw ValidationException::withMessages(['dkim' => "Cannot create backup {$path}.bak."]);
+            }
+            if (@file_put_contents($path, $updated, LOCK_EX) === false) {
+                throw ValidationException::withMessages(['dkim' => "Cannot write {$path}."]);
+            }
+
+            return ['changed' => true, 'path' => $path, 'message' => "Removed {$domain} from the mxcentral-managed DKIM block."];
+        });
+    }
+
     private function configuredManagedDomains(string $content): array
     {
         $domains = [];
@@ -159,13 +227,46 @@ final class DomainDkimService
 
     private function replaceManagedBlock(string $content, array $domains): string
     {
-        $block = $this->managedBlock($domains);
         $pattern = '/'.preg_quote(self::BEGIN_MARKER, '/').'.*?'.preg_quote(self::END_MARKER, '/').'\R?/s';
+
+        if ($domains === []) {
+            if (preg_match($pattern, $content)) {
+                return rtrim(preg_replace($pattern, '', $content, 1) ?? $content)."\n";
+            }
+
+            return $content;
+        }
+
+        $block = $this->managedBlock($domains);
         if (preg_match($pattern, $content)) {
             return preg_replace($pattern, $block."\n", $content, 1) ?? $content;
         }
 
         return rtrim($content)."\n\n".$block."\n";
+    }
+
+    private function deleteKeyFiles(string $domain): array
+    {
+        $keyPath = $this->keyPath($domain);
+        $paths = array_values(array_unique(array_merge([$keyPath], glob($keyPath.'.previous-*') ?: [])));
+        $deleted = [];
+
+        foreach ($paths as $path) {
+            if (! is_file($path)) {
+                continue;
+            }
+
+            if (! @unlink($path)) {
+                throw ValidationException::withMessages(['dkim' => "Cannot delete DKIM key file {$path}."]);
+            }
+
+            $deleted[] = $path;
+        }
+
+        return [
+            'deleted' => $deleted,
+            'path' => $keyPath,
+        ];
     }
 
     private function managedBlock(array $domains): string

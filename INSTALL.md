@@ -348,6 +348,10 @@ sudo -u www-data php artisan quarantine:notify-recipients --dry-run
 ### DKIM
 
 The app generates DKIM keys under `/var/lib/dkim`, writes amavisd config at `/etc/amavis/conf.d/50-user`, and restarts amavisd.
+Generating or rotating a DKIM key always restarts amavisd because amavis may
+keep the previous private key in memory. Deleting a domain removes the
+mxcentral-managed DKIM config entry, deletes that domain's DKIM key files, and
+restarts amavisd before the domain record is removed.
 
 If generated key ownership or mode must be fixed, the app runs:
 

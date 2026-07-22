@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\IredMail\AccountRepository;
 use App\Services\IredMail\CurrentActor;
+use App\Services\IredMail\DomainDkimService;
 use App\Services\IredMail\MailActivityRepository;
 use App\Services\IredMail\PolicyRepository;
 use App\Services\IredMail\SetupInspector;
@@ -34,8 +35,9 @@ final class ApiController extends Controller
         return ['ok' => true];
     }
 
-    public function deleteDomain(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain): array
+    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, CurrentActor $actor, string $domain): array
     {
+        $dkim->cleanupRemovedDomain($actor, $domain);
         $accounts->deleteDomain($actor, $domain, (int) $request->input('keep_days', 0));
         return ['ok' => true];
     }
