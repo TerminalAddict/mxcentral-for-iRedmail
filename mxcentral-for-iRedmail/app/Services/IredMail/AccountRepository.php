@@ -12,9 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 final class AccountRepository
 {
-    public function __construct(private readonly AuditLogger $audit)
-    {
-    }
+    public function __construct(private readonly AuditLogger $audit) {}
 
     public function dashboard(CurrentActor $actor): array
     {
@@ -43,6 +41,14 @@ final class AccountRepository
             ->select('domain')
             ->orderBy('domain')
             ->get();
+    }
+
+    private function hostedDomainSet(): array
+    {
+        return DB::connection('vmail')->table('domain')
+            ->pluck('domain')
+            ->mapWithKeys(fn (string $domain) => [strtolower($domain) => true])
+            ->all();
     }
 
     public function domain(CurrentActor $actor, ?string $domain = null)
@@ -729,9 +735,9 @@ final class AccountRepository
     {
         abort_unless($actor->globalAdmin, 403);
         $email = IredMailAddress::email($data['username'] ?? '');
-        $domain = strtoupper((string) ($data['domain'] ?? '')) === 'ALL' ? 'ALL' : IredMailAddress::domain($data['domain'] ?? '');
-        if (! $email || ! $domain) {
-            throw ValidationException::withMessages(['username' => 'Enter a valid admin email and domain.']);
+        $domains = $this->normalizeAdminDomains($data);
+        if (! $email || $domains === []) {
+            throw ValidationException::withMessages(['username' => 'Enter a valid admin email and select at least one domain.']);
         }
 
         $mailboxExists = DB::connection('vmail')->table('mailbox')->where('username', $email)->exists();
@@ -755,19 +761,55 @@ final class AccountRepository
             $adminExists = true;
         }
 
-        $existing = DB::connection('vmail')->table('domain_admins')->where('username', $email)->where('domain', $domain)->exists();
-        DB::connection('vmail')->table('domain_admins')->updateOrInsert(
-            ['username' => $email, 'domain' => $domain],
-            ['active' => 1, 'modified' => now()->toDateTimeString(), 'created' => $existing ? DB::raw('created') : now()->toDateTimeString(), 'expired' => '9999-12-31 00:00:00'],
-        );
+        foreach ($domains as $domain) {
+            $existing = DB::connection('vmail')->table('domain_admins')->where('username', $email)->where('domain', $domain)->exists();
+            DB::connection('vmail')->table('domain_admins')->updateOrInsert(
+                ['username' => $email, 'domain' => $domain],
+                ['active' => 1, 'modified' => now()->toDateTimeString(), 'created' => $existing ? DB::raw('created') : now()->toDateTimeString(), 'expired' => '9999-12-31 00:00:00'],
+            );
+        }
 
-        if ($mailboxExists && $domain === 'ALL') {
+        if ($mailboxExists && in_array('ALL', $domains, true)) {
             DB::connection('vmail')->table('mailbox')->where('username', $email)->update(['isglobaladmin' => 1, 'modified' => now()->toDateTimeString()]);
         } elseif ($mailboxExists) {
             DB::connection('vmail')->table('mailbox')->where('username', $email)->update(['isadmin' => 1, 'modified' => now()->toDateTimeString()]);
         }
 
-        $this->audit->log('create', "Assigned {$email} as admin of {$domain}.", $domain === 'ALL' ? '' : $domain, $email);
+        $this->audit->log('create', "Assigned {$email} as admin of ".implode(', ', $domains).'.', in_array('ALL', $domains, true) ? '' : $domains[0], $email);
+    }
+
+    private function normalizeAdminDomains(array $data): array
+    {
+        $rawDomains = $data['domains'] ?? $data['domain'] ?? [];
+        $rawDomains = is_array($rawDomains) ? $rawDomains : [$rawDomains];
+        $domains = [];
+
+        foreach ($rawDomains as $rawDomain) {
+            $rawDomain = trim((string) $rawDomain);
+            if ($rawDomain === '') {
+                continue;
+            }
+
+            $domain = strtoupper($rawDomain) === 'ALL' ? 'ALL' : IredMailAddress::domain($rawDomain);
+            if (! $domain) {
+                throw ValidationException::withMessages(['domains' => "Invalid domain selection: {$rawDomain}"]);
+            }
+
+            $domains[] = $domain;
+        }
+
+        $domains = array_values(array_unique($domains));
+        if (in_array('ALL', $domains, true)) {
+            return ['ALL'];
+        }
+
+        $hostedDomains = $this->hostedDomainSet();
+        $invalid = array_values(array_filter($domains, fn (string $domain) => ! isset($hostedDomains[$domain])));
+        if ($invalid !== []) {
+            throw ValidationException::withMessages(['domains' => 'Admin domains must be hosted here: '.implode(', ', $invalid)]);
+        }
+
+        return $domains;
     }
 
     public function deleteAdminAssignment(CurrentActor $actor, string $email, string $domain): void
@@ -880,6 +922,7 @@ final class AccountRepository
     private function normalizeMembers(string|array $members): array
     {
         $values = is_array($members) ? $members : preg_split('/[\s,;]+/', $members);
+
         return array_values(array_unique(array_filter(array_map(fn ($member) => IredMailAddress::email((string) $member), $values ?: []))));
     }
 

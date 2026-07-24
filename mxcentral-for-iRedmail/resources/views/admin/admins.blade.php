@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $selectedDomains = array_flip((array) old('domains', []));
+@endphp
+
 <div class="page-titlebar">
     <h1>Domain Admins</h1>
     <a class="button secondary" href="{{ route('export.admins') }}">Export statistics</a>
@@ -18,9 +22,14 @@
                 <input name="name">
                 <span class="field-hint">Used only when creating a separate admin login.</span>
             </label>
-            <label>Domain or ALL
-                <input name="domain" required>
-                <span class="field-hint">Enter a hosted domain for domain-level access, or ALL for global admin access.</span>
+            <label>Managed domains
+                <select name="domains[]" multiple required size="8">
+                    <option value="ALL" @selected(isset($selectedDomains['ALL']))>All domains</option>
+                    @foreach($domainOptions as $option)
+                        <option value="{{ $option->domain }}" @selected(isset($selectedDomains[$option->domain]))>{{ $option->domain }}</option>
+                    @endforeach
+                </select>
+                <span class="field-hint">Select one or more hosted domains, or All domains for global admin access.</span>
             </label>
             <label class="span-2">Password for new separate admin
                 <input name="password" type="password" placeholder="Only needed if mailbox/admin does not exist">

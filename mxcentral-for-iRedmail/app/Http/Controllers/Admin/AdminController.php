@@ -65,7 +65,10 @@ final class AdminController extends Controller
 
     public function admins(AccountRepository $accounts, CurrentActor $actor)
     {
-        return view('admin.admins', ['rows' => $accounts->admins($actor)]);
+        return view('admin.admins', [
+            'rows' => $accounts->admins($actor),
+            'domainOptions' => $accounts->domainOptions($actor),
+        ]);
     }
 
     public function search(Request $request, AccountRepository $accounts, CurrentActor $actor)
@@ -76,36 +79,42 @@ final class AdminController extends Controller
     public function createDomain(Request $request, AccountRepository $accounts, CurrentActor $actor)
     {
         $accounts->createDomain($actor, $request->all());
+
         return back()->with('status', 'Domain created.');
     }
 
     public function updateDomain(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
     {
         $accounts->updateDomain($actor, $domain, $request->all());
+
         return back()->with('status', 'Domain updated.');
     }
 
     public function createAliasDomain(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
     {
         $accounts->createAliasDomain($actor, $domain, $request->all());
+
         return back()->with('status', 'Alias domain added.');
     }
 
     public function deleteAliasDomain(AccountRepository $accounts, CurrentActor $actor, string $aliasDomain)
     {
         $accounts->deleteAliasDomain($actor, $aliasDomain);
+
         return back()->with('status', 'Alias domain removed.');
     }
 
     public function createCatchAll(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
     {
         $accounts->createCatchAll($actor, $domain, $request->all());
+
         return back()->with('status', 'Catch-all destination added.');
     }
 
     public function deleteCatchAll(AccountRepository $accounts, CurrentActor $actor, string $domain, string $destination)
     {
         $accounts->deleteCatchAll($actor, $domain, $destination);
+
         return back()->with('status', 'Catch-all destination removed.');
     }
 
@@ -156,78 +165,91 @@ final class AdminController extends Controller
     public function createUser(Request $request, AccountRepository $accounts, CurrentActor $actor)
     {
         $accounts->createUser($actor, $request->all());
+
         return back()->with('status', 'User created.');
     }
 
     public function updateUser(Request $request, AccountRepository $accounts, CurrentActor $actor, string $email)
     {
         $accounts->updateUser($actor, $email, $request->all());
+
         return back()->with('status', 'User updated.');
     }
 
     public function updateUserForwarding(Request $request, AccountRepository $accounts, CurrentActor $actor, string $email)
     {
         $accounts->updateUserForwarding($actor, $email, $request->all());
+
         return back()->with('status', 'Forwarding updated.');
     }
 
     public function createAlias(Request $request, AccountRepository $accounts, CurrentActor $actor)
     {
         $accounts->createAlias($actor, $request->all());
+
         return back()->with('status', 'Alias created.');
     }
 
     public function updateAlias(Request $request, AccountRepository $accounts, CurrentActor $actor, string $address)
     {
         $accounts->updateAlias($actor, $address, $request->all());
+
         return back()->with('status', 'Alias updated.');
     }
 
     public function deleteAlias(AccountRepository $accounts, CurrentActor $actor, string $address)
     {
         $accounts->deleteAlias($actor, $address);
+
         return back()->with('status', 'Alias deleted.');
     }
 
     public function createList(Request $request, AccountRepository $accounts, CurrentActor $actor)
     {
         $accounts->createList($actor, $request->all());
+
         return back()->with('status', 'Mailing list created.');
     }
 
     public function updateList(Request $request, AccountRepository $accounts, CurrentActor $actor, string $address)
     {
         $accounts->updateList($actor, $address, $request->all());
+
         return back()->with('status', 'Mailing list updated.');
     }
 
     public function deleteList(AccountRepository $accounts, CurrentActor $actor, string $address)
     {
         $accounts->deleteList($actor, $address);
+
         return back()->with('status', 'Mailing list deleted.');
     }
 
     public function assignAdmin(Request $request, AccountRepository $accounts, CurrentActor $actor)
     {
         $accounts->assignAdmin($actor, $request->all());
+
         return back()->with('status', 'Admin assignment saved.');
     }
 
     public function deleteAdminAssignment(AccountRepository $accounts, CurrentActor $actor, string $email, string $domain)
     {
         $accounts->deleteAdminAssignment($actor, $email, $domain);
+
         return back()->with('status', 'Admin assignment removed.');
     }
 
     public function updateServices(Request $request, AccountRepository $accounts, CurrentActor $actor, string $email)
     {
         $accounts->updateUserServices($actor, $email, $request->input('services', []));
+
         return back()->with('status', 'Services updated.');
     }
 
     public function deleteUser(Request $request, AccountRepository $accounts, CurrentActor $actor, string $email)
     {
         $accounts->deleteUser($actor, $email, (int) $request->input('keep_days', 0));
+
         return back()->with('status', 'User deleted; mailbox path logged.');
     }
 

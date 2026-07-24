@@ -119,6 +119,10 @@ setfacl -m u:www-data:rwx /var/lib/dkim
 setfacl -m u:www-data:rwx /opt/iredapd
 setfacl -m u:www-data:rw /opt/iredapd/settings.py
 
+if [ -L /opt/iredapd/settings.py ]; then
+    setfacl -m u:www-data:rw "$(readlink -f /opt/iredapd/settings.py)"
+fi
+
 setfacl -m u:www-data:rw /etc/postfix/main.cf
 setfacl -m u:www-data:rwx /etc/postfix
 touch /etc/postfix/sender_access.pcre
@@ -146,6 +150,7 @@ Verify key permissions:
 ```sh
 sudo -u www-data test -r /opt/iredapd/settings.py && echo iredapd-read-ok
 sudo -u www-data test -w /opt/iredapd/settings.py && echo iredapd-write-ok
+sudo -u www-data grep -E 'ALLOWED_LOGIN_MISMATCH_SENDERS|ALLOWED_FORGED_SENDERS|MYNETWORKS' /opt/iredapd/settings.py
 sudo -u www-data sh -c 'touch /opt/iredapd/.mxcentral-acl-test && rm /opt/iredapd/.mxcentral-acl-test' && echo iredapd-backup-ok
 
 sudo -u www-data test -w /etc/amavis/conf.d/50-user && echo amavis-write-ok
