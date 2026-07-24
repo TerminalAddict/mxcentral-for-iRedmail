@@ -109,4 +109,17 @@ final class SystemSettingsController extends Controller
 
         return back()->with('status', 'SOGo logo saved and SOGo reloaded.');
     }
+
+    public function updateDecryptablePasswords(Request $request, SystemSettingsService $settings, CurrentActor $actor)
+    {
+        $result = $settings->saveDecryptablePasswords($actor, $request->boolean('enabled'));
+
+        if (! $result['changed']) {
+            return back()->with('status', 'Decryptable password storage was already '.($result['enabled'] ? 'enabled.' : 'disabled.'));
+        }
+
+        return back()->with('status', $result['enabled']
+            ? 'Decryptable password storage enabled. Only new or changed passwords can be stored from now on.'
+            : 'Decryptable password storage disabled. Stored decryptable passwords were removed.');
+    }
 }

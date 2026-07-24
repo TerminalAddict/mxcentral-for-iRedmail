@@ -92,6 +92,10 @@ If you edit `.env` later as `root`, rerun:
 chown www-data:www-data /opt/www/mxcentral-for-iRedmail/.env
 ```
 
+Keep the generated `APP_KEY` stable. Optional decryptable mailbox password
+storage encrypts values with this key; if the key is changed, previously stored
+decryptable passwords cannot be recovered.
+
 ## Install sudoers Include
 
 On the mail server:
@@ -228,11 +232,21 @@ AMAVISD_DKIM_CHMOD_COMMAND="/usr/bin/sudo /usr/bin/chmod"
 
 IREDMAIL_SPF_SERVER_HOSTNAME=mail.example.com
 IREDMAIL_SPF_SERVER_IPS=203.0.113.10
+IREDMAIL_DECRYPTABLE_PASSWORD_COLUMN=decrypt-pass
 
 SOGO_ROOT_TEMPLATE_SOURCE=
 SOGO_ROOT_TEMPLATE_TARGET=/var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox
 SOGO_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart sogo.service"
 ```
+
+Optional decryptable password storage is controlled from `system/settings`.
+When enabled, the app alters `vmail.mailbox` and adds `decrypt-pass` as a
+nullable encrypted text column. Only passwords created or changed after the
+feature is enabled can be stored. Turning the feature off drops the column and
+removes stored decryptable passwords.
+
+The configured vmail database account must therefore have `ALTER` privilege on
+`vmail.mailbox` in addition to its normal mailbox read/write privileges.
 
 Set `IREDMAIL_SPF_SERVER_HOSTNAME` and `IREDMAIL_SPF_SERVER_IPS` to the real
 outbound mail hostname and public sending IPs. The DNS checker uses these

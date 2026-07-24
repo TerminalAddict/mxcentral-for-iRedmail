@@ -45,6 +45,8 @@ AMAVISD_DB_DATABASE=amavisd
 IREDAPD_DB_DATABASE=iredapd
 FAIL2BAN_DB_DATABASE=fail2ban
 FAIL2BAN_UNBAN_COMMAND="/usr/bin/sudo /usr/bin/fail2ban-client unban"
+
+IREDMAIL_DECRYPTABLE_PASSWORD_COLUMN=decrypt-pass
 ```
 
 Per-database `*_DB_HOST`, `*_DB_USERNAME`, and `*_DB_PASSWORD` variables are still supported as overrides, but normal iRedMail installs should only need the shared `IREDMAIL_DB_*` values.
@@ -167,11 +169,37 @@ The app only writes a marked MXCentral block in the amavisd config and appends D
 
 ## System Settings
 
-Global admins can use `/system/settings` for host-level mail settings which are not stored in the iRedMail SQL tables.
+Global admins can use `/system/settings` for host-level mail settings. Most
+settings manage service configuration files; optional decryptable password
+storage is represented by a column in `vmail.mailbox`.
 
 The app never grants itself broad root access. System commands are read from `.env`, tokenized, and executed without a shell. Configure narrow `sudoers` rules for the exact commands required on your host.
 
 Fail2ban unban uses `FAIL2BAN_UNBAN_COMMAND` with the IP appended by the app. With the provided sudoers include, set it to `/usr/bin/sudo /usr/bin/fail2ban-client unban`.
+
+### Decryptable Mailbox Passwords
+
+Decryptable password storage is disabled by default and can only be enabled or
+disabled by a global admin. Its state is determined directly from the configured
+column in `vmail.mailbox`, so no separate application setting or migration is
+required.
+
+When enabled:
+
+- MXCentral adds the nullable `decrypt-pass` text column to `vmail.mailbox`.
+- New mailbox passwords and subsequent password changes are encrypted with
+  Laravel's application encryption key before being stored.
+- An authorized admin can reveal a stored password from the user edit screen.
+- Existing password hashes are not converted. A password becomes available only
+  after it is created or changed while the feature is enabled.
+
+When disabled, MXCentral drops the column and permanently removes every stored
+decryptable password. Re-enabling creates an empty column; it does not restore
+previous values or passwords changed while storage was disabled.
+
+Keep `APP_KEY` stable and secret. Changing it makes existing encrypted values
+unreadable. The vmail database account needs `ALTER` privilege on
+`vmail.mailbox` so the global-admin toggle can add and drop the column.
 
 ### Sender Mismatch Permission
 
@@ -345,6 +373,9 @@ The PHP process also needs filesystem permission to create/write:
 
 - All normal writes use Laravel CSRF protection and route middleware.
 - Global-only system settings are protected with `iredmail.auth:global`.
+- Decryptable mailbox passwords are encrypted at rest with `APP_KEY`; their
+  encrypted database values are excluded from list, search, API, and
+  self-service results.
 - Shell execution is avoided for configured system commands; commands are run as argv arrays through Symfony Process.
 - System-file writes create `.bak` backups and use per-target lock files under `storage/framework/locks`.
 - Quarantine release protocol values are validated to reject control characters before sending to Amavisd.
@@ -367,6 +398,7 @@ If the `iredadmin` database has not been created yet, import the reference schem
 - Domain, user, alias, mailing list, and admin listings.
 - Domain, user, and alias creation.
 - Per-user service toggles.
+- Optional global-admin-controlled decryptable mailbox password storage.
 - User deletion with deleted mailbox path logging.
 - Mail sent/received metadata views.
 - Quarantine list, raw message view, delete, and Amavisd release request.
@@ -381,7 +413,7 @@ If the `iredadmin` database has not been created yet, import the reference schem
 
 ### Which database user should this app use?
 
-Use a dedicated MariaDB/MySQL user with the required privileges on the iRedMail databases. In a standard deployment the database host is shared, so set `IREDMAIL_DB_HOST`, `IREDMAIL_DB_USERNAME`, and `IREDMAIL_DB_PASSWORD`, then keep per-database names as `vmail`, `iredadmin`, `amavisd`, `iredapd`, and `fail2ban`.
+Use a dedicated MariaDB/MySQL user with the required privileges on the iRedMail databases. In a standard deployment the database host is shared, so set `IREDMAIL_DB_HOST`, `IREDMAIL_DB_USERNAME`, and `IREDMAIL_DB_PASSWORD`, then keep per-database names as `vmail`, `iredadmin`, `amavisd`, `iredapd`, and `fail2ban`. If decryptable password storage will be toggled from System Settings, this account also needs `ALTER` on `vmail.mailbox`.
 
 ### Why do System Settings show readable or writable as "no"?
 

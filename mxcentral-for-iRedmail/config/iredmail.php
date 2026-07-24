@@ -12,6 +12,7 @@ return [
     'quarantine_notification_state_path' => env('QUARANTINE_NOTIFICATION_STATE_PATH', storage_path('app/quarantine-notifications.json')),
     'quarantine_notification_subject' => env('QUARANTINE_NOTIFICATION_SUBJECT', '[Attention] You have %(total)d quarantined email(s)'),
     'quarantine_notification_max_rows' => (int) env('QUARANTINE_NOTIFICATION_MAX_ROWS', 50),
+    'decryptable_password_column' => env('IREDMAIL_DECRYPTABLE_PASSWORD_COLUMN', 'decrypt-pass'),
     'upgrade_check_state_path' => env('IREDMAIL_UPGRADE_CHECK_STATE_PATH', storage_path('app/iredmail-upgrade-check.json')),
     'upgrade_check_timeout' => (int) env('IREDMAIL_UPGRADE_CHECK_TIMEOUT', 15),
     'upgrade_notification_subject' => env('IREDMAIL_UPGRADE_NOTIFICATION_SUBJECT', '[Attention] iRedMail upgrade available'),

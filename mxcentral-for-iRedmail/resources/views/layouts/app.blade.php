@@ -635,6 +635,13 @@
         .checkboxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
         .checkboxes label { display: flex; align-items: center; gap: 8px; }
         .checkboxes input { width: auto; }
+        .password-toggle-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 96px;
+            gap: 8px;
+            align-items: stretch;
+        }
+        .password-toggle-row button { min-height: 42px; padding: 0 12px; }
         .settings-picker {
             display: grid;
             gap: 10px;

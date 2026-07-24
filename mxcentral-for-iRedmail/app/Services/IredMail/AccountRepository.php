@@ -4,9 +4,13 @@ namespace App\Services\IredMail;
 
 use App\Support\IredMailAddress;
 use App\Support\IredMailPassword;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -104,7 +108,10 @@ final class AccountRepository
             });
         }
 
-        return $query->orderBy('username')->paginate(config('iredmail.page_size'));
+        $users = $query->orderBy('username')->paginate(config('iredmail.page_size'));
+        $users->setCollection($this->withoutStoredPasswords($users->getCollection()));
+
+        return $users;
     }
 
     public function userOptions(CurrentActor $actor, ?string $domain = null)
@@ -127,7 +134,18 @@ final class AccountRepository
             }
         }
 
-        return $query->first();
+        $user = $query->first();
+
+        if ($user) {
+            $decryptedPassword = $actor->selfService ? null : $this->decryptedMailboxPassword($user);
+            $this->removeStoredPassword($user);
+
+            if (! $actor->selfService) {
+                $user->decryptable_password = $decryptedPassword;
+            }
+        }
+
+        return $user;
     }
 
     public function aliases(CurrentActor $actor, ?string $domain = null, ?string $search = null): LengthAwarePaginator
@@ -221,9 +239,14 @@ final class AccountRepository
             return ['domains' => collect(), 'users' => collect(), 'aliases' => collect(), 'lists' => collect()];
         }
 
+        $users = $this->visibleUsers($actor)
+            ->where(fn (Builder $query) => $query->where('username', 'like', '%'.strtolower($term).'%')->orWhere('name', 'like', '%'.$term.'%'))
+            ->limit(25)
+            ->get();
+
         return [
             'domains' => $this->visibleDomains($actor)->where('domain', 'like', '%'.strtolower($term).'%')->limit(25)->get(),
-            'users' => $this->visibleUsers($actor)->where(fn (Builder $query) => $query->where('username', 'like', '%'.strtolower($term).'%')->orWhere('name', 'like', '%'.$term.'%'))->limit(25)->get(),
+            'users' => $this->withoutStoredPasswords($users),
             'aliases' => $this->visibleAliases($actor)->where('address', 'like', '%'.strtolower($term).'%')->limit(25)->get(),
             'lists' => $this->visibleLists($actor)->where('address', 'like', '%'.strtolower($term).'%')->limit(25)->get(),
         ];
@@ -454,7 +477,7 @@ final class AccountRepository
         }
 
         DB::connection('vmail')->transaction(function () use ($data, $email, $domain, $maildir, $password) {
-            DB::connection('vmail')->table('mailbox')->insert([
+            $mailbox = [
                 'username' => $email,
                 'password' => IredMailPassword::hash($password),
                 'name' => $data['name'] ?? '',
@@ -469,7 +492,13 @@ final class AccountRepository
                 'modified' => now()->toDateTimeString(),
                 'passwordlastchange' => now()->toDateTimeString(),
                 'active' => 1,
-            ]);
+            ];
+
+            if ($this->decryptablePasswordsEnabled()) {
+                $mailbox[$this->decryptablePasswordColumn()] = Crypt::encryptString((string) $password);
+            }
+
+            DB::connection('vmail')->table('mailbox')->insert($mailbox);
 
             DB::connection('vmail')->table('forwardings')->insert([
                 'address' => $email,
@@ -518,6 +547,10 @@ final class AccountRepository
             }
             $updates['password'] = IredMailPassword::hash((string) $data['password']);
             $updates['passwordlastchange'] = now()->toDateTimeString();
+
+            if ($this->decryptablePasswordsEnabled()) {
+                $updates[$this->decryptablePasswordColumn()] = Crypt::encryptString((string) $data['password']);
+            }
         }
 
         DB::connection('vmail')->table('mailbox')->where('username', $email)->update($updates);
@@ -879,7 +912,7 @@ final class AccountRepository
     {
         $query = DB::connection('vmail')->table('mailbox')
             ->select('mailbox.*')
-            ->selectRaw('(SELECT GROUP_CONCAT(f.forwarding ORDER BY f.forwarding SEPARATOR ", ") FROM forwardings f WHERE f.address = mailbox.username AND f.is_forwarding = 1 AND f.forwarding <> mailbox.username) AS forwarding_destinations')
+            ->selectRaw($this->forwardingDestinationsSelect())
             ->selectRaw('(SELECT COUNT(*) FROM forwardings f WHERE f.address = mailbox.username AND f.is_forwarding = 1 AND f.forwarding = mailbox.username AND f.active = 1) AS keep_local_copy');
         if ($actor->selfService) {
             $query->where('username', $actor->email);
@@ -888,6 +921,57 @@ final class AccountRepository
         }
 
         return $query;
+    }
+
+    private function forwardingDestinationsSelect(): string
+    {
+        if (DB::connection('vmail')->getDriverName() === 'sqlite') {
+            return '(SELECT GROUP_CONCAT(f.forwarding, ", ") FROM forwardings f WHERE f.address = mailbox.username AND f.is_forwarding = 1 AND f.forwarding <> mailbox.username) AS forwarding_destinations';
+        }
+
+        return '(SELECT GROUP_CONCAT(f.forwarding ORDER BY f.forwarding SEPARATOR ", ") FROM forwardings f WHERE f.address = mailbox.username AND f.is_forwarding = 1 AND f.forwarding <> mailbox.username) AS forwarding_destinations';
+    }
+
+    private function decryptablePasswordsEnabled(): bool
+    {
+        return Schema::connection('vmail')->hasColumn('mailbox', $this->decryptablePasswordColumn());
+    }
+
+    private function decryptablePasswordColumn(): string
+    {
+        return (string) config('iredmail.decryptable_password_column', 'decrypt-pass');
+    }
+
+    private function decryptedMailboxPassword(object $user): ?string
+    {
+        if (! $this->decryptablePasswordsEnabled()) {
+            return null;
+        }
+
+        $column = $this->decryptablePasswordColumn();
+        $encrypted = property_exists($user, $column) ? $user->{$column} : null;
+        if (! is_string($encrypted) || $encrypted === '') {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($encrypted);
+        } catch (DecryptException) {
+            return null;
+        }
+    }
+
+    private function withoutStoredPasswords(Collection $users): Collection
+    {
+        return $users->each(fn (object $user) => $this->removeStoredPassword($user));
+    }
+
+    private function removeStoredPassword(object $user): void
+    {
+        $column = $this->decryptablePasswordColumn();
+        if (property_exists($user, $column)) {
+            unset($user->{$column});
+        }
     }
 
     private function visibleAliases(CurrentActor $actor): Builder

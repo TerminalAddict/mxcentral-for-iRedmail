@@ -240,6 +240,39 @@
 </div>
 
 <div class="panel">
+    <h2>Decryptable Password Storage</h2>
+    <form method="post" action="{{ route('system.settings.decryptable-passwords.update') }}" class="record-form"
+        @if($settings['decryptable_passwords_enabled']) onsubmit="return this.querySelector('input[type=checkbox][name=enabled]').checked || confirm('Disable decryptable password storage and permanently remove all stored decryptable passwords?')" @endif>
+        @csrf
+        <div class="record-form__grid">
+            <label class="checkbox-field span-2">
+                <input type="hidden" name="enabled" value="0">
+                <input name="enabled" type="checkbox" value="1" @checked($settings['decryptable_passwords_enabled'])>
+                <span class="checkbox-field__body">
+                    <span class="checkbox-field__label">Store decryptable mailbox passwords</span>
+                    <span class="field-hint">Adds {{ $settings['decryptable_password_column'] }} to vmail.mailbox and encrypts new or changed passwords with this app's APP_KEY.</span>
+                </span>
+            </label>
+            <div class="span-2">
+                <strong>Current state</strong>
+                <span class="field-hint">{{ $settings['decryptable_passwords_enabled'] ? 'Enabled. Users with a stored encrypted password can show it from /users.' : 'Disabled. The decryptable password column is not present, and /users will not show the password field.' }}</span>
+            </div>
+            <div class="span-2">
+                <strong>Important limit</strong>
+                <span class="field-hint">Existing hashed passwords cannot be decrypted retrospectively. Only passwords entered while this is enabled can be stored for later display.</span>
+            </div>
+            <div class="span-2">
+                <strong>Disabling</strong>
+                <span class="field-hint">Turning this off drops the column from vmail.mailbox, removes stored decryptable passwords, and hides the show-password UI.</span>
+            </div>
+        </div>
+        <div class="record-form__footer">
+            <button>{{ $settings['decryptable_passwords_enabled'] ? 'Save password storage setting' : 'Enable password storage' }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="panel">
     <h2>iRedMail Upgrade Check</h2>
     <table class="summary-table">
         <thead><tr><th>Component</th><th>Installed</th><th>Latest</th><th>Status</th></tr></thead>

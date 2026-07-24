@@ -4,7 +4,9 @@ namespace App\Services\IredMail;
 
 use App\Support\IredMailAddress;
 use Closure;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\Process\Process;
 
@@ -64,8 +66,42 @@ final class SystemSettingsService
             'sogo_template_target_readable' => is_readable($this->sogoTemplateTarget()),
             'sogo_template_target_writable' => $this->sogoTemplateTargetWritable(),
             'sogo_reload_command_configured' => $this->sogoReloadCommand() !== '',
+            'decryptable_passwords_enabled' => $this->decryptablePasswordsEnabled(),
+            'decryptable_password_column' => $this->decryptablePasswordColumn(),
             'hosted_mailboxes' => $this->hostedMailboxes(),
             'hosted_domains' => $this->hostedDomains(),
+        ];
+    }
+
+    public function saveDecryptablePasswords(CurrentActor $actor, bool $enabled): array
+    {
+        abort_unless($actor->globalAdmin, 403);
+
+        $wasEnabled = $this->decryptablePasswordsEnabled();
+        if ($enabled === $wasEnabled) {
+            return [
+                'changed' => false,
+                'enabled' => $enabled,
+            ];
+        }
+
+        $column = $this->decryptablePasswordColumn();
+
+        if ($enabled) {
+            Schema::connection('vmail')->table('mailbox', function (Blueprint $table) use ($column): void {
+                $table->text($column)->nullable();
+            });
+        } else {
+            Schema::connection('vmail')->table('mailbox', function (Blueprint $table) use ($column): void {
+                $table->dropColumn($column);
+            });
+        }
+
+        $this->audit->log('update', ($enabled ? 'Enabled' : 'Disabled and removed').' decryptable mailbox password storage.');
+
+        return [
+            'changed' => true,
+            'enabled' => $enabled,
         ];
     }
 
@@ -256,6 +292,16 @@ final class SystemSettingsService
     private function settingsPath(): string
     {
         return (string) config('iredmail.iredapd_settings_path');
+    }
+
+    private function decryptablePasswordsEnabled(): bool
+    {
+        return Schema::connection('vmail')->hasColumn('mailbox', $this->decryptablePasswordColumn());
+    }
+
+    private function decryptablePasswordColumn(): string
+    {
+        return (string) config('iredmail.decryptable_password_column', 'decrypt-pass');
     }
 
     private function restartCommand(): string

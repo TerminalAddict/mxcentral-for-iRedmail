@@ -72,6 +72,15 @@
                 <label>Name<input name="name" value="{{ $selectedUser->name ?? '' }}"><span class="field-hint">Display name.</span></label>
                 <label>Quota MB<input name="quota" type="number" min="0" value="{{ $selectedUser->quota ?? 0 }}"><span class="field-hint">0 = unlimited mailbox quota.</span></label>
                 <label class="span-2">New password<input name="password" type="password" placeholder="Leave blank"><span class="field-hint">Leave blank to keep the current password.</span></label>
+                @if(!session('actor.self_service') && !empty($selectedUser->decryptable_password))
+                    <label class="span-2 decryptable-password-field">Stored password
+                        <span class="password-toggle-row">
+                            <input value="{{ $selectedUser->decryptable_password }}" type="password" readonly data-password-toggle-input>
+                            <button class="secondary" type="button" data-password-toggle>Show</button>
+                        </span>
+                        <span class="field-hint">This value exists only because the password was created or changed while decryptable password storage was enabled.</span>
+                    </label>
+                @endif
                 @unless(session('actor.self_service'))
                     <label class="checkbox-field">
                         <input type="hidden" name="active" value="0"><input name="active" type="checkbox" value="1" @checked($selectedUser->active ?? false)>
@@ -156,4 +165,18 @@
     </tbody>
 </table>
 <div class="pagination">{{ $rows->links() }}</div>
+<script>
+    (() => {
+        document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+            const input = button.closest('.password-toggle-row')?.querySelector('[data-password-toggle-input]');
+            if (!input) return;
+
+            button.addEventListener('click', () => {
+                const hidden = input.type === 'password';
+                input.type = hidden ? 'text' : 'password';
+                button.textContent = hidden ? 'Hide' : 'Show';
+            });
+        });
+    })();
+</script>
 @endsection

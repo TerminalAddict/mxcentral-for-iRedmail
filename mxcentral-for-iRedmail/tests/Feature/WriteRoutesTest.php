@@ -35,6 +35,7 @@ final class WriteRoutesTest extends TestCase
             'system.settings.unauthenticated.update',
             'system.settings.discard.update',
             'system.settings.sogo.update',
+            'system.settings.decryptable-passwords.update',
             'quarantine',
             'quarantine.delete',
             'quarantine.release',
