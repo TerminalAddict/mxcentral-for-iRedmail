@@ -306,6 +306,19 @@
         }
         tbody tr:last-child td { border-bottom: 0; }
         td form + form { margin-top: 8px; }
+        .sortable-heading {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: inherit;
+            text-decoration: none;
+        }
+        .sortable-heading:hover { color: var(--accent-strong); }
+        .sortable-heading__indicator {
+            min-width: 10px;
+            font-size: 0.78rem;
+            line-height: 1;
+        }
         .domain-summary-table th:nth-child(2),
         .domain-summary-table td:nth-child(2) { width: 190px; }
         .domain-summary-table th:nth-child(3),
@@ -329,6 +342,13 @@
             flex: 0 1 420px;
         }
         .search-compact input { min-width: 0; }
+        .search-compact select { min-width: 150px; }
+        .alias-filter {
+            flex: 0 1 720px;
+            flex-wrap: wrap;
+        }
+        .alias-filter input[type="search"] { flex: 1 1 260px; }
+        .alias-filter select { flex: 0 1 190px; }
         .domain-form { display: grid; gap: 16px; }
         .domain-form__grid {
             display: grid;

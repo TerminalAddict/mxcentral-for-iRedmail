@@ -1,14 +1,46 @@
 @extends('layouts.app')
 
 @section('content')
-@php($policies = ['public', 'domain', 'subdomain', 'membersonly', 'moderatorsonly', 'membersandmoderatorsonly'])
+@php
+    $policies = ['public', 'domain', 'subdomain', 'membersonly', 'moderatorsonly', 'membersandmoderatorsonly'];
+    $sortableColumns = [
+        'address' => 'Address',
+        'domain' => 'Domain',
+        'policy' => 'Policy',
+        'members' => 'Members',
+        'status' => 'Status',
+    ];
+    $currentSort = array_key_exists((string) request('sort'), $sortableColumns) ? request('sort') : 'address';
+    $currentDirection = request('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+    $sortUrl = function (string $column) use ($currentSort, $currentDirection): string {
+        $direction = $currentSort === $column && $currentDirection === 'asc' ? 'desc' : 'asc';
+
+        return route('aliases', array_merge(
+            request()->except(['page', 'sort', 'direction']),
+            ['sort' => $column, 'direction' => $direction],
+        ));
+    };
+    $sortIndicator = fn (string $column): string => $currentSort === $column
+        ? ($currentDirection === 'asc' ? '▲' : '▼')
+        : '';
+@endphp
 
 <div class="page-titlebar">
     <h1>Aliases</h1>
-    <form class="search-compact" method="get" action="{{ route('aliases') }}">
-        <input name="q" value="{{ request('q') }}" placeholder="Search aliases">
-        <input name="domain" value="{{ request('domain') }}" placeholder="Domain">
-        <button>Search</button>
+    <form class="search-compact alias-filter" method="get" action="{{ route('aliases') }}">
+        <input type="hidden" name="sort" value="{{ $currentSort }}">
+        <input type="hidden" name="direction" value="{{ $currentDirection }}">
+        <input type="search" name="q" value="{{ request('q') }}" placeholder="Address, name, policy, or member">
+        <select name="domain" aria-label="Filter by domain">
+            <option value="">All domains</option>
+            @foreach($domainOptions as $domain)
+                <option value="{{ $domain->domain }}" @selected(request('domain') === $domain->domain)>{{ $domain->domain }}</option>
+            @endforeach
+        </select>
+        <button>Filter</button>
+        @if(request('q') || request('domain'))
+            <a class="button secondary" href="{{ route('aliases', ['sort' => $currentSort, 'direction' => $currentDirection]) }}">Clear</a>
+        @endif
     </form>
 </div>
 
@@ -51,20 +83,6 @@
 
 <div class="panel">
     <h2>Edit Alias</h2>
-    <form method="get" action="{{ route('aliases') }}" class="record-selector-row">
-        @if(request('q'))<input type="hidden" name="q" value="{{ request('q') }}">@endif
-        @if(request('domain'))<input type="hidden" name="domain" value="{{ request('domain') }}">@endif
-        <label>Alias
-            <select name="edit">
-                @foreach($aliasOptions as $option)
-                    <option value="{{ $option->address }}" @selected(($selectedAlias->address ?? '') === $option->address)>{{ $option->address }}</option>
-                @endforeach
-            </select>
-            <span class="field-hint">Pick an alias to load its editable settings.</span>
-        </label>
-        <button class="secondary">Load</button>
-    </form>
-
     @if($selectedAlias)
         <form method="post" action="{{ route('aliases.update', $selectedAlias->address) }}" class="record-form">@csrf @method('patch')
             <div class="record-form__grid">
@@ -103,23 +121,41 @@
             <button class="danger">Delete alias</button>
         </form>
     @else
-        <p class="muted">Select an alias above to edit it.</p>
+        <p class="muted">Choose an alias from the paginated table below to edit it.</p>
     @endif
 </div>
 
 <table class="summary-table">
-    <thead><tr><th>Address</th><th>Domain</th><th>Policy</th><th>Members</th><th>Status</th></tr></thead>
-    <tbody>
-    @foreach($rows as $row)
+    <thead>
         <tr>
-            <td><a href="{{ route('aliases', array_filter(['edit' => $row->address, 'q' => request('q'), 'domain' => request('domain')])) }}">{{ $row->address }}</a></td>
+            @foreach($sortableColumns as $column => $label)
+                <th @if($currentSort === $column) aria-sort="{{ $currentDirection === 'asc' ? 'ascending' : 'descending' }}" @endif>
+                    <a class="sortable-heading" href="{{ $sortUrl($column) }}">
+                        {{ $label }}
+                        <span class="sortable-heading__indicator" aria-hidden="true">{{ $sortIndicator($column) }}</span>
+                    </a>
+                </th>
+            @endforeach
+        </tr>
+    </thead>
+    <tbody>
+    @forelse($rows as $row)
+        <tr>
+            <td><a href="{{ route('aliases', array_merge(request()->query(), ['edit' => $row->address])) }}">{{ $row->address }}</a></td>
             <td>{{ $row->domain }}</td>
             <td>{{ $row->accesspolicy ?? 'public' }}</td>
             <td>{{ $row->members ?? '' }}</td>
             <td class="{{ ($row->active ?? false) ? 'ok' : 'bad' }}">{{ ($row->active ?? false) ? 'Active' : 'Disabled' }}</td>
         </tr>
-    @endforeach
+    @empty
+        <tr><td colspan="5" class="muted">No aliases match the current filter.</td></tr>
+    @endforelse
     </tbody>
 </table>
-<div class="pagination">{{ $rows->links() }}</div>
+<div class="pagination">
+    @if($rows->total() > 0)
+        <p class="muted">Showing {{ $rows->firstItem() }}–{{ $rows->lastItem() }} of {{ $rows->total() }} aliases.</p>
+    @endif
+    {{ $rows->withQueryString()->links() }}
+</div>
 @endsection

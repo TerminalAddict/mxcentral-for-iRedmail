@@ -67,7 +67,13 @@ final class ApiController extends Controller
 
     public function aliases(Request $request, AccountRepository $accounts, CurrentActor $actor): array
     {
-        return ['data' => $accounts->aliases($actor, $request->query('domain'), $request->query('q'))];
+        return ['data' => $accounts->aliases(
+            $actor,
+            $request->query('domain'),
+            $request->query('q'),
+            $request->query('sort'),
+            $request->query('direction'),
+        )];
     }
 
     public function createAlias(Request $request, AccountRepository $accounts, CurrentActor $actor): array

@@ -46,9 +46,14 @@ final class AdminController extends Controller
     public function aliases(Request $request, AccountRepository $accounts, CurrentActor $actor)
     {
         return view('admin.aliases', [
-            'rows' => $accounts->aliases($actor, $request->query('domain'), $request->query('q')),
+            'rows' => $accounts->aliases(
+                $actor,
+                $request->query('domain'),
+                $request->query('q'),
+                $request->query('sort'),
+                $request->query('direction'),
+            ),
             'domainOptions' => $accounts->domainOptions($actor),
-            'aliasOptions' => $accounts->aliasOptions($actor, $request->query('domain')),
             'selectedAlias' => $accounts->alias($actor, $request->query('edit')),
         ]);
     }

@@ -148,27 +148,48 @@ final class AccountRepository
         return $user;
     }
 
-    public function aliases(CurrentActor $actor, ?string $domain = null, ?string $search = null): LengthAwarePaginator
+    public function aliases(
+        CurrentActor $actor,
+        ?string $domain = null,
+        ?string $search = null,
+        ?string $sort = null,
+        ?string $direction = null,
+    ): LengthAwarePaginator
     {
         $query = $this->visibleAliases($actor);
         if ($domain) {
-            $query->where('domain', strtolower($domain));
-        }
-        if ($search) {
-            $query->where('address', 'like', '%'.strtolower($search).'%');
-        }
-
-        return $query->orderBy('address')->paginate(config('iredmail.page_size'));
-    }
-
-    public function aliasOptions(CurrentActor $actor, ?string $domain = null)
-    {
-        $query = $this->visibleAliases($actor)->select('alias.address', 'alias.domain');
-        if ($domain) {
             $query->where('alias.domain', strtolower($domain));
         }
+        if ($search) {
+            $term = '%'.strtolower(trim($search)).'%';
+            $query->where(function (Builder $query) use ($term): void {
+                $query->where('alias.address', 'like', $term)
+                    ->orWhere('alias.domain', 'like', $term)
+                    ->orWhere('alias.name', 'like', $term)
+                    ->orWhere('alias.accesspolicy', 'like', $term)
+                    ->orWhereExists(function (Builder $query) use ($term): void {
+                        $query->selectRaw('1')
+                            ->from('forwardings as searched_forwardings')
+                            ->whereColumn('searched_forwardings.address', 'alias.address')
+                            ->where('searched_forwardings.is_alias', 1)
+                            ->where('searched_forwardings.forwarding', 'like', $term);
+                    });
+            });
+        }
 
-        return $query->orderBy('alias.address')->get();
+        $sortColumn = match ($sort) {
+            'domain' => 'alias.domain',
+            'policy' => 'alias.accesspolicy',
+            'members' => 'members',
+            'status' => 'alias.active',
+            default => 'alias.address',
+        };
+        $sortDirection = strtolower((string) $direction) === 'desc' ? 'desc' : 'asc';
+
+        return $query
+            ->orderBy($sortColumn, $sortDirection)
+            ->orderBy('alias.address')
+            ->paginate(config('iredmail.page_size'));
     }
 
     public function alias(CurrentActor $actor, ?string $address = null)
@@ -978,12 +999,21 @@ final class AccountRepository
     {
         $query = DB::connection('vmail')->table('alias')
             ->select('alias.*')
-            ->selectRaw('(SELECT GROUP_CONCAT(f.forwarding ORDER BY f.forwarding SEPARATOR ", ") FROM forwardings f WHERE f.address = alias.address AND f.is_alias = 1) AS members');
+            ->selectRaw($this->aliasMembersSelect());
         if (! $actor->globalAdmin) {
             $query->whereIn('domain', $actor->domains ?: ['']);
         }
 
         return $query;
+    }
+
+    private function aliasMembersSelect(): string
+    {
+        if (DB::connection('vmail')->getDriverName() === 'sqlite') {
+            return '(SELECT GROUP_CONCAT(f.forwarding, ", ") FROM forwardings f WHERE f.address = alias.address AND f.is_alias = 1) AS members';
+        }
+
+        return '(SELECT GROUP_CONCAT(f.forwarding ORDER BY f.forwarding SEPARATOR ", ") FROM forwardings f WHERE f.address = alias.address AND f.is_alias = 1) AS members';
     }
 
     private function visibleLists(CurrentActor $actor): Builder
