@@ -12,6 +12,7 @@ final class WriteRoutesTest extends TestCase
         foreach ([
             'domains.create',
             'domains.update',
+            'domains.staging.update',
             'domains.alias-domains.create',
             'domains.alias-domains.delete',
             'domains.catch-all.create',

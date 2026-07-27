@@ -7,8 +7,10 @@ use App\Services\IredMail\AccountRepository;
 use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\DomainDkimService;
 use App\Services\IredMail\DomainDnsService;
+use App\Services\IredMail\SystemSettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 final class AdminController extends Controller
 {
@@ -17,9 +19,10 @@ final class AdminController extends Controller
         return view('admin.dashboard', ['stats' => $accounts->dashboard($actor)]);
     }
 
-    public function domains(Request $request, AccountRepository $accounts, CurrentActor $actor, DomainDkimService $dkim, DomainDnsService $dns)
+    public function domains(Request $request, AccountRepository $accounts, CurrentActor $actor, DomainDkimService $dkim, DomainDnsService $dns, SystemSettingsService $settings)
     {
         $selectedDomain = $accounts->domain($actor, $request->query('edit'));
+        $stagedDomains = array_fill_keys($settings->stagedDomains(), true);
 
         return view('admin.domains', [
             'rows' => $accounts->domains($actor, $request->query('q')),
@@ -28,6 +31,7 @@ final class AdminController extends Controller
             'aliasDomains' => $selectedDomain ? $accounts->aliasDomains($actor, $selectedDomain->domain) : collect(),
             'catchAllDestinations' => $selectedDomain ? $accounts->catchAllDestinations($actor, $selectedDomain->domain) : collect(),
             'backupMxPrimaryIp' => $accounts->backupMxPrimaryIp($selectedDomain),
+            'stagedDomains' => $stagedDomains,
             'dkimStatus' => $selectedDomain ? $dkim->status($actor, $selectedDomain->domain) : null,
             'dnsStatus' => $selectedDomain ? $dns->status($actor, $selectedDomain->domain) : null,
         ]);
@@ -81,11 +85,20 @@ final class AdminController extends Controller
         return view('admin.search', ['results' => $accounts->search($actor, (string) $request->query('q')), 'term' => $request->query('q')]);
     }
 
-    public function createDomain(Request $request, AccountRepository $accounts, CurrentActor $actor)
+    public function createDomain(Request $request, AccountRepository $accounts, SystemSettingsService $settings, CurrentActor $actor)
     {
-        $accounts->createDomain($actor, $request->all());
+        $staging = $request->boolean('staging');
+        $data = $request->all();
+        $data['_defer_activation'] = $staging;
+        $domain = $accounts->createDomain($actor, $data);
 
-        return back()->with('status', 'Domain created.');
+        if ($staging) {
+            $result = $settings->saveDomainStaging($actor, $domain, true);
+            $this->ensureStagingReloadSucceeded($result, "Domain {$domain} was created disabled, but staging could not be activated");
+            $accounts->activateStagedDomain($actor, $domain);
+        }
+
+        return back()->with('status', $staging ? 'Domain created in staging mode. Accounts can log in, but inbound mail is temporarily rejected.' : 'Domain created.');
     }
 
     public function updateDomain(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
@@ -95,18 +108,31 @@ final class AdminController extends Controller
         return back()->with('status', 'Domain updated.');
     }
 
-    public function createAliasDomain(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
+    public function createAliasDomain(Request $request, AccountRepository $accounts, SystemSettingsService $settings, CurrentActor $actor, string $domain)
     {
         $accounts->createAliasDomain($actor, $domain, $request->all());
+        $this->ensureStagingReloadSucceeded($settings->refreshStagingDomains(), 'Alias domain was created, but the staging map could not be refreshed');
 
         return back()->with('status', 'Alias domain added.');
     }
 
-    public function deleteAliasDomain(AccountRepository $accounts, CurrentActor $actor, string $aliasDomain)
+    public function deleteAliasDomain(AccountRepository $accounts, SystemSettingsService $settings, CurrentActor $actor, string $aliasDomain)
     {
         $accounts->deleteAliasDomain($actor, $aliasDomain);
+        $this->ensureStagingReloadSucceeded($settings->refreshStagingDomains(), 'Alias domain was removed, but the staging map could not be refreshed');
 
         return back()->with('status', 'Alias domain removed.');
+    }
+
+    public function updateDomainStaging(Request $request, SystemSettingsService $settings, CurrentActor $actor, string $domain)
+    {
+        $enabled = $request->boolean('enabled');
+        $result = $settings->saveDomainStaging($actor, $domain, $enabled);
+        $this->ensureStagingReloadSucceeded($result, 'The staging state was saved, but Postfix could not apply it');
+
+        return back()->with('status', $enabled
+            ? "Domain {$result['domain']} is staged. Accounts remain active while inbound mail is temporarily rejected."
+            : "Domain {$result['domain']} is accepting inbound mail.");
     }
 
     public function createCatchAll(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
@@ -123,8 +149,15 @@ final class AdminController extends Controller
         return back()->with('status', 'Catch-all destination removed.');
     }
 
-    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, CurrentActor $actor, string $domain)
+    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, SystemSettingsService $settings, CurrentActor $actor, string $domain)
     {
+        if (in_array(strtolower($domain), $settings->stagedDomains(), true)) {
+            $this->ensureStagingReloadSucceeded(
+                $settings->saveDomainStaging($actor, $domain, false),
+                'The domain is staged and could not be removed safely from the Postfix staging map',
+            );
+        }
+
         $dkimCleanup = $dkim->cleanupRemovedDomain($actor, $domain);
         $accounts->deleteDomain($actor, $domain, (int) $request->input('keep_days', 0));
 
@@ -266,6 +299,15 @@ final class AdminController extends Controller
     public function exportAdminStats(AccountRepository $accounts, CurrentActor $actor): Response
     {
         return $this->csv('admin-statistics.csv', $accounts->exportAdminStats($actor));
+    }
+
+    private function ensureStagingReloadSucceeded(array $result, string $message): void
+    {
+        if (! ($result['reload']['ok'] ?? false)) {
+            throw ValidationException::withMessages([
+                'staging' => $message.': '.($result['reload']['message'] ?? 'unknown Postfix reload error'),
+            ]);
+        }
     }
 
     private function csv(string $filename, array $rows): Response

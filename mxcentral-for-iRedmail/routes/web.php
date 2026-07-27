@@ -27,6 +27,7 @@ Route::middleware('iredmail.auth:admin')->group(function () {
     Route::get('/domains', [AdminController::class, 'domains'])->name('domains');
     Route::post('/domains', [AdminController::class, 'createDomain'])->name('domains.create');
     Route::patch('/domains/{domain}', [AdminController::class, 'updateDomain'])->where('domain', '.*')->name('domains.update');
+    Route::post('/domains/{domain}/staging', [AdminController::class, 'updateDomainStaging'])->where('domain', '.*')->middleware('iredmail.auth:global')->name('domains.staging.update');
     Route::post('/domains/{domain}/alias-domains', [AdminController::class, 'createAliasDomain'])->where('domain', '.*')->name('domains.alias-domains.create');
     Route::delete('/alias-domains/{aliasDomain}', [AdminController::class, 'deleteAliasDomain'])->where('aliasDomain', '.*')->name('domains.alias-domains.delete');
     Route::post('/domains/{domain}/catch-all', [AdminController::class, 'createCatchAll'])->where('domain', '.*')->name('domains.catch-all.create');
@@ -77,6 +78,7 @@ Route::prefix('api')->middleware('iredmail.auth')->group(function () {
     Route::get('/domains', [ApiController::class, 'domains'])->middleware('iredmail.auth:admin');
     Route::post('/domains', [ApiController::class, 'createDomain'])->middleware('iredmail.auth:admin');
     Route::patch('/domains/{domain}', [ApiController::class, 'updateDomain'])->where('domain', '.*')->middleware('iredmail.auth:admin');
+    Route::post('/domains/{domain}/staging', [ApiController::class, 'updateDomainStaging'])->where('domain', '.*')->middleware('iredmail.auth:global');
     Route::delete('/domains/{domain}', [ApiController::class, 'deleteDomain'])->where('domain', '.*')->middleware('iredmail.auth:admin');
     Route::get('/users', [ApiController::class, 'users']);
     Route::post('/users', [ApiController::class, 'createUser'])->middleware('iredmail.auth:admin');

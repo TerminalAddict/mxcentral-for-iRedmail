@@ -178,7 +178,7 @@
             <div>
                 <strong>Postfix hook</strong>
                 <span class="field-hint">
-                    {{ $settings['postfix_recipient_access_configured'] ? 'Detected in main.cf.' : 'Not detected in main.cf.' }}
+                    {{ $settings['postfix_recipient_access_configured'] ? 'Detected in main.cf.' : 'Not detected yet; MXCentral will install it when this form is saved.' }}
                     Main config: {{ $settings['postfix_main_cf_path'] }}.
                 </span>
             </div>
@@ -191,6 +191,7 @@
             </div>
         </div>
         <div class="record-form__footer">
+            <span class="field-hint">Saving manages the map, main.cf hook, postmap rebuild, and Postfix reload as one application operation.</span>
             <button>Save discard recipients</button>
         </div>
     </form>
@@ -377,7 +378,7 @@
         </div>
         <div class="span-2">
             <strong>Postfix discard setup</strong>
-            <span class="field-hint">Add check_recipient_access hash:/etc/postfix/discard_recipients to smtpd_recipient_restrictions before using the discard list.</span>
+            <span class="field-hint">MXCentral installs and maintains check_recipient_access hash:/etc/postfix/discard_recipients in smtpd_recipient_restrictions when the discard list is saved.</span>
         </div>
         <div class="span-2">
             <strong>Sender mismatch setup</strong>
@@ -385,11 +386,11 @@
         </div>
         <div class="span-2">
             <strong>Unauthenticated sender setup</strong>
-            <span class="field-hint">Add check_sender_access pcre:/etc/postfix/sender_access.pcre to smtpd_sender_restrictions if it is not already present.</span>
+            <span class="field-hint">MXCentral installs and maintains check_sender_access pcre:/etc/postfix/sender_access.pcre when unauthenticated sender settings are saved.</span>
         </div>
         <div class="span-2">
             <strong>Postfix commands</strong>
-            <span class="field-hint">Set POSTFIX_POSTMAP_COMMAND to a narrow postmap command and POSTFIX_RELOAD_COMMAND to a narrow Postfix reload command.</span>
+            <span class="field-hint">MXCentral uses the bundled narrow sudo defaults for postmap and Postfix reload. Environment values can override them for hosts with different command paths.</span>
         </div>
         <div class="span-2">
             <strong>SOGo template override</strong>

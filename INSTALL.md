@@ -214,6 +214,7 @@ FAIL2BAN_UNBAN_COMMAND="/usr/bin/sudo /usr/bin/fail2ban-client unban"
 POSTFIX_MAIN_CF_PATH=/etc/postfix/main.cf
 POSTFIX_SENDER_ACCESS_PATH=/etc/postfix/sender_access.pcre
 POSTFIX_DISCARD_RECIPIENTS_PATH=/etc/postfix/discard_recipients
+POSTFIX_STAGING_DOMAINS_PATH=/etc/postfix/mxcentral_staging_domains.pcre
 POSTFIX_POSTMAP_COMMAND="/usr/bin/sudo /usr/sbin/postmap"
 POSTFIX_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl reload postfix.service"
 
@@ -431,11 +432,34 @@ The UI accepts exact IPs and IPv4 CIDRs. Examples:
 
 ### Discard Recipients
 
-The app writes `/etc/postfix/discard_recipients`, runs postmap, and reloads Postfix. `main.cf` must include:
+When the discard form is saved, the app writes
+`/etc/postfix/discard_recipients`, ensures `main.cf` contains:
 
 ```text
 check_recipient_access hash:/etc/postfix/discard_recipients
 ```
+
+It then runs postmap and reloads Postfix through the fixed commands in the
+bundled sudoers include. No separate manual `main.cf`, postmap, or reload step
+is required after the base MXCentral permissions have been installed.
+
+### Staging Domains
+
+Domain staging is controlled from `/domains`. MXCentral creates and maintains
+`/etc/postfix/mxcentral_staging_domains.pcre`, installs its recipient restriction
+before the discard map, and reloads Postfix through the existing fixed sudo
+command.
+
+The map returns a temporary SMTP 450 response for staged primary and alias
+domains. The corresponding `vmail.domain` and `vmail.mailbox` records remain
+active so administrators can create accounts, authenticate, and migrate mail.
+Switching to **Accepting mail** removes the domain patterns and reloads Postfix;
+it does not change public DNS.
+
+The standard installer already grants `www-data` narrow ACL access to
+`/etc/postfix` and grants the fixed Postfix reload command. The staging PCRE map
+does not use postmap, so deploying this feature does not require reinstalling
+the sudoers file.
 
 ### Backup MX
 

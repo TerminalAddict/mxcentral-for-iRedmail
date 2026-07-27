@@ -48,7 +48,7 @@ final class SystemSettingsController extends Controller
         $result = $settings->saveDiscardRecipients($actor, $request->input('discard_recipients', []));
 
         if (! $result['postmap']['configured']) {
-            return back()->with('status', 'Discard recipients saved. Postmap is not configured, so run postmap and reload Postfix manually.');
+            return back()->withErrors(['postmap' => 'Discard recipients were saved, but MXCentral has no postmap command configured and could not activate the map.']);
         }
 
         if (! $result['postmap']['ok']) {
@@ -56,14 +56,16 @@ final class SystemSettingsController extends Controller
         }
 
         if (! $result['reload']['configured']) {
-            return back()->with('status', 'Discard recipients saved and postmap completed. Postfix reload is not configured, so reload Postfix manually.');
+            return back()->withErrors(['reload' => 'Discard recipients and the Postfix map were updated, but MXCentral has no Postfix reload command configured.']);
         }
 
         if (! $result['reload']['ok']) {
             return back()->withErrors(['reload' => 'Discard recipients saved and postmap completed, but Postfix reload failed: '.$result['reload']['message']]);
         }
 
-        return back()->with('status', 'Discard recipients saved, postmap completed, and Postfix reloaded.');
+        $hook = $result['postfix_hook']['changed'] ? ' Postfix recipient access was installed in main.cf.' : '';
+
+        return back()->with('status', 'Discard recipients saved, postmap completed, and Postfix reloaded.'.$hook);
     }
 
     public function updateUnauthenticatedSenders(Request $request, SystemSettingsService $settings, CurrentActor $actor)

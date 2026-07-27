@@ -211,6 +211,7 @@
         .muted { color: var(--muted); }
         .ok { color: var(--success); font-weight: 800; }
         .bad { color: var(--danger); font-weight: 800; }
+        .warning { color: var(--warning); font-weight: 800; }
 
         .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
         .toolbar form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0; }

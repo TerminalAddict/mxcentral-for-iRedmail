@@ -273,7 +273,7 @@ final class AccountRepository
         ];
     }
 
-    public function createDomain(CurrentActor $actor, array $data): void
+    public function createDomain(CurrentActor $actor, array $data): string
     {
         abort_unless($actor->globalAdmin, 403);
         $domain = IredMailAddress::domain($data['domain'] ?? '');
@@ -298,10 +298,23 @@ final class AccountRepository
             'backupmx' => (int) $backupMx,
             'created' => now()->toDateTimeString(),
             'modified' => now()->toDateTimeString(),
-            'active' => 1,
+            'active' => empty($data['_defer_activation']) ? 1 : 0,
         ]);
 
         $this->audit->log('create', "Created domain {$domain}.", $domain);
+
+        return $domain;
+    }
+
+    public function activateStagedDomain(CurrentActor $actor, string $domain): void
+    {
+        $domain = IredMailAddress::domain($domain) ?? abort(404);
+        abort_unless($actor->globalAdmin, 403);
+
+        DB::connection('vmail')->table('domain')->where('domain', $domain)->update([
+            'active' => 1,
+            'modified' => now()->toDateTimeString(),
+        ]);
     }
 
     public function updateDomain(CurrentActor $actor, string $domain, array $data): void

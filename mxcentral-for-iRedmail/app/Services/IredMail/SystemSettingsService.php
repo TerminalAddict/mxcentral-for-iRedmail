@@ -19,6 +19,7 @@ final class SystemSettingsService
     private const SENDER_ACCESS_BEGIN_MARKER = '# BEGIN mxcentral managed: unauthenticated senders';
     private const SENDER_ACCESS_END_MARKER = '# END mxcentral managed: unauthenticated senders';
     private const SENDER_MISMATCH_PLUGIN = 'reject_sender_login_mismatch';
+    private const STAGED_PRIMARY_MARKER = '# MXCentral staged primary domain: ';
 
     public function __construct(private readonly AuditLogger $audit)
     {
@@ -276,16 +277,100 @@ final class SystemSettingsService
             }
 
             $postmap = $this->runPostmap($path);
-            $reload = $postmap['ok'] ? $this->reloadPostfix() : ['configured' => $this->postfixReloadCommand() !== '', 'ok' => false, 'message' => 'Skipped because postmap failed or is not configured.'];
+            $postfixHook = $postmap['ok']
+                ? $this->ensurePostfixRecipientAccessHook()
+                : ['changed' => false, 'path' => $this->postfixMainCfPath(), 'message' => 'Skipped because postmap failed or is not configured.'];
+            $reload = $postmap['ok']
+                ? $this->reloadPostfix()
+                : ['configured' => $this->postfixReloadCommand() !== '', 'ok' => false, 'message' => 'Skipped because postmap failed or is not configured.'];
 
             $this->audit->log('update', 'Updated Postfix discard recipients: '.implode(', ', $recipients).'.');
 
             return [
                 'changed' => $updated !== $original,
+                'postfix_hook' => $postfixHook,
                 'postmap' => $postmap,
                 'reload' => $reload,
                 'recipients' => $recipients,
             ];
+        });
+    }
+
+    public function stagedDomains(): array
+    {
+        $path = $this->postfixStagingDomainsPath();
+        if (! is_file($path) || ! is_readable($path)) {
+            return [];
+        }
+
+        preg_match_all(
+            '/^'.preg_quote(self::STAGED_PRIMARY_MARKER, '/').'([^\s#]+)\s*$/m',
+            (string) file_get_contents($path),
+            $matches,
+        );
+
+        $domains = [];
+        foreach ($matches[1] ?? [] as $value) {
+            $domain = IredMailAddress::domain((string) $value);
+            if ($domain) {
+                $domains[] = $domain;
+            }
+        }
+
+        sort($domains);
+
+        return array_values(array_unique($domains));
+    }
+
+    public function saveDomainStaging(CurrentActor $actor, string $domain, bool $enabled): array
+    {
+        abort_unless($actor->globalAdmin, 403);
+
+        $domain = IredMailAddress::domain($domain) ?? abort(404);
+        abort_unless(DB::connection('vmail')->table('domain')->where('domain', $domain)->exists(), 404);
+
+        return $this->withFileLock($this->postfixStagingDomainsPath(), function () use ($domain, $enabled) {
+            $stagedDomains = $this->stagedDomains();
+            $wasEnabled = in_array($domain, $stagedDomains, true);
+
+            if ($enabled && ! $wasEnabled) {
+                $stagedDomains[] = $domain;
+            } elseif (! $enabled && $wasEnabled) {
+                $stagedDomains = array_values(array_diff($stagedDomains, [$domain]));
+            }
+
+            $result = $this->persistStagingDomains($stagedDomains, true);
+            if ($enabled !== $wasEnabled) {
+                $this->audit->log(
+                    'update',
+                    ($enabled ? 'Staged' : 'Activated incoming mail for')." domain {$domain}.",
+                    $domain,
+                );
+            }
+
+            return array_merge($result, [
+                'domain' => $domain,
+                'enabled' => $enabled,
+                'state_changed' => $enabled !== $wasEnabled,
+            ]);
+        });
+    }
+
+    public function refreshStagingDomains(): array
+    {
+        return $this->withFileLock($this->postfixStagingDomainsPath(), function () {
+            $hostedDomains = DB::connection('vmail')->table('domain')->pluck('domain')->all();
+            $stagedDomains = array_values(array_intersect($this->stagedDomains(), $hostedDomains));
+
+            if ($stagedDomains === [] && ! is_file($this->postfixStagingDomainsPath())) {
+                return [
+                    'changed' => false,
+                    'reload' => ['configured' => true, 'ok' => true, 'message' => 'No staged domains configured.'],
+                    'domains' => [],
+                ];
+            }
+
+            return $this->persistStagingDomains($stagedDomains);
         });
     }
 
@@ -532,14 +617,19 @@ final class SystemSettingsService
         return (string) config('iredmail.postfix_sender_access_path');
     }
 
+    private function postfixStagingDomainsPath(): string
+    {
+        return (string) config('iredmail.postfix_staging_domains_path');
+    }
+
     private function postmapCommand(): string
     {
-        return trim((string) config('iredmail.postfix_postmap_command'));
+        return trim((string) config('iredmail.postfix_postmap_command')) ?: '/usr/bin/sudo /usr/sbin/postmap';
     }
 
     private function postfixReloadCommand(): string
     {
-        return trim((string) config('iredmail.postfix_reload_command'));
+        return trim((string) config('iredmail.postfix_reload_command')) ?: '/usr/bin/sudo /usr/bin/systemctl reload postfix.service';
     }
 
     private function sogoTemplateSource(): string
@@ -638,6 +728,81 @@ final class SystemSettingsService
         return implode("\n", $lines)."\n";
     }
 
+    private function persistStagingDomains(array $stagedDomains, bool $forceReload = false): array
+    {
+        $stagedDomains = array_values(array_unique(array_filter(array_map(
+            fn (string $domain) => IredMailAddress::domain($domain),
+            $stagedDomains,
+        ))));
+        sort($stagedDomains);
+
+        $path = $this->postfixStagingDomainsPath();
+        $directory = dirname($path);
+        if (! is_dir($directory)) {
+            throw ValidationException::withMessages(['staging' => "Directory does not exist: {$directory}"]);
+        }
+
+        $original = is_file($path) ? (string) file_get_contents($path) : '';
+        $updated = $this->stagingDomainsContent($stagedDomains);
+        $mapChanged = $updated !== $original;
+
+        if ($mapChanged) {
+            if (is_file($path) && @copy($path, $path.'.bak') === false) {
+                throw ValidationException::withMessages(['staging' => "Cannot create backup {$path}.bak."]);
+            }
+            if (@file_put_contents($path, $updated, LOCK_EX) === false) {
+                throw ValidationException::withMessages(['staging' => "Cannot write {$path}. Check the MXCentral Postfix ACL permissions."]);
+            }
+        }
+
+        $postfixHook = $this->ensurePostfixStagingAccessHook();
+        $reload = ($mapChanged || $postfixHook['changed'] || $forceReload)
+            ? $this->reloadPostfix()
+            : ['configured' => true, 'ok' => true, 'message' => 'No Postfix staging change needed.'];
+
+        return [
+            'changed' => $mapChanged || $postfixHook['changed'],
+            'map_changed' => $mapChanged,
+            'path' => $path,
+            'postfix_hook' => $postfixHook,
+            'reload' => $reload,
+            'domains' => $stagedDomains,
+        ];
+    }
+
+    private function stagingDomainsContent(array $stagedDomains): string
+    {
+        $lines = [
+            '# Managed by MXCentral.',
+            '# Staged domains temporarily reject inbound recipients before message acceptance.',
+        ];
+
+        $aliasDomains = $stagedDomains === []
+            ? collect()
+            : DB::connection('vmail')->table('alias_domain')
+                ->whereIn('target_domain', $stagedDomains)
+                ->orderBy('alias_domain')
+                ->get(['alias_domain', 'target_domain']);
+
+        foreach ($stagedDomains as $domain) {
+            $lines[] = '';
+            $lines[] = self::STAGED_PRIMARY_MARKER.$domain;
+            $lines[] = $this->stagingDomainPattern($domain).' 450 4.2.0 Domain migration in progress; please try again later';
+
+            foreach ($aliasDomains->where('target_domain', $domain) as $aliasDomain) {
+                $lines[] = '# MXCentral staged alias domain: '.$aliasDomain->alias_domain;
+                $lines[] = $this->stagingDomainPattern((string) $aliasDomain->alias_domain).' 450 4.2.0 Domain migration in progress; please try again later';
+            }
+        }
+
+        return implode("\n", $lines)."\n";
+    }
+
+    private function stagingDomainPattern(string $domain): string
+    {
+        return '/@'.str_replace('/', '\\/', preg_quote($domain, '/')).'$/i';
+    }
+
     private function postfixRecipientAccessConfigured(): bool
     {
         $path = $this->postfixMainCfPath();
@@ -645,10 +810,9 @@ final class SystemSettingsService
             return false;
         }
 
-        $content = preg_replace('/\s+/', ' ', (string) file_get_contents($path));
         $map = 'check_recipient_access hash:'.$this->discardRecipientsPath();
 
-        return str_contains((string) $content, $map);
+        return $this->postfixConfigurationContains((string) file_get_contents($path), $map);
     }
 
     private function postfixSenderAccessConfigured(): bool
@@ -658,10 +822,9 @@ final class SystemSettingsService
             return false;
         }
 
-        $content = preg_replace('/\s+/', ' ', (string) file_get_contents($path));
         $map = 'check_sender_access pcre:'.$this->postfixSenderAccessPath();
 
-        return str_contains((string) $content, $map);
+        return $this->postfixConfigurationContains((string) file_get_contents($path), $map);
     }
 
     private function saveSenderAccessPcre(array $senders, array $networks): array
@@ -698,29 +861,62 @@ final class SystemSettingsService
 
     private function ensurePostfixSenderAccessHook(): array
     {
+        return $this->ensurePostfixAccessHook(
+            'smtpd_sender_restrictions',
+            'check_sender_access pcre:'.$this->postfixSenderAccessPath(),
+            'unauthenticated_senders',
+        );
+    }
+
+    private function ensurePostfixRecipientAccessHook(): array
+    {
+        return $this->ensurePostfixAccessHook(
+            'smtpd_recipient_restrictions',
+            'check_recipient_access hash:'.$this->discardRecipientsPath(),
+            'discard_recipients',
+            'check_recipient_access pcre:'.$this->postfixStagingDomainsPath(),
+        );
+    }
+
+    private function ensurePostfixStagingAccessHook(): array
+    {
+        return $this->ensurePostfixAccessHook(
+            'smtpd_recipient_restrictions',
+            'check_recipient_access pcre:'.$this->postfixStagingDomainsPath(),
+            'staging',
+        );
+    }
+
+    private function ensurePostfixAccessHook(
+        string $setting,
+        string $map,
+        string $validationKey,
+        ?string $insertAfter = null,
+    ): array
+    {
         $path = $this->postfixMainCfPath();
         if (! is_file($path) || ! is_readable($path)) {
-            throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot read {$path}."]);
+            throw ValidationException::withMessages([$validationKey => "Cannot read {$path}."]);
         }
 
-        return $this->withFileLock($path, function () use ($path) {
+        return $this->withFileLock($path, function () use ($path, $setting, $map, $validationKey, $insertAfter) {
             $original = (string) file_get_contents($path);
-            $updated = $this->addPostfixSenderAccessHook($original);
+            $updated = $this->addPostfixAccessHook($original, $setting, $map, $insertAfter);
 
             if ($updated === $original) {
                 return ['changed' => false, 'path' => $path];
             }
 
             if (! is_writable($path)) {
-                throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot write {$path}. Check file ownership or sudo helper permissions."]);
+                throw ValidationException::withMessages([$validationKey => "Cannot write {$path}. Check the MXCentral Postfix ACL permissions."]);
             }
 
             if (@copy($path, $path.'.bak') === false) {
-                throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot create backup {$path}.bak."]);
+                throw ValidationException::withMessages([$validationKey => "Cannot create backup {$path}.bak."]);
             }
 
             if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot write {$path}."]);
+                throw ValidationException::withMessages([$validationKey => "Cannot write {$path}."]);
             }
 
             return ['changed' => true, 'path' => $path];
@@ -729,8 +925,40 @@ final class SystemSettingsService
 
     private function addPostfixSenderAccessHook(string $content): string
     {
-        $map = 'check_sender_access pcre:'.$this->postfixSenderAccessPath();
-        if (str_contains((string) preg_replace('/\s+/', ' ', $content), $map)) {
+        return $this->addPostfixAccessHook(
+            $content,
+            'smtpd_sender_restrictions',
+            'check_sender_access pcre:'.$this->postfixSenderAccessPath(),
+        );
+    }
+
+    private function addPostfixRecipientAccessHook(string $content): string
+    {
+        return $this->addPostfixAccessHook(
+            $content,
+            'smtpd_recipient_restrictions',
+            'check_recipient_access hash:'.$this->discardRecipientsPath(),
+            'check_recipient_access pcre:'.$this->postfixStagingDomainsPath(),
+        );
+    }
+
+    private function addPostfixStagingAccessHook(string $content): string
+    {
+        return $this->addPostfixAccessHook(
+            $content,
+            'smtpd_recipient_restrictions',
+            'check_recipient_access pcre:'.$this->postfixStagingDomainsPath(),
+        );
+    }
+
+    private function addPostfixAccessHook(
+        string $content,
+        string $setting,
+        string $map,
+        ?string $insertAfter = null,
+    ): string
+    {
+        if ($insertAfter === null && $this->postfixConfigurationContains($content, $map)) {
             return $content;
         }
 
@@ -741,7 +969,7 @@ final class SystemSettingsService
 
         for ($index = 0; $index < count($lines); $index += 2) {
             $line = $lines[$index] ?? '';
-            if (! preg_match('/^\s*smtpd_sender_restrictions\s*=/', $line)) {
+            if (! preg_match('/^\s*'.preg_quote($setting, '/').'\s*=/', $line)) {
                 continue;
             }
 
@@ -751,16 +979,41 @@ final class SystemSettingsService
             }
 
             $block = implode('', array_slice($lines, $index, $end - $index));
-            $restrictions = $this->postfixRestrictionValues($block);
-            array_unshift($restrictions, $map);
-            $replacement = 'smtpd_sender_restrictions = '.implode(', ', array_values(array_unique($restrictions)))."\n";
+            $restrictions = $this->postfixRestrictionValues($block, $setting);
+            $updatedRestrictions = array_values(array_filter(
+                $restrictions,
+                fn (string $restriction) => $restriction !== $map,
+            ));
+
+            $insertAfterIndex = $insertAfter === null ? false : array_search($insertAfter, $updatedRestrictions, true);
+            if ($insertAfterIndex === false) {
+                array_unshift($updatedRestrictions, $map);
+            } else {
+                array_splice($updatedRestrictions, $insertAfterIndex + 1, 0, [$map]);
+            }
+
+            $updatedRestrictions = array_values(array_unique($updatedRestrictions));
+            if ($updatedRestrictions === $restrictions) {
+                return $content;
+            }
+
+            $replacement = $setting.' = '.implode(', ', $updatedRestrictions)."\n";
 
             return implode('', array_slice($lines, 0, $index))
                 .$replacement
                 .implode('', array_slice($lines, $end));
         }
 
-        return rtrim($content)."\n\nsmtpd_sender_restrictions = {$map}\n";
+        return rtrim($content)."\n\n{$setting} = {$map}\n";
+    }
+
+    private function postfixConfigurationContains(string $content, string $value): bool
+    {
+        $withoutComments = preg_replace('/^\s*#.*$/m', '', $content) ?? $content;
+        $withoutComments = preg_replace('/\s+#.*$/m', '', $withoutComments) ?? $withoutComments;
+        $normalized = preg_replace('/\s+/', ' ', $withoutComments) ?? $withoutComments;
+
+        return str_contains($normalized, $value);
     }
 
     private function replaceSenderAccessBlock(string $content, array $senders, array $networks): string
@@ -1086,9 +1339,9 @@ final class SystemSettingsService
         return $content;
     }
 
-    private function postfixRestrictionValues(string $block): array
+    private function postfixRestrictionValues(string $block, string $setting = 'smtpd_sender_restrictions'): array
     {
-        $value = preg_replace('/^\s*smtpd_sender_restrictions\s*=/m', '', $block, 1) ?? $block;
+        $value = preg_replace('/^\s*'.preg_quote($setting, '/').'\s*=/m', '', $block, 1) ?? $block;
         $value = preg_replace('/\s+#.*$/m', '', $value) ?? $value;
 
         $restrictions = [];

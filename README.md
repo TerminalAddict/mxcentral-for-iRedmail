@@ -317,7 +317,8 @@ no-reply@example.com DISCARD
 smtp@example.com DISCARD
 ```
 
-Postfix must include this restriction in `smtpd_recipient_restrictions`:
+When the form is saved, MXCentral automatically installs this restriction in
+`smtpd_recipient_restrictions`, rebuilds the hash map, and reloads Postfix:
 
 ```text
 check_recipient_access hash:/etc/postfix/discard_recipients
@@ -328,16 +329,44 @@ Environment:
 ```dotenv
 POSTFIX_MAIN_CF_PATH=/etc/postfix/main.cf
 POSTFIX_DISCARD_RECIPIENTS_PATH=/etc/postfix/discard_recipients
+POSTFIX_STAGING_DOMAINS_PATH=/etc/postfix/mxcentral_staging_domains.pcre
 POSTFIX_POSTMAP_COMMAND="/usr/bin/sudo /usr/sbin/postmap"
-POSTFIX_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl reload postfix"
+POSTFIX_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl reload postfix.service"
 ```
 
-Example sudoers rules:
+These commands have secure built-in defaults. Environment values are only
+needed when the host uses different binary paths or service names. The bundled
+sudoers include grants the corresponding fixed commands:
 
 ```sudoers
 www-data ALL=NOPASSWD: /usr/sbin/postmap /etc/postfix/discard_recipients
 www-data ALL=NOPASSWD: /usr/bin/systemctl reload postfix
 ```
+
+### Staging Domains During Migration
+
+Global admins can create a domain in staging mode or switch an existing domain
+between **Staging** and **Accepting mail** from `/domains`.
+
+Staging is independent from iRedMail's active flag:
+
+- `vmail.domain.active` and mailbox accounts remain active so users can
+  authenticate through IMAP, webmail, and migration tools.
+- MXCentral writes `/etc/postfix/mxcentral_staging_domains.pcre`.
+- Postfix temporarily rejects staged-domain recipients with
+  `450 4.2.0 Domain migration in progress; please try again later`.
+- Message content is not accepted, queued, or discarded on the new server.
+- Alias domains targeting a staged primary domain are included automatically.
+- MX records are never changed by MXCentral.
+
+MXCentral installs the staging recipient restriction before the silent-discard
+restriction, updates `main.cf`, and reloads Postfix through the existing narrow
+sudo command. The PCRE map does not require postmap. No additional sudoers rule
+is required beyond the standard MXCentral installation.
+
+The intended migration sequence is: create the staged domain and users, copy
+mail, test logins, select **Start accepting inbound mail**, change MX records,
+then perform final incremental synchronization while old DNS answers expire.
 
 ### SOGo Branding
 
@@ -398,6 +427,7 @@ If the `iredadmin` database has not been created yet, import the reference schem
 - Domain, user, alias, mailing list, and admin listings.
 - Domain, user, and alias creation.
 - Per-user service toggles.
+- Staged domain migrations with active user logins and temporary inbound SMTP rejection.
 - Optional global-admin-controlled decryptable mailbox password storage.
 - User deletion with deleted mailbox path logging.
 - Mail sent/received metadata views.

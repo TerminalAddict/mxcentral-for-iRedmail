@@ -29,6 +29,61 @@ final class SystemSettingsServiceTest extends TestCase
         $this->assertFalse($this->senderAccessBlockMatches($block, '103.123.168.0'));
     }
 
+    public function test_discard_recipient_hook_preserves_existing_restrictions_and_is_idempotent(): void
+    {
+        config(['iredmail.postfix_discard_recipients_path' => '/etc/postfix/discard_recipients']);
+        $original = "smtpd_recipient_restrictions = permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination\n";
+
+        $updated = $this->invokePrivate('addPostfixRecipientAccessHook', [$original]);
+
+        $this->assertStringContainsString('check_recipient_access hash:/etc/postfix/discard_recipients', $updated);
+        $this->assertStringContainsString('permit_mynetworks', $updated);
+        $this->assertStringContainsString('permit_sasl_authenticated', $updated);
+        $this->assertStringContainsString('reject_unauth_destination', $updated);
+        $this->assertSame($updated, $this->invokePrivate('addPostfixRecipientAccessHook', [$updated]));
+    }
+
+    public function test_commented_discard_hook_does_not_prevent_active_hook_installation(): void
+    {
+        config(['iredmail.postfix_discard_recipients_path' => '/etc/postfix/discard_recipients']);
+        $original = "# check_recipient_access hash:/etc/postfix/discard_recipients\nsmtpd_recipient_restrictions = reject_unauth_destination\n";
+
+        $updated = $this->invokePrivate('addPostfixRecipientAccessHook', [$original]);
+
+        $this->assertSame(2, substr_count($updated, 'check_recipient_access hash:/etc/postfix/discard_recipients'));
+        $this->assertStringContainsString(
+            'smtpd_recipient_restrictions = check_recipient_access hash:/etc/postfix/discard_recipients, reject_unauth_destination',
+            $updated,
+        );
+    }
+
+    public function test_discard_hook_is_kept_after_the_staging_hook(): void
+    {
+        config([
+            'iredmail.postfix_discard_recipients_path' => '/etc/postfix/discard_recipients',
+            'iredmail.postfix_staging_domains_path' => '/etc/postfix/mxcentral_staging_domains.pcre',
+        ]);
+        $original = 'smtpd_recipient_restrictions = check_recipient_access hash:/etc/postfix/discard_recipients, check_recipient_access pcre:/etc/postfix/mxcentral_staging_domains.pcre, reject_unauth_destination'."\n";
+
+        $updated = $this->invokePrivate('addPostfixRecipientAccessHook', [$original]);
+
+        $this->assertLessThan(
+            strpos($updated, 'check_recipient_access hash:/etc/postfix/discard_recipients'),
+            strpos($updated, 'check_recipient_access pcre:/etc/postfix/mxcentral_staging_domains.pcre'),
+        );
+    }
+
+    public function test_postfix_commands_use_narrow_sudo_defaults_when_environment_values_are_blank(): void
+    {
+        config([
+            'iredmail.postfix_postmap_command' => '',
+            'iredmail.postfix_reload_command' => '',
+        ]);
+
+        $this->assertSame('/usr/bin/sudo /usr/sbin/postmap', $this->invokePrivate('postmapCommand', []));
+        $this->assertSame('/usr/bin/sudo /usr/bin/systemctl reload postfix.service', $this->invokePrivate('postfixReloadCommand', []));
+    }
+
     /**
      * @param  array<int, mixed>  $arguments
      */

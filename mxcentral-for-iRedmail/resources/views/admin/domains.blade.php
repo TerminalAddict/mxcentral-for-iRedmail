@@ -29,6 +29,10 @@
                 <input name="backupmx" type="checkbox" value="1">
                 <span class="checkbox-field__body"><span class="checkbox-field__label">Backup MX</span><span class="field-hint">Accept and relay mail onward for this domain.</span></span>
             </label>
+            <label class="checkbox-field">
+                <input name="staging" type="checkbox" value="1">
+                <span class="checkbox-field__body"><span class="checkbox-field__label">Create in staging mode</span><span class="field-hint">Keep accounts active for login and migration while temporarily rejecting inbound mail.</span></span>
+            </label>
             <button>Create domain</button>
         </div>
     </form>
@@ -64,7 +68,7 @@
             <div class="domain-edit-actions">
                 <label class="checkbox-field">
                     <input type="hidden" name="active" value="0"><input name="active" type="checkbox" value="1" @checked($selectedDomain->active ?? false)>
-                    <span class="checkbox-field__body"><span class="checkbox-field__label">Active</span><span class="field-hint">Disable to stop this domain being treated as live.</span></span>
+                    <span class="checkbox-field__body"><span class="checkbox-field__label">Accounts active</span><span class="field-hint">Keep enabled during staging so users can authenticate through IMAP and webmail.</span></span>
                 </label>
                 <label class="checkbox-field">
                     <input name="backupmx" type="checkbox" value="1" @checked($selectedDomain->backupmx ?? false)>
@@ -73,6 +77,29 @@
                 <button class="secondary">Save changes</button>
             </div>
         </form>
+
+        @if(session('actor.global_admin'))
+            @php($selectedDomainIsStaged = isset($stagedDomains[$selectedDomain->domain]))
+            <div class="domain-dkim">
+                <div class="domain-dkim__header">
+                    <div>
+                        <h3>Incoming mail state</h3>
+                        @if($selectedDomainIsStaged)
+                            <p><span class="warning">Staging</span> — mailbox accounts remain active, but Postfix temporarily rejects inbound recipients with a 450 response before accepting message content.</p>
+                        @else
+                            <p><span class="ok">Accepting mail</span> — Postfix accepts normal inbound delivery for this domain.</p>
+                        @endif
+                    </div>
+                    <form method="post" action="{{ route('domains.staging.update', $selectedDomain->domain) }}"
+                        @unless($selectedDomainIsStaged) onsubmit="return confirm('Stage this domain and temporarily reject all inbound mail?')" @else onsubmit="return confirm('Start accepting inbound mail for this domain? Make sure migration is complete and you are ready for delivery.')" @endunless>
+                        @csrf
+                        <input type="hidden" name="enabled" value="{{ $selectedDomainIsStaged ? '0' : '1' }}">
+                        <button class="{{ $selectedDomainIsStaged ? '' : 'secondary' }}">{{ $selectedDomainIsStaged ? 'Start accepting inbound mail' : 'Stage inbound mail' }}</button>
+                    </form>
+                </div>
+                <p class="field-hint">This does not change MX records. MXCentral manages the Postfix staging map, recipient restriction, and reload automatically.</p>
+            </div>
+        @endif
 
         <div class="domain-dkim">
             <div class="domain-dkim__header">
@@ -299,6 +326,7 @@
             <td>User max {{ $row->maxquota ?? 0 }} MB · Domain {{ $row->quota ?? 0 }} MB</td>
             <td>
                 <span class="{{ ($row->active ?? 0) ? 'ok' : 'bad' }}">{{ ($row->active ?? 0) ? 'Active' : 'Disabled' }}</span>
+                @if(isset($stagedDomains[$row->domain]))<div class="warning">Staging inbound mail</div>@endif
                 @if($row->backupmx ?? false)<div class="muted">Backup MX</div>@endif
             </td>
         </tr>

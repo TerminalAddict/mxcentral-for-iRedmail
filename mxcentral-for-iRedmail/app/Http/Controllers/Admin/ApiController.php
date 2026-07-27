@@ -9,7 +9,9 @@ use App\Services\IredMail\DomainDkimService;
 use App\Services\IredMail\MailActivityRepository;
 use App\Services\IredMail\PolicyRepository;
 use App\Services\IredMail\SetupInspector;
+use App\Services\IredMail\SystemSettingsService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 final class ApiController extends Controller
 {
@@ -23,10 +25,20 @@ final class ApiController extends Controller
         return ['data' => $accounts->domains($actor, $request->query('q'))];
     }
 
-    public function createDomain(Request $request, AccountRepository $accounts, CurrentActor $actor): array
+    public function createDomain(Request $request, AccountRepository $accounts, SystemSettingsService $settings, CurrentActor $actor): array
     {
-        $accounts->createDomain($actor, $request->all());
-        return ['ok' => true];
+        $staging = $request->boolean('staging');
+        $data = $request->all();
+        $data['_defer_activation'] = $staging;
+        $domain = $accounts->createDomain($actor, $data);
+
+        if ($staging) {
+            $result = $settings->saveDomainStaging($actor, $domain, true);
+            $this->ensureStagingReloadSucceeded($result);
+            $accounts->activateStagedDomain($actor, $domain);
+        }
+
+        return ['ok' => true, 'staging' => $staging];
     }
 
     public function updateDomain(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain): array
@@ -35,8 +47,20 @@ final class ApiController extends Controller
         return ['ok' => true];
     }
 
-    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, CurrentActor $actor, string $domain): array
+    public function updateDomainStaging(Request $request, SystemSettingsService $settings, CurrentActor $actor, string $domain): array
     {
+        $result = $settings->saveDomainStaging($actor, $domain, $request->boolean('enabled'));
+        $this->ensureStagingReloadSucceeded($result);
+
+        return ['ok' => true, 'staging' => $result['enabled']];
+    }
+
+    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, SystemSettingsService $settings, CurrentActor $actor, string $domain): array
+    {
+        if (in_array(strtolower($domain), $settings->stagedDomains(), true)) {
+            $this->ensureStagingReloadSucceeded($settings->saveDomainStaging($actor, $domain, false));
+        }
+
         $dkim->cleanupRemovedDomain($actor, $domain);
         $accounts->deleteDomain($actor, $domain, (int) $request->input('keep_days', 0));
         return ['ok' => true];
@@ -149,5 +173,14 @@ final class ApiController extends Controller
     public function setup(SetupInspector $setup): array
     {
         return ['data' => $setup->report()];
+    }
+
+    private function ensureStagingReloadSucceeded(array $result): void
+    {
+        if (! ($result['reload']['ok'] ?? false)) {
+            throw ValidationException::withMessages([
+                'staging' => 'Postfix could not apply the staging change: '.($result['reload']['message'] ?? 'unknown reload error'),
+            ]);
+        }
     }
 }
