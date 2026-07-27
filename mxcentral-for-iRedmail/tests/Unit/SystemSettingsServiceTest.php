@@ -84,6 +84,66 @@ final class SystemSettingsServiceTest extends TestCase
         $this->assertSame('/usr/bin/sudo /usr/bin/systemctl reload postfix.service', $this->invokePrivate('postfixReloadCommand', []));
     }
 
+    public function test_sogo_login_colors_are_inserted_after_first_script_and_before_main_content_comment(): void
+    {
+        $template = <<<'WOX'
+<html>
+  <script type="text/javascript">
+    var language = 'en';
+  </script>
+
+  <!--
+      MAIN CONTENT ROW
+  -->
+  <img class="md-margin" src="default.svg">
+</html>
+WOX;
+
+        $updated = $this->invokePrivate('replaceSogoLoginColors', [$template, '#175f55', '#ffffff']);
+
+        $this->assertLessThan(strpos($updated, '.md-default-theme.md-accent.md-bg'), strpos($updated, '</script>'));
+        $this->assertLessThan(strpos($updated, 'MAIN CONTENT ROW'), strpos($updated, '#login *'));
+        $this->assertStringContainsString('background-color: #175f55 !important;', $updated);
+        $this->assertStringContainsString('color: #ffffff !important;', $updated);
+    }
+
+    public function test_sogo_login_color_block_is_updated_without_duplication(): void
+    {
+        $template = <<<'WOX'
+<html>
+  <script></script>
+  <!-- MAIN CONTENT ROW -->
+</html>
+WOX;
+        $first = $this->invokePrivate('replaceSogoLoginColors', [$template, '#175f55', '#ffffff']);
+        $updated = $this->invokePrivate('replaceSogoLoginColors', [$first, '#123456', '#abcdef']);
+        $colors = $this->invokePrivate('sogoLoginColorsFromContent', [$updated]);
+
+        $this->assertSame(['background' => '#123456', 'foreground' => '#abcdef'], $colors);
+        $this->assertSame(1, substr_count($updated, '.md-default-theme.md-accent.md-bg'));
+        $this->assertSame(1, substr_count($updated, '#login *'));
+    }
+
+    public function test_sogo_login_colors_replace_an_existing_unmanaged_style_block(): void
+    {
+        $template = <<<'WOX'
+<html>
+  <script></script>
+  <style type="text/css">
+  .md-default-theme.md-accent.md-bg { background-color: #000000 !important; }
+  #login * { color: #111111 !important; }
+  </style>
+  <!-- MAIN CONTENT ROW -->
+</html>
+WOX;
+
+        $updated = $this->invokePrivate('replaceSogoLoginColors', [$template, '#175f55', '#ffffff']);
+
+        $this->assertStringNotContainsString('#000000', $updated);
+        $this->assertStringNotContainsString('#111111', $updated);
+        $this->assertSame(1, substr_count($updated, '.md-default-theme.md-accent.md-bg'));
+    }
+
     /**
      * @param  array<int, mixed>  $arguments
      */

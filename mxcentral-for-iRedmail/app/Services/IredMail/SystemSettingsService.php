@@ -20,6 +20,10 @@ final class SystemSettingsService
     private const SENDER_ACCESS_END_MARKER = '# END mxcentral managed: unauthenticated senders';
     private const SENDER_MISMATCH_PLUGIN = 'reject_sender_login_mismatch';
     private const STAGED_PRIMARY_MARKER = '# MXCentral staged primary domain: ';
+    private const SOGO_BRANDING_BEGIN_MARKER = '<!-- BEGIN MXCentral managed SOGo login branding -->';
+    private const SOGO_BRANDING_END_MARKER = '<!-- END MXCentral managed SOGo login branding -->';
+    private const SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR = '#175f55';
+    private const SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR = '#ffffff';
 
     public function __construct(private readonly AuditLogger $audit)
     {
@@ -60,6 +64,8 @@ final class SystemSettingsService
             'postmap_command_configured' => $this->postmapCommand() !== '',
             'postfix_reload_command_configured' => $this->postfixReloadCommand() !== '',
             'sogo_logo_url' => $this->sogoLogoUrl(),
+            'sogo_login_background_color' => $this->sogoLoginColors()['background'],
+            'sogo_login_foreground_color' => $this->sogoLoginColors()['foreground'],
             'sogo_template_source' => $this->sogoTemplateSource(),
             'sogo_template_source_readable' => is_readable($this->sogoTemplateSource()),
             'sogo_template_target' => $this->sogoTemplateTarget(),
@@ -195,7 +201,12 @@ final class SystemSettingsService
         });
     }
 
-    public function saveSogoLogo(CurrentActor $actor, string $url): array
+    public function saveSogoLogo(
+        CurrentActor $actor,
+        string $url,
+        string $backgroundColor = self::SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR,
+        string $foregroundColor = self::SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR,
+    ): array
     {
         abort_unless($actor->globalAdmin, 403);
 
@@ -203,6 +214,8 @@ final class SystemSettingsService
         if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
             throw ValidationException::withMessages(['sogo_logo_url' => 'Enter a valid http or https image URL.']);
         }
+        $backgroundColor = $this->normalizeSogoColor($backgroundColor, 'sogo_login_background_color');
+        $foregroundColor = $this->normalizeSogoColor($foregroundColor, 'sogo_login_foreground_color');
 
         $source = $this->sogoTemplateSource();
         if (! is_file($source) || ! is_readable($source)) {
@@ -210,7 +223,7 @@ final class SystemSettingsService
         }
 
         $target = $this->sogoTemplateTarget();
-        return $this->withFileLock($target, function () use ($source, $target, $url) {
+        return $this->withFileLock($target, function () use ($source, $target, $url, $backgroundColor, $foregroundColor) {
             $directory = dirname($target);
             if (! is_dir($directory) && @mkdir($directory, 0755, true) === false) {
                 throw ValidationException::withMessages(['sogo_logo_url' => "Cannot create {$directory}."]);
@@ -228,6 +241,13 @@ final class SystemSettingsService
             if ($updated === $original && $this->sogoLogoUrlFromContent($original) !== $url) {
                 throw ValidationException::withMessages(['sogo_logo_url' => 'Could not find the SOGo logo image tag to update.']);
             }
+            $updated = $this->replaceSogoLoginColors($updated, $backgroundColor, $foregroundColor);
+            $colors = $this->sogoLoginColorsFromContent($updated);
+            if ($colors['background'] !== $backgroundColor || $colors['foreground'] !== $foregroundColor) {
+                throw ValidationException::withMessages([
+                    'sogo_login_background_color' => 'Could not insert the SOGo login colours after the first script block.',
+                ]);
+            }
 
             if ($updated !== $original) {
                 if (@copy($target, $target.'.bak') === false) {
@@ -239,12 +259,14 @@ final class SystemSettingsService
             }
 
             $reload = $this->reloadSogo();
-            $this->audit->log('update', "Updated SOGo logo URL to {$url}.");
+            $this->audit->log('update', "Updated SOGo branding: logo {$url}, login background {$backgroundColor}, login foreground {$foregroundColor}.");
 
             return [
                 'changed' => $updated !== $original,
                 'reload' => $reload,
                 'url' => $url,
+                'background_color' => $backgroundColor,
+                'foreground_color' => $foregroundColor,
             ];
         });
     }
@@ -1396,6 +1418,90 @@ final class SystemSettingsService
         }
 
         return null;
+    }
+
+    /**
+     * @return array{background: string, foreground: string}
+     */
+    private function sogoLoginColors(): array
+    {
+        $target = $this->sogoTemplateTarget();
+        if (! is_readable($target)) {
+            return [
+                'background' => self::SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR,
+                'foreground' => self::SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR,
+            ];
+        }
+
+        return $this->sogoLoginColorsFromContent((string) file_get_contents($target));
+    }
+
+    /**
+     * @return array{background: string, foreground: string}
+     */
+    private function sogoLoginColorsFromContent(string $content): array
+    {
+        $background = self::SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR;
+        $foreground = self::SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR;
+
+        if (preg_match('/\.md-default-theme\.md-accent\.md-bg\s*\{[^}]*\bbackground-color\s*:\s*(#[0-9a-f]{6})\s*!important\s*;?[^}]*\}/is', $content, $match)) {
+            $background = strtolower($match[1]);
+        }
+        if (preg_match('/#login\s+\*\s*\{[^}]*\bcolor\s*:\s*(#[0-9a-f]{6})\s*!important\s*;?[^}]*\}/is', $content, $match)) {
+            $foreground = strtolower($match[1]);
+        }
+
+        return ['background' => $background, 'foreground' => $foreground];
+    }
+
+    private function normalizeSogoColor(string $color, string $field): string
+    {
+        $color = strtolower(trim($color));
+        if (preg_match('/^#[0-9a-f]{6}$/', $color) !== 1) {
+            throw ValidationException::withMessages([$field => 'Choose a valid six-digit hex colour.']);
+        }
+
+        return $color;
+    }
+
+    private function replaceSogoLoginColors(string $content, string $backgroundColor, string $foregroundColor): string
+    {
+        $block = self::SOGO_BRANDING_BEGIN_MARKER."\n"
+            ."  <style type=\"text/css\">\n"
+            ."  .md-default-theme.md-accent.md-bg {\n"
+            ."    background-color: {$backgroundColor} !important;\n"
+            ."  }\n\n"
+            ."  #login * {\n"
+            ."    color: {$foregroundColor} !important;\n"
+            ."  }\n"
+            ."  </style>\n"
+            .self::SOGO_BRANDING_END_MARKER;
+
+        $managedPattern = '/'.preg_quote(self::SOGO_BRANDING_BEGIN_MARKER, '/').'.*?'.preg_quote(self::SOGO_BRANDING_END_MARKER, '/').'/s';
+        if (preg_match($managedPattern, $content)) {
+            return preg_replace($managedPattern, $block, $content, 1) ?? $content;
+        }
+
+        if (preg_match_all('/<style\b[^>]*>[\s\S]*?<\/style>/i', $content, $styleMatches, PREG_OFFSET_CAPTURE)) {
+            foreach ($styleMatches[0] as [$style, $offset]) {
+                if (preg_match('/\.md-default-theme\.md-accent\.md-bg\s*\{/i', $style)
+                    && preg_match('/#login\s+\*\s*\{/i', $style)) {
+                    return substr_replace($content, $block, $offset, strlen($style));
+                }
+            }
+        }
+
+        if (preg_match('/<\/script\s*>/i', $content, $scriptMatch, PREG_OFFSET_CAPTURE) !== 1) {
+            return $content;
+        }
+
+        $scriptEnd = $scriptMatch[0][1] + strlen($scriptMatch[0][0]);
+        if (preg_match('/<!--\s*MAIN CONTENT ROW/i', $content, $commentMatch, PREG_OFFSET_CAPTURE, $scriptEnd) !== 1) {
+            return $content;
+        }
+        $mainComment = $commentMatch[0][1];
+
+        return substr($content, 0, $scriptEnd)."\n\n".$block.substr($content, $scriptEnd, $mainComment - $scriptEnd).substr($content, $mainComment);
     }
 
     private function replaceSogoLogoUrl(string $content, string $url): string

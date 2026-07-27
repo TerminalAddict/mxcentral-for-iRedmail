@@ -99,17 +99,22 @@ final class SystemSettingsController extends Controller
 
     public function updateSogoLogo(Request $request, SystemSettingsService $settings, CurrentActor $actor)
     {
-        $result = $settings->saveSogoLogo($actor, (string) $request->input('sogo_logo_url', ''));
+        $result = $settings->saveSogoLogo(
+            $actor,
+            (string) $request->input('sogo_logo_url', ''),
+            (string) $request->input('sogo_login_background_color', ''),
+            (string) $request->input('sogo_login_foreground_color', ''),
+        );
 
         if (! $result['reload']['configured']) {
-            return back()->with('status', 'SOGo logo saved. Reload command is not configured, so reload SOGo manually if needed.');
+            return back()->with('status', 'SOGo branding saved. Reload command is not configured, so reload SOGo manually if needed.');
         }
 
         if (! $result['reload']['ok']) {
-            return back()->withErrors(['sogo_logo_url' => 'SOGo logo saved, but reload failed: '.$result['reload']['message']]);
+            return back()->withErrors(['sogo_logo_url' => 'SOGo branding saved, but reload failed: '.$result['reload']['message']]);
         }
 
-        return back()->with('status', 'SOGo logo saved and SOGo reloaded.');
+        return back()->with('status', 'SOGo branding saved and SOGo reloaded.');
     }
 
     public function updateDecryptablePasswords(Request $request, SystemSettingsService $settings, CurrentActor $actor)

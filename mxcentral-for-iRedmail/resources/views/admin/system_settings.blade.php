@@ -202,7 +202,7 @@
     <form method="post" action="{{ route('system.settings.sogo.update') }}" class="record-form">@csrf
         <div class="record-form__grid">
             <label class="span-3">Logo image URL
-                <input name="sogo_logo_url" type="url" value="{{ $settings['sogo_logo_url'] ?? '' }}" placeholder="https://static.example.com/logo.svg">
+                <input name="sogo_logo_url" type="url" value="{{ old('sogo_logo_url', $settings['sogo_logo_url'] ?? '') }}" placeholder="https://static.example.com/logo.svg">
                 <span class="field-hint">Hosted image URL to use on the SOGo login/root page. SVG, PNG, JPG, or WebP URLs are acceptable if the browser can load them.</span>
             </label>
             <div class="settings-image-preview">
@@ -215,6 +215,14 @@
                     @endif
                 </div>
             </div>
+            <label>Login background colour
+                <input name="sogo_login_background_color" type="color" value="{{ old('sogo_login_background_color', $settings['sogo_login_background_color']) }}">
+                <span class="field-hint">Background colour for the SOGo login page.</span>
+            </label>
+            <label>Login foreground colour
+                <input name="sogo_login_foreground_color" type="color" value="{{ old('sogo_login_foreground_color', $settings['sogo_login_foreground_color']) }}">
+                <span class="field-hint">Text and form input colour within the SOGo login form.</span>
+            </label>
             <div class="span-2">
                 <strong>Source template</strong>
                 <span class="field-hint">{{ $settings['sogo_template_source'] }}</span>
@@ -235,7 +243,7 @@
             </div>
         </div>
         <div class="record-form__footer">
-            <button>Save SOGo logo</button>
+            <button>Save SOGo branding</button>
         </div>
     </form>
 </div>
@@ -394,7 +402,7 @@
         </div>
         <div class="span-2">
             <strong>SOGo template override</strong>
-            <span class="field-hint">The app copies SOGoRootPage.wox to the SOGo user's template override path, then updates the logo img src.</span>
+            <span class="field-hint">The app copies SOGoRootPage.wox to the SOGo user's template override path, then updates the logo and managed login colours.</span>
         </div>
         <div class="span-2">
             <strong>SOGo reload</strong>

@@ -370,11 +370,13 @@ then perform final incremental synchronization while old DNS answers expire.
 
 ### SOGo Branding
 
-This manages the per-user SOGo root page template override and replaces the logo image URL.
+This manages the per-user SOGo root page template override, the logo image URL, and the login page colours.
 
 - UI input: an `http` or `https` image URL.
 - The app copies `SOGoRootPage.wox` to the SOGo override template path when needed.
 - The app updates the `src` attribute of the SOGo logo image and shows the currently configured image.
+- The login background and foreground colour pickers maintain a style block immediately after the template's first `</script>` tag and before its `MAIN CONTENT ROW` comment.
+- The foreground colour applies to text and form controls inside `#login`.
 
 Environment:
 
