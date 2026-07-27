@@ -6,6 +6,7 @@ use App\Services\IredMail\AuditLogger;
 use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\DomainDkimService;
 use Illuminate\Support\Facades\DB;
+use Tests\Fakes\FakePrivilegedHelper;
 use Tests\TestCase;
 
 final class DomainDkimServiceTest extends TestCase
@@ -126,7 +127,7 @@ final class DomainDkimServiceTest extends TestCase
 
     private function service(): DomainDkimService
     {
-        return new DomainDkimService(new AuditLogger());
+        return new DomainDkimService(new AuditLogger, new FakePrivilegedHelper);
     }
 
     private function globalActor(): CurrentActor

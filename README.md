@@ -26,7 +26,7 @@ Open `http://127.0.0.1:8000`.
 
 ## Configuration
 
-Set the shared iRedMail database credentials in `.env`:
+Set a separate least-privilege identity for each iRedMail schema in `.env`:
 
 ```dotenv
 DB_CONNECTION=sqlite
@@ -36,22 +36,33 @@ QUEUE_CONNECTION=sync
 
 IREDMAIL_DB_HOST=127.0.0.1
 IREDMAIL_DB_PORT=3306
-IREDMAIL_DB_USERNAME=mxcentral-for-iredmail
-IREDMAIL_DB_PASSWORD=
 
 VMAIL_DB_DATABASE=vmail
+VMAIL_DB_USERNAME=mxcentral_vmail
+VMAIL_DB_PASSWORD=
 IREDADMIN_DB_DATABASE=iredadmin
+IREDADMIN_DB_USERNAME=mxcentral_iredadmin
+IREDADMIN_DB_PASSWORD=
 AMAVISD_DB_DATABASE=amavisd
+AMAVISD_DB_USERNAME=mxcentral_amavisd
+AMAVISD_DB_PASSWORD=
 IREDAPD_DB_DATABASE=iredapd
+IREDAPD_DB_USERNAME=mxcentral_iredapd
+IREDAPD_DB_PASSWORD=
 FAIL2BAN_DB_DATABASE=fail2ban
-FAIL2BAN_UNBAN_COMMAND="/usr/bin/sudo /usr/bin/fail2ban-client unban"
+FAIL2BAN_DB_USERNAME=mxcentral_fail2ban
+FAIL2BAN_DB_PASSWORD=
 
 IREDMAIL_DECRYPTABLE_PASSWORD_COLUMN=decrypt-pass
+MXCENTRAL_PRIVILEGED_HELPER_COMMAND="/usr/bin/sudo /usr/local/sbin/mxcentral-privileged"
 ```
 
-Per-database `*_DB_HOST`, `*_DB_USERNAME`, and `*_DB_PASSWORD` variables are still supported as overrides, but normal iRedMail installs should only need the shared `IREDMAIL_DB_*` values.
+Use [the table-level grant template](mxcentral-for-iRedmail/docs/database-grants.sql)
+to provision these accounts. Do not grant global privileges.
 
-Do not commit `.env`. It contains live database credentials and host-specific command paths.
+Do not commit `.env`. It contains live database credentials and server-specific
+application settings. Keep privileged command paths in the root-owned
+`/etc/mxcentral/privileged-helper.json`.
 
 MxCentral does not require a local Laravel application database for normal
 operation. Keep `SESSION_DRIVER=file`, `CACHE_STORE=array`, and
@@ -133,15 +144,20 @@ location = /mxcentral/index.php {
     include /etc/nginx/templates/hsts.tmpl;
     include /etc/nginx/templates/fastcgi_php.tmpl;
 
-    fastcgi_param SCRIPT_FILENAME /opt/www/mxcentral-for-iRedmail/public/index.php;
+    fastcgi_param SCRIPT_FILENAME @@MXCENTRAL_PUBLIC_PATH@@/index.php;
     fastcgi_param SCRIPT_NAME /mxcentral/index.php;
-    fastcgi_param DOCUMENT_ROOT /opt/www/mxcentral-for-iRedmail/public;
+    fastcgi_param DOCUMENT_ROOT @@MXCENTRAL_PUBLIC_PATH@@;
     fastcgi_param REQUEST_URI $request_uri;
 }
 
 ```
 
-Include it from the active iRedMail nginx server block in the same way as the other files in `/etc/nginx/templates/`. Put this include before any broad PHP catchall include if the server block has one. Adjust `/opt/www/mxcentral-for-iRedmail/public` to wherever this app is deployed. The iRedMail `fastcgi_php.tmpl` normally supplies the PHP-FPM socket; if your server does not, add the correct `fastcgi_pass` line inside the `location = /mxcentral/index.php` block.
+Render `docs/nginx/mxcentral.tmpl` with
+`scripts/render-nginx-template.sh <absolute-public-path> <absolute-output-path>`
+before including it. Put this include before any broad PHP catchall include if
+the server block has one. The iRedMail `fastcgi_php.tmpl` normally supplies the
+PHP-FPM socket; if your server does not, add the correct `fastcgi_pass` line
+inside the `location = /mxcentral/index.php` block.
 
 ### DKIM Management
 
@@ -155,17 +171,13 @@ AMAVISD_CONFIG_PATH=/etc/amavis/conf.d/50-user
 AMAVISD_DKIM_DIRECTORY=/var/lib/dkim
 AMAVISD_DKIM_SELECTOR=mxcentral
 AMAVISD_DKIM_BITS=1024
-AMAVISD_GENRSA_COMMAND="/usr/bin/sudo /usr/sbin/amavisd genrsa"
-AMAVISD_SHOWKEYS_COMMAND="/usr/bin/sudo /usr/sbin/amavisd showkeys"
-AMAVISD_TESTKEYS_COMMAND="/usr/bin/sudo /usr/sbin/amavisd testkeys"
-AMAVISD_RESTART_COMMAND="systemctl restart amavis"
-AMAVISD_DKIM_KEY_OWNER=amavis
-AMAVISD_DKIM_KEY_GROUP=amavis
-AMAVISD_DKIM_CHOWN_COMMAND="/usr/bin/sudo /usr/bin/chown"
-AMAVISD_DKIM_CHMOD_COMMAND="/usr/bin/sudo /usr/bin/chmod"
 ```
 
-The app only writes a marked MXCentral block in the amavisd config and appends DKIM sender mappings so existing iRedMail mappings remain intact. The web server user must be able to write the amavisd config and DKIM directory, or you must wrap the configured commands with narrow sudo permissions.
+The app only writes a marked MXCentral block in the amavisd config and appends
+DKIM sender mappings so existing iRedMail mappings remain intact. Key generation,
+ownership/mode enforcement, configuration replacement, and service reloads go
+through the root-owned MXCentral helper. The PHP worker must not have write
+access to the amavisd configuration or DKIM directory.
 
 ## System Settings
 
@@ -173,9 +185,10 @@ Global admins can use `/system/settings` for host-level mail settings. Most
 settings manage service configuration files; optional decryptable password
 storage is represented by a column in `vmail.mailbox`.
 
-The app never grants itself broad root access. System commands are read from `.env`, tokenized, and executed without a shell. Configure narrow `sudoers` rules for the exact commands required on your host.
-
-Fail2ban unban uses `FAIL2BAN_UNBAN_COMMAND` with the IP appended by the app. With the provided sudoers include, set it to `/usr/bin/sudo /usr/bin/fail2ban-client unban`.
+The only sudo grant is the fixed, no-argument
+`/usr/local/sbin/mxcentral-privileged` broker. It validates JSON operations and
+uses root-owned paths and command arrays from
+`/etc/mxcentral/privileged-helper.json`. See [INSTALL.md](INSTALL.md).
 
 ### Decryptable Mailbox Passwords
 
@@ -189,7 +202,9 @@ When enabled:
 - MXCentral adds the nullable `decrypt-pass` text column to `vmail.mailbox`.
 - New mailbox passwords and subsequent password changes are encrypted with
   Laravel's application encryption key before being stored.
-- An authorized admin can reveal a stored password from the user edit screen.
+- Only an explicitly allowlisted global admin can request a reveal from the
+  user edit screen. Each reveal requires current-password re-authentication, a
+  configured TOTP code, and a recorded access purpose.
 - Existing password hashes are not converted. A password becomes available only
   after it is created or changed while the feature is enabled.
 
@@ -200,6 +215,22 @@ previous values or passwords changed while storage was disabled.
 Keep `APP_KEY` stable and secret. Changing it makes existing encrypted values
 unreadable. The vmail database account needs `ALTER` privilege on
 `vmail.mailbox` so the global-admin toggle can add and drop the column.
+Reveals use short-lived single-use links, never embed plaintext in the user
+listing, and are disabled unless `MXCENTRAL_PASSWORD_REVEAL_ADMINS` and
+`MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS` explicitly authorize the administrator.
+
+### Deployment-specific mailbox settings
+
+Mailbox layout and transports are validated settings rather than code
+assumptions. Configure `IREDMAIL_STORAGE_BASE_DIRECTORY`,
+`IREDMAIL_STORAGE_NODE`, `IREDMAIL_MAILBOX_DIRECTORY_TEMPLATE` (containing
+`{domain}` and `{local}`), `IREDMAIL_MAILBOX_LANGUAGE`,
+`IREDMAIL_BACKUP_MX_PORT`, and
+`IREDMAIL_MAILING_LIST_TRANSPORT_TEMPLATE` (containing `{address}`) in each
+server's protected `.env`. Deployment runs `mxcentral:check-production`, and
+production HTTP requests fail closed if these or the application/session
+security settings are unsafe, required iRedMail tables are inaccessible, or the
+root helper reports insecure paths, commands, ownership, or modes.
 
 ### Sender Mismatch Permission
 
@@ -219,16 +250,7 @@ Environment:
 
 ```dotenv
 IREDAPD_SETTINGS_PATH=/opt/iredapd/settings.py
-IREDAPD_RESTART_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart iredapd.service"
 POSTFIX_MAIN_CF_PATH=/etc/postfix/main.cf
-POSTFIX_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl reload postfix.service"
-```
-
-Example sudoers rule, adjusted for the web server user running PHP:
-
-```sudoers
-www-data ALL=NOPASSWD: /usr/bin/systemctl restart iredapd.service
-www-data ALL=NOPASSWD: /usr/bin/systemctl reload postfix.service
 ```
 
 ### Send Without SMTP Auth
@@ -299,7 +321,7 @@ The command groups current quarantined messages by recipient, sends each user a 
 Use one cron entry for all MXCentral scheduled tasks:
 
 ```cron
-* * * * * /usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php >/dev/null 2>&1
+* * * * * MXCENTRAL_CRON_USER=www-data MXCENTRAL_SUDO_PATH=/usr/bin/sudo /usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php >/dev/null 2>&1
 ```
 
 Cron documentation is in `docs/cron/quarantine-notifications.md`.
@@ -330,18 +352,10 @@ Environment:
 POSTFIX_MAIN_CF_PATH=/etc/postfix/main.cf
 POSTFIX_DISCARD_RECIPIENTS_PATH=/etc/postfix/discard_recipients
 POSTFIX_STAGING_DOMAINS_PATH=/etc/postfix/mxcentral_staging_domains.pcre
-POSTFIX_POSTMAP_COMMAND="/usr/bin/sudo /usr/sbin/postmap"
-POSTFIX_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl reload postfix.service"
 ```
 
-These commands have secure built-in defaults. Environment values are only
-needed when the host uses different binary paths or service names. The bundled
-sudoers include grants the corresponding fixed commands:
-
-```sudoers
-www-data ALL=NOPASSWD: /usr/sbin/postmap /etc/postfix/discard_recipients
-www-data ALL=NOPASSWD: /usr/bin/systemctl reload postfix
-```
+Binary paths and service names are root-controlled in
+`/etc/mxcentral/privileged-helper.json`; they cannot be changed by PHP.
 
 ### Staging Domains During Migration
 
@@ -360,9 +374,8 @@ Staging is independent from iRedMail's active flag:
 - MX records are never changed by MXCentral.
 
 MXCentral installs the staging recipient restriction before the silent-discard
-restriction, updates `main.cf`, and reloads Postfix through the existing narrow
-sudo command. The PCRE map does not require postmap. No additional sudoers rule
-is required beyond the standard MXCentral installation.
+restriction, atomically updates `main.cf`, and reloads Postfix through the
+privileged helper. The PCRE map does not require postmap.
 
 The intended migration sequence is: create the staged domain and users, copy
 mail, test logins, select **Start accepting inbound mail**, change MX records,
@@ -383,26 +396,20 @@ Environment:
 ```dotenv
 SOGO_ROOT_TEMPLATE_SOURCE=
 SOGO_ROOT_TEMPLATE_TARGET=/var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox
-SOGO_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart sogo.service"
 ```
 
 If `SOGO_ROOT_TEMPLATE_SOURCE` is empty, the app searches `/usr/lib*/GNUstep/SOGo/Templates/MainUI/SOGoRootPage.wox`. Set it explicitly if your package installs the template elsewhere.
 
-Example sudoers rule:
-
-```sudoers
-www-data ALL=NOPASSWD: /usr/bin/systemctl restart sogo.service
-```
-
-The PHP process also needs filesystem permission to create/write:
-
-```text
-/var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox
-```
+The privileged helper creates or replaces the override and reloads SOGo. PHP
+does not need write access to the SOGo template tree.
 
 ## Security Notes
 
 - All normal writes use Laravel CSRF protection and route middleware.
+- Login attempts are limited independently by normalized account and source IP
+  using a persistent local cache. Delays escalate into temporary lockouts. After
+  verifying a request out of band, an operator can run
+  `php artisan mxcentral:unlock-admin admin@example.com --ip=192.0.2.10`.
 - Global-only system settings are protected with `iredmail.auth:global`.
 - Decryptable mailbox passwords are encrypted at rest with `APP_KEY`; their
   encrypted database values are excluded from list, search, API, and
@@ -445,11 +452,16 @@ If the `iredadmin` database has not been created yet, import the reference schem
 
 ### Which database user should this app use?
 
-Use a dedicated MariaDB/MySQL user with the required privileges on the iRedMail databases. In a standard deployment the database host is shared, so set `IREDMAIL_DB_HOST`, `IREDMAIL_DB_USERNAME`, and `IREDMAIL_DB_PASSWORD`, then keep per-database names as `vmail`, `iredadmin`, `amavisd`, `iredapd`, and `fail2ban`. If decryptable password storage will be toggled from System Settings, this account also needs `ALTER` on `vmail.mailbox`.
+Use separate table-scoped MariaDB/MySQL identities for `vmail`, `iredadmin`,
+`amavisd`, `iredapd`, and `fail2ban`. The database host and port may remain
+shared. If decryptable password storage will be toggled from System Settings,
+only the vmail identity also needs `ALTER` on `vmail.mailbox`.
 
 ### Why do System Settings show readable or writable as "no"?
 
-Those settings touch files owned by services such as iRedAPD, Postfix, and SOGo. The PHP process must be granted narrow filesystem permissions for the managed files and narrow sudo permission only for the related restart/reload commands.
+Those settings touch files owned by services such as iRedAPD, Postfix, and
+SOGo. PHP receives no direct write permission; the root-owned helper performs
+validated atomic updates and service reloads.
 
 ### Do discard recipients need to be real mailboxes?
 
@@ -461,7 +473,9 @@ Yes. Sender mismatch permission is intentionally limited to existing hosted mail
 
 ### Why did a setting save but the service did not reload?
 
-The related command is probably not configured in `.env`, or sudoers does not allow the PHP process to run the exact command. The UI reports command status after each save.
+Check that the helper is installed, its root-owned JSON configuration matches
+this host, and sudoers permits the PHP pool user to execute only the fixed
+helper path. The UI reports helper status after each save.
 
 ## Tests
 

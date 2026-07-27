@@ -7,7 +7,9 @@ use App\Services\IredMail\AccountRepository;
 use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\DomainDkimService;
 use App\Services\IredMail\DomainDnsService;
+use App\Services\IredMail\PasswordRevealAccess;
 use App\Services\IredMail\SystemSettingsService;
+use App\Support\CsvCell;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -37,13 +39,14 @@ final class AdminController extends Controller
         ]);
     }
 
-    public function users(Request $request, AccountRepository $accounts, CurrentActor $actor)
+    public function users(Request $request, AccountRepository $accounts, PasswordRevealAccess $passwordReveal, CurrentActor $actor)
     {
         return view('admin.users', [
             'rows' => $accounts->users($actor, $request->query('domain'), $request->query('q')),
             'domainOptions' => $accounts->domainOptions($actor),
             'userOptions' => $accounts->userOptions($actor, $request->query('domain')),
             'selectedUser' => $accounts->user($actor, $request->query('edit')),
+            'canRevealPasswords' => $passwordReveal->allows($actor),
         ]);
     }
 
@@ -317,7 +320,7 @@ final class AdminController extends Controller
         $content = '';
         foreach ($rows as $row) {
             $handle = fopen('php://temp', 'r+');
-            fputcsv($handle, $row);
+            fputcsv($handle, array_map([CsvCell::class, 'safe'], $row));
             rewind($handle);
             $content .= stream_get_contents($handle);
             fclose($handle);

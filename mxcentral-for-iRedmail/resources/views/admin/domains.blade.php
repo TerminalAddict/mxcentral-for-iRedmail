@@ -9,7 +9,7 @@
     </form>
 </div>
 
-@if(session('actor.global_admin'))
+@if($currentActor->globalAdmin)
 <div class="panel">
     <h2>Create Domain</h2>
     <form method="post" action="{{ route('domains.create') }}" class="domain-form">@csrf
@@ -22,7 +22,7 @@
             <label>List limit<input name="maillists" type="number" min="0" value="0"><span class="field-hint">0 = unlimited lists.</span></label>
             <label>Max user quota MB<input name="maxquota" type="number" min="0" value="0"><span class="field-hint">0 = no per-user cap.</span></label>
             <label>Domain quota MB<input name="quota" type="number" min="0" value="0"><span class="field-hint">0 = unlimited domain storage.</span></label>
-            <label class="span-2">Primary MX IP<input name="backupmx_primary_ip" placeholder="45.56.127.226"><span class="field-hint">Required for Backup MX. The app saves transport as relay:[IP]:25.</span></label>
+            <label class="span-2">Primary MX IP<input name="backupmx_primary_ip" placeholder="45.56.127.226"><span class="field-hint">Required for Backup MX. The configured relay port is {{ config('iredmail.backup_mx_port') }}.</span></label>
         </div>
         <div class="domain-form__footer">
             <label class="checkbox-field">
@@ -63,7 +63,7 @@
                 <label>Lists<input name="maillists" type="number" min="0" value="{{ $selectedDomain->maillists ?? 0 }}"><span class="field-hint">0 = unlimited lists.</span></label>
                 <label>Max user quota MB<input name="maxquota" type="number" min="0" value="{{ $selectedDomain->maxquota ?? 0 }}"><span class="field-hint">Largest per-user mailbox quota.</span></label>
                 <label>Domain quota MB<input name="quota" type="number" min="0" value="{{ $selectedDomain->quota ?? 0 }}"><span class="field-hint">Total domain mailbox storage.</span></label>
-                <label class="span-2">Primary MX IP<input name="backupmx_primary_ip" value="{{ $backupMxPrimaryIp }}" placeholder="45.56.127.226"><span class="field-hint">Required when Backup MX is enabled. Saves transport as relay:[IP]:25.</span></label>
+                <label class="span-2">Primary MX IP<input name="backupmx_primary_ip" value="{{ $backupMxPrimaryIp }}" placeholder="45.56.127.226"><span class="field-hint">Required when Backup MX is enabled. The configured relay port is {{ config('iredmail.backup_mx_port') }}.</span></label>
             </div>
             <div class="domain-edit-actions">
                 <label class="checkbox-field">
@@ -78,7 +78,7 @@
             </div>
         </form>
 
-        @if(session('actor.global_admin'))
+        @if($currentActor->globalAdmin)
             @php($selectedDomainIsStaged = isset($stagedDomains[$selectedDomain->domain]))
             <div class="domain-dkim">
                 <div class="domain-dkim__header">
@@ -210,7 +210,7 @@
                 @endif
 
                 <div class="domain-dkim__actions">
-                    @if(session('actor.global_admin'))
+                    @if($currentActor->globalAdmin)
                         <form method="post" action="{{ route('domains.dkim.generate', $selectedDomain->domain) }}">@csrf
                             <label>Key size
                                 <select name="bits">
@@ -223,7 +223,7 @@
                     @endif
                 </div>
 
-                @unless(session('actor.global_admin'))
+                @unless($currentActor->globalAdmin)
                     <p class="field-hint">Only global admins can generate keys or update amavisd configuration.</p>
                 @endunless
             </div>
@@ -309,7 +309,7 @@
             @endif
         </div>
 
-        @if(session('actor.global_admin'))
+        @if($currentActor->globalAdmin)
             <form method="post" action="{{ route('domains.delete', $selectedDomain->domain) }}" onsubmit="return confirm('Delete this domain and all related accounts?')" class="domain-danger-row">@csrf @method('delete')
                 <label>Keep days<input name="keep_days" type="number" min="0" value="0"><span class="field-hint">Sets the logged scheduled mailbox deletion date. 0 = no scheduled date.</span></label>
                 <button class="danger">Delete selected domain</button>

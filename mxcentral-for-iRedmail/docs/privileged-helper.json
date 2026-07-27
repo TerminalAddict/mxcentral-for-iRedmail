@@ -1,0 +1,35 @@
+{
+  "files": {
+    "amavis_config": "/etc/amavis/conf.d/50-user",
+    "iredapd_settings": "/opt/iredapd/settings.py",
+    "postfix_main": "/etc/postfix/main.cf",
+    "postfix_sender_access": "/etc/postfix/sender_access.pcre",
+    "postfix_discard_recipients": "/etc/postfix/discard_recipients",
+    "postfix_staging_domains": "/etc/postfix/mxcentral_staging_domains.pcre",
+    "sogo_template": "/var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox"
+  },
+  "file_sources": {
+    "sogo_template": "/usr/lib/GNUstep/SOGo/Templates/MainUI/SOGoRootPage.wox"
+  },
+  "dkim": {
+    "directory": "/var/lib/dkim",
+    "selector": "mxcentral",
+    "owner": "amavis",
+    "group": "amavis",
+    "mode": "0400",
+    "genrsa": ["/usr/sbin/amavisd", "genrsa"]
+  },
+  "commands": {
+    "amavis_showkeys": ["/usr/sbin/amavisd", "showkeys"],
+    "amavis_testkeys": ["/usr/sbin/amavisd", "testkeys"],
+    "amavis_restart": ["/usr/bin/systemctl", "restart", "amavis.service"],
+    "iredapd_restart": ["/usr/bin/systemctl", "restart", "iredapd.service"],
+    "postfix_reload": ["/usr/bin/systemctl", "reload", "postfix.service"],
+    "postfix_check": ["/usr/sbin/postfix", "check"],
+    "sogo_reload": ["/usr/bin/systemctl", "restart", "sogo.service"],
+    "postmap": ["/usr/sbin/postmap"],
+    "fail2ban_unban": ["/usr/bin/fail2ban-client", "unban"]
+  },
+  "operation_state_directory": "/var/lib/mxcentral/operations",
+  "web_users": ["www-data"]
+}

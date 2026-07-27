@@ -78,6 +78,7 @@ final class MailActivityRepository
         $allowedIds = $allowed->pluck('msgs.mail_id')->all();
 
         DB::connection('amavisd')->table('quarantine')->whereIn('mail_id', $allowedIds)->delete();
+
         return DB::connection('amavisd')->table('msgs')->whereIn('mail_id', $allowedIds)->delete();
     }
 
@@ -86,8 +87,21 @@ final class MailActivityRepository
         $mailId = $this->safeProtocolToken($mailId, 'mail_id');
         $secretId = $this->safeProtocolToken($secretId, 'secret_id');
 
-        $record = $this->quarantined($actor)->getCollection()->firstWhere('mail_id', $mailId);
-        abort_unless($record, 403);
+        $query = DB::connection('amavisd')->table('msgs')
+            ->leftJoin('msgrcpt', 'msgs.mail_id', '=', 'msgrcpt.mail_id')
+            ->leftJoin('maddr as sender', 'msgs.sid', '=', 'sender.id')
+            ->leftJoin('maddr as recip', 'msgrcpt.rid', '=', 'recip.id')
+            ->select('msgs.mail_id', 'msgs.secret_id')
+            ->where('msgs.quar_type', 'Q')
+            ->where('msgs.mail_id', $mailId);
+        $this->scopeEitherSide($query, $actor);
+        $record = $query->first();
+        abort_unless(
+            $record
+            && is_string($record->secret_id)
+            && hash_equals($record->secret_id, $secretId),
+            403,
+        );
 
         $socket = @fsockopen(config('iredmail.amavisd_quarantine_host'), config('iredmail.amavisd_quarantine_port'), $errno, $errstr, 10);
         if (! $socket) {
@@ -108,12 +122,14 @@ final class MailActivityRepository
                 abort_unless($actor->canManageEmail($account), 403);
                 $column = $direction === 'sent' ? 'sender.email' : 'recip.email';
                 $query->where($column, strtolower($account));
+
                 return;
             }
 
             abort_unless($actor->canManageDomain($account), 403);
             $column = $direction === 'sent' ? 'sender.domain' : 'recip.domain';
             $query->where($column, IredMailAddress::amavisdDomain($account));
+
             return;
         }
 
@@ -128,12 +144,14 @@ final class MailActivityRepository
     {
         if ($actor->selfService) {
             $query->where(fn (Builder $query) => $query->where('sender.email', $actor->email)->orWhere('recip.email', $actor->email));
+
             return;
         }
 
         if ($account && str_contains($account, '@')) {
             abort_unless($actor->canManageEmail($account), 403);
             $query->where(fn (Builder $query) => $query->where('sender.email', strtolower($account))->orWhere('recip.email', strtolower($account)));
+
             return;
         }
 

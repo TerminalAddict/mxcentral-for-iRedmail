@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureSafeProduction;
+use App\Http\Middleware\IredMailAuthenticated;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,8 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(EnsureSafeProduction::class);
         $middleware->alias([
-            'iredmail.auth' => \App\Http\Middleware\IredMailAuthenticated::class,
+            'iredmail.auth' => IredMailAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

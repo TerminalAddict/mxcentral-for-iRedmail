@@ -6,10 +6,16 @@ use App\Support\IredMailAddress;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\Process\Process;
 
 final class PolicyRepository
 {
+    private readonly PrivilegedHelper $privileged;
+
+    public function __construct(?PrivilegedHelper $privileged = null)
+    {
+        $this->privileged = $privileged ?? app(PrivilegedHelper::class);
+    }
+
     public function throttle(CurrentActor $actor, ?string $account = null): LengthAwarePaginator
     {
         $query = DB::connection('iredapd')->table('throttle');
@@ -45,12 +51,26 @@ final class PolicyRepository
     public function wblist(CurrentActor $actor, ?string $account = null): LengthAwarePaginator
     {
         $query = DB::connection('amavisd')->table('wblist')
-            ->leftJoin('mailaddr', 'wblist.sid', '=', 'mailaddr.id')
-            ->select('wblist.*', 'mailaddr.email as sender');
+            ->leftJoin('mailaddr as sender_address', 'wblist.sid', '=', 'sender_address.id')
+            ->leftJoin('mailaddr as recipient_address', 'wblist.rid', '=', 'recipient_address.id')
+            ->select('wblist.*', 'sender_address.email as sender', 'recipient_address.email as recipient');
 
         if ($account) {
             $this->assertPolicyAccess($actor, $account);
-            $query->where('wblist.rid', $this->mailaddrId($this->policyAccount($account)));
+            $recipientId = DB::connection('amavisd')->table('mailaddr')
+                ->where('email', $this->policyAccount($account))
+                ->value('id');
+            $query->where('wblist.rid', $recipientId ?? -1);
+        } elseif (! $actor->globalAdmin) {
+            $query->where(function ($scope) use ($actor): void {
+                foreach ($actor->domains as $domain) {
+                    $scope->orWhere('recipient_address.email', '@'.$domain)
+                        ->orWhere('recipient_address.email', 'like', '%@'.$domain);
+                }
+                if ($actor->domains === []) {
+                    $scope->whereRaw('1 = 0');
+                }
+            });
         }
 
         return $query->orderByDesc('wblist.rid')->paginate(config('iredmail.page_size'));
@@ -89,32 +109,17 @@ final class PolicyRepository
 
         DB::connection('fail2ban')->table('banned')->where('ip', $ip)->update(['remove' => 1]);
 
-        $command = config('iredmail.fail2ban_unban_command');
-        if ($command !== '') {
-            $process = new Process(array_merge($this->commandArguments($command), [$ip]));
-            $process->setTimeout(30);
-            $process->run();
-
-            return [
-                'marked' => true,
-                'configured' => true,
-                'ok' => $process->isSuccessful(),
-                'message' => trim($process->getOutput()."\n".$process->getErrorOutput()),
-            ];
-        }
-
-        return ['marked' => true, 'configured' => false, 'ok' => true, 'message' => 'No direct unban command configured.'];
-    }
-
-    private function commandArguments(string $command): array
-    {
-        return array_values(array_filter(str_getcsv($command, ' ', '"', '\\'), fn (string $argument) => $argument !== ''));
+        return array_merge(
+            ['marked' => true],
+            $this->privileged->run('fail2ban_unban', ['ip' => $ip]),
+        );
     }
 
     private function assertPolicyAccess(CurrentActor $actor, string $account): void
     {
         if ($account === '@.') {
             abort_unless($actor->globalAdmin, 403);
+
             return;
         }
 

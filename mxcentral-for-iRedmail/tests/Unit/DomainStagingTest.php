@@ -6,6 +6,7 @@ use App\Services\IredMail\AuditLogger;
 use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\SystemSettingsService;
 use Illuminate\Support\Facades\DB;
+use Tests\Fakes\FakePrivilegedHelper;
 use Tests\TestCase;
 
 final class DomainStagingTest extends TestCase
@@ -83,7 +84,7 @@ final class DomainStagingTest extends TestCase
 
     public function test_staging_domain_manages_pcre_hook_aliases_and_reload_without_disabling_accounts(): void
     {
-        $service = new SystemSettingsService(new AuditLogger);
+        $service = new SystemSettingsService(new AuditLogger, new FakePrivilegedHelper);
 
         $result = $service->saveDomainStaging($this->actor(), 'example.com', true);
 
@@ -112,7 +113,7 @@ final class DomainStagingTest extends TestCase
 
     public function test_refresh_adds_new_alias_domain_to_an_existing_staging_map(): void
     {
-        $service = new SystemSettingsService(new AuditLogger);
+        $service = new SystemSettingsService(new AuditLogger, new FakePrivilegedHelper);
         $service->saveDomainStaging($this->actor(), 'example.com', true);
 
         DB::connection('vmail')->table('alias_domain')->insert([

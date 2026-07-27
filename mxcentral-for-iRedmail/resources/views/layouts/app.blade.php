@@ -881,7 +881,7 @@
         ['label' => 'Throttle', 'route' => 'throttle', 'match' => 'throttle*', 'icon' => $icon('<path d="M12 14a3 3 0 1 0-3-3"/><path d="M19.4 15a8 8 0 1 0-14.8 0"/><path d="m12 14 4-4"/>')],
         ['label' => 'Search', 'route' => 'search', 'match' => 'search', 'icon' => $icon('<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/>')],
     ];
-    if (session('actor.global_admin')) {
+    if (($currentActor ?? null)?->globalAdmin) {
         $adminNav[] = ['label' => 'Admins', 'route' => 'admins', 'match' => 'admins*', 'icon' => $icon('<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M19 8v4"/><path d="M21 10h-4"/>')];
         $adminNav[] = ['label' => 'Fail2ban', 'route' => 'fail2ban', 'match' => 'fail2ban*', 'icon' => $icon('<path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6l-8-3Z"/><path d="m9.5 9.5 5 5"/><path d="m14.5 9.5-5 5"/>')];
         $adminNav[] = ['label' => 'System Settings', 'route' => 'system.settings', 'match' => 'system.settings*', 'icon' => $icon('<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 3.4-.2-.1a1.7 1.7 0 0 0-2 .2 1.7 1.7 0 0 0-.8 1.6V22H9.2v-.2a1.7 1.7 0 0 0-.8-1.6 1.7 1.7 0 0 0-2-.2l-.2.1-2-3.4.1-.1A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3 14H2v-4h1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-3.4.2.1a1.7 1.7 0 0 0 2-.2A1.7 1.7 0 0 0 9.2 2V2h5.6v.2a1.7 1.7 0 0 0 .8 1.6 1.7 1.7 0 0 0 2 .2l.2-.1 2 3.4-.1.1a1.7 1.7 0 0 0-.3 1.9A1.7 1.7 0 0 0 21 10h1v4h-1a1.7 1.7 0 0 0-1.6 1Z"/>')];
@@ -890,18 +890,18 @@
         ['label' => 'Preferences', 'route' => 'preferences', 'match' => 'preferences', 'icon' => $icon('<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 3.4-.2-.1a1.7 1.7 0 0 0-2 .2 1.7 1.7 0 0 0-.8 1.6V22H9.2v-.2a1.7 1.7 0 0 0-.8-1.6 1.7 1.7 0 0 0-2-.2l-.2.1-2-3.4.1-.1A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3 14H2v-4h1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-3.4.2.1a1.7 1.7 0 0 0 2-.2A1.7 1.7 0 0 0 9.2 2V2h5.6v.2a1.7 1.7 0 0 0 .8 1.6 1.7 1.7 0 0 0 2 .2l.2-.1 2 3.4-.1.1a1.7 1.7 0 0 0-.3 1.9A1.7 1.7 0 0 0 21 10h1v4h-1a1.7 1.7 0 0 0-1.6 1Z"/>')],
         ['label' => 'Quarantine', 'route' => 'quarantine', 'match' => 'quarantine*', 'icon' => $icon('<path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6l-8-3Z"/><path d="M9 12h6"/>')],
     ];
-    $navItems = session('actor.self_service') ? $selfNav : $adminNav;
-    $desktopPrimaryRoutes = session('actor.self_service') ? ['preferences', 'quarantine'] : ['dashboard', 'domains', 'users', 'search'];
+    $navItems = ($currentActor ?? null)?->selfService ? $selfNav : $adminNav;
+    $desktopPrimaryRoutes = ($currentActor ?? null)?->selfService ? ['preferences', 'quarantine'] : ['dashboard', 'domains', 'users', 'search'];
     $desktopPrimaryItems = array_values(array_filter($navItems, fn ($item) => in_array($item['route'], $desktopPrimaryRoutes, true)));
     $desktopMenuItems = array_values(array_filter($navItems, fn ($item) => ! in_array($item['route'], $desktopPrimaryRoutes, true)));
-    $bottomItems = session('actor.self_service') ? $selfNav : array_values(array_filter($adminNav, fn ($item) => in_array($item['route'], ['dashboard', 'domains', 'users', 'mail.logs', 'search'], true)));
+    $bottomItems = ($currentActor ?? null)?->selfService ? $selfNav : array_values(array_filter($adminNav, fn ($item) => in_array($item['route'], ['dashboard', 'domains', 'users', 'mail.logs', 'search'], true)));
     $isActive = fn ($item) => request()->routeIs($item['match']);
 @endphp
 <div class="app-shell">
-    @if(session('actor'))
+    @if($currentActor ?? null)
         <header class="app-topbar">
             <div class="app-topbar__inner">
-                <a class="app-brand" href="{{ route(session('actor.self_service') ? 'preferences' : 'dashboard') }}">
+                <a class="app-brand" href="{{ route($currentActor->selfService ? 'preferences' : 'dashboard') }}">
                     <span class="app-brand__mark">{!! $mailIcon !!}</span>
                     <span class="app-brand__text">
                         <span class="app-brand__title">MXCentral</span>
@@ -939,7 +939,7 @@
         @if(isset($errors) && $errors->any())<div class="alert bad">{{ $errors->first() }}</div>@endif
         @yield('content')
     </main>
-    @if(session('actor'))
+    @if($currentActor ?? null)
         <nav class="bottom-nav" aria-label="Mobile primary">
             @foreach($bottomItems as $item)
                 <a class="bottom-nav__link @if($isActive($item)) is-active @endif" href="{{ route($item['route'], $item['params'] ?? []) }}">

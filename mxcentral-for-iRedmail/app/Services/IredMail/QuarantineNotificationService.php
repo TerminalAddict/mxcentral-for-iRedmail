@@ -2,6 +2,7 @@
 
 namespace App\Services\IredMail;
 
+use App\Support\AtomicJsonFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -10,6 +11,14 @@ use Illuminate\Support\Str;
 final class QuarantineNotificationService
 {
     public function notify(bool $forceAll = false, bool $dryRun = false): array
+    {
+        return AtomicJsonFile::locked(
+            $this->statePath(),
+            fn (): array => $this->notifyWhileLocked($forceAll, $dryRun),
+        );
+    }
+
+    private function notifyWhileLocked(bool $forceAll, bool $dryRun): array
     {
         $state = $this->loadState();
         $alreadyNotified = array_fill_keys($state['mail_ids'] ?? [], true);
@@ -163,19 +172,12 @@ final class QuarantineNotificationService
     private function saveState(array $state): void
     {
         $path = $this->statePath();
-        $directory = dirname($path);
-        if (! is_dir($directory) && @mkdir($directory, 0755, true) === false) {
-            throw new \RuntimeException("Cannot create {$directory}.");
-        }
-
         $state['mail_ids'] = array_values(array_filter(
             $state['mail_ids'] ?? [],
             fn ($mailId) => is_string($mailId) && $mailId !== ''
         ));
 
-        if (@file_put_contents($path, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n", LOCK_EX) === false) {
-            throw new \RuntimeException("Cannot write {$path}.");
-        }
+        AtomicJsonFile::write($path, $state);
     }
 
     private function statePath(): string

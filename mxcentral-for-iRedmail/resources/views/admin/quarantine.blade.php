@@ -11,7 +11,7 @@
         'badmime' => 'Bad MIME',
     ];
     $typeDescriptions = [
-        null => session('actor.self_service') ? 'All quarantined messages currently visible to your mailbox.' : 'All quarantined messages currently visible to your admin account.',
+        null => $currentActor->selfService ? 'All quarantined messages currently visible to your mailbox.' : 'All quarantined messages currently visible to your admin account.',
         'spam' => 'Messages held because SpamAssassin or Amavisd classified them as spam.',
         'virus' => 'Messages held because virus scanning detected malicious content.',
         'banned' => 'Messages held because attachment or content policy blocked them.',
@@ -43,7 +43,7 @@
         </div>
         <div>
             <strong>Account filter</strong>
-            <span class="field-hint">{{ session('actor.self_service') ? 'Self-service quarantine is limited to your own mailbox.' : 'Enter a hosted domain to see mail for that domain, or a full address to match sender or recipient.' }}</span>
+            <span class="field-hint">{{ $currentActor->selfService ? 'Self-service quarantine is limited to your own mailbox.' : 'Enter a hosted domain to see mail for that domain, or a full address to match sender or recipient.' }}</span>
         </div>
         <div>
             <strong>Release and delete</strong>

@@ -5,11 +5,16 @@ namespace Tests\Unit;
 use App\Services\IredMail\AccountRepository;
 use App\Services\IredMail\AuditLogger;
 use App\Services\IredMail\CurrentActor;
+use App\Services\IredMail\PasswordRevealAccess;
+use App\Services\IredMail\PasswordRevealService;
 use App\Services\IredMail\SystemSettingsService;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\Fakes\FakeAuthService;
 use Tests\TestCase;
 
 final class DecryptablePasswordStorageTest extends TestCase
@@ -140,7 +145,8 @@ final class DecryptablePasswordStorageTest extends TestCase
         $this->assertSame('second-password', Crypt::decryptString($updated));
 
         $selected = $this->repository()->user($this->actor(), 'user@example.com');
-        $this->assertSame('second-password', $selected->decryptable_password);
+        $this->assertTrue($selected->has_decryptable_password);
+        $this->assertFalse(property_exists($selected, 'decryptable_password'));
         $this->assertFalse(property_exists($selected, 'decrypt-pass'));
     }
 
@@ -169,7 +175,9 @@ final class DecryptablePasswordStorageTest extends TestCase
 
         $settings->saveDecryptablePasswords($this->actor(), true);
         $this->assertNull(DB::connection('vmail')->table('mailbox')->value('decrypt-pass'));
-        $this->assertNull($this->repository()->user($this->actor(), 'user@example.com')->decryptable_password);
+        $selected = $this->repository()->user($this->actor(), 'user@example.com');
+        $this->assertFalse($selected->has_decryptable_password);
+        $this->assertFalse(property_exists($selected, 'decryptable_password'));
     }
 
     public function test_user_without_stored_decryptable_password_gets_null_display_value(): void
@@ -185,7 +193,8 @@ final class DecryptablePasswordStorageTest extends TestCase
 
         $selected = $this->repository()->user($this->actor(), 'old-user@example.com');
 
-        $this->assertNull($selected->decryptable_password);
+        $this->assertFalse($selected->has_decryptable_password);
+        $this->assertFalse(property_exists($selected, 'decryptable_password'));
     }
 
     public function test_stored_ciphertext_is_not_exposed_in_lists_or_self_service_results(): void
@@ -219,6 +228,87 @@ final class DecryptablePasswordStorageTest extends TestCase
         $this->assertFalse(Schema::connection('vmail')->hasColumn('mailbox', 'decrypt-pass'));
     }
 
+    public function test_password_reveal_requires_reauthentication_mfa_and_is_one_time(): void
+    {
+        $actor = $this->actor();
+        $secret = 'JBSWY3DPEHPK3PXP';
+        config([
+            'iredmail.password_reveal_admins' => $actor->email,
+            'iredmail.password_reveal_totp_secrets' => json_encode([$actor->email => $secret]),
+            'iredmail.password_reveal_cache_store' => 'file',
+            'iredmail.password_reveal_token_seconds' => 60,
+        ]);
+        CarbonImmutable::setTestNow('2026-07-28 12:00:00 UTC');
+        app()->instance(CurrentActor::class, $actor);
+
+        (new SystemSettingsService(new AuditLogger))->saveDecryptablePasswords($actor, true);
+        $repository = $this->repository();
+        $repository->createUser($actor, [
+            'local_part' => 'user',
+            'domain' => 'example.com',
+            'name' => 'Example User',
+            'password' => 'stored-password',
+        ]);
+        $service = new PasswordRevealService(
+            new PasswordRevealAccess,
+            new FakeAuthService($actor),
+            $repository,
+            new AuditLogger,
+        );
+
+        try {
+            $service->request(
+                $actor,
+                'admin-record',
+                'user@example.com',
+                'wrong-password',
+                $this->totp($secret),
+                'Customer-authorized migration support.',
+            );
+            $this->fail('Password reveal accepted an incorrect administrator password.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('current_password', $exception->errors());
+        }
+
+        $token = $service->request(
+            $actor,
+            'admin-record',
+            'user@example.com',
+            'current-password',
+            $this->totp($secret),
+            'Customer-authorized migration support.',
+        );
+        $revealed = $service->consume($actor, $token);
+        $this->assertSame('stored-password', $revealed['password']);
+        $this->assertSame('user@example.com', $revealed['email']);
+
+        $this->expectException(HttpException::class);
+        $service->consume($actor, $token);
+    }
+
+    public function test_cross_type_address_conflict_is_rejected_inside_serialized_creation(): void
+    {
+        $this->repository()->createUser($this->actor(), [
+            'local_part' => 'shared',
+            'domain' => 'example.com',
+            'name' => 'Mailbox',
+            'password' => 'first-password',
+        ]);
+
+        try {
+            $this->repository()->createAlias($this->actor(), [
+                'address' => 'shared@example.com',
+                'members' => 'destination@example.com',
+            ]);
+            $this->fail('An alias was created over an existing mailbox address.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('address', $exception->errors());
+        }
+
+        $this->assertSame(1, DB::connection('vmail')->table('mailbox')->where('username', 'shared@example.com')->count());
+        $this->assertSame(0, DB::connection('vmail')->table('alias')->where('address', 'shared@example.com')->count());
+    }
+
     private function repository(): AccountRepository
     {
         return new AccountRepository(new AuditLogger);
@@ -246,5 +336,31 @@ final class DecryptablePasswordStorageTest extends TestCase
             selfService: true,
             domains: ['example.com'],
         );
+    }
+
+    private function totp(string $secret): string
+    {
+        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        $bits = '';
+        foreach (str_split($secret) as $character) {
+            $bits .= str_pad(decbin((int) strpos($alphabet, $character)), 5, '0', STR_PAD_LEFT);
+        }
+        $key = '';
+        foreach (str_split($bits, 8) as $byte) {
+            if (strlen($byte) === 8) {
+                $key .= chr(bindec($byte));
+            }
+        }
+        $counter = intdiv(now()->timestamp, 30);
+        $hash = hash_hmac('sha1', pack('N2', 0, $counter), $key, true);
+        $offset = ord($hash[19]) & 0x0F;
+        $number = (
+            ((ord($hash[$offset]) & 0x7F) << 24)
+            | ((ord($hash[$offset + 1]) & 0xFF) << 16)
+            | ((ord($hash[$offset + 2]) & 0xFF) << 8)
+            | (ord($hash[$offset + 3]) & 0xFF)
+        ) % 1_000_000;
+
+        return str_pad((string) $number, 6, '0', STR_PAD_LEFT);
     }
 }

@@ -7,6 +7,7 @@ use App\Support\IredMailPassword;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,12 @@ use Illuminate\Validation\ValidationException;
 
 final class AccountRepository
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    private readonly PasswordRevealAccess $passwordRevealAccess;
+
+    public function __construct(private readonly AuditLogger $audit, ?PasswordRevealAccess $passwordRevealAccess = null)
+    {
+        $this->passwordRevealAccess = $passwordRevealAccess ?? app(PasswordRevealAccess::class);
+    }
 
     public function dashboard(CurrentActor $actor): array
     {
@@ -137,15 +143,38 @@ final class AccountRepository
         $user = $query->first();
 
         if ($user) {
-            $decryptedPassword = $actor->selfService ? null : $this->decryptedMailboxPassword($user);
+            $column = $this->decryptablePasswordColumn();
+            $user->has_decryptable_password = $this->decryptablePasswordsEnabled()
+                && property_exists($user, $column)
+                && is_string($user->{$column})
+                && $user->{$column} !== '';
             $this->removeStoredPassword($user);
-
-            if (! $actor->selfService) {
-                $user->decryptable_password = $decryptedPassword;
-            }
         }
 
         return $user;
+    }
+
+    public function hasDecryptablePassword(CurrentActor $actor, string $email): bool
+    {
+        abort_unless($this->passwordRevealAccess->allows($actor), 403);
+
+        $user = $this->passwordRevealUser($actor, $email);
+        if (! $user || ! $this->decryptablePasswordsEnabled()) {
+            return false;
+        }
+
+        $column = $this->decryptablePasswordColumn();
+
+        return property_exists($user, $column) && is_string($user->{$column}) && $user->{$column} !== '';
+    }
+
+    public function revealDecryptablePassword(CurrentActor $actor, string $email): ?string
+    {
+        abort_unless($this->passwordRevealAccess->allows($actor), 403);
+
+        $user = $this->passwordRevealUser($actor, $email);
+
+        return $user ? $this->decryptedMailboxPassword($user) : null;
     }
 
     public function aliases(
@@ -154,8 +183,7 @@ final class AccountRepository
         ?string $search = null,
         ?string $sort = null,
         ?string $direction = null,
-    ): LengthAwarePaginator
-    {
+    ): LengthAwarePaginator {
         $query = $this->visibleAliases($actor);
         if ($domain) {
             $query->where('alias.domain', strtolower($domain));
@@ -462,7 +490,7 @@ final class AccountRepository
             ]);
         }
 
-        return "relay:[{$ip}]:25";
+        return "relay:[{$ip}]:".(int) config('iredmail.backup_mx_port');
     }
 
     public function deleteDomain(CurrentActor $actor, string $domain, int $keepDays = 0): void
@@ -498,29 +526,29 @@ final class AccountRepository
         if (! $email || ! $actor->canManageEmail($email)) {
             throw ValidationException::withMessages(['username' => 'Enter an email address in a managed domain.']);
         }
-        if ($this->accountExists($email)) {
-            throw ValidationException::withMessages(['username' => 'An account with this email address already exists.']);
-        }
-
         $domain = IredMailAddress::domainOf($email);
         $local = strstr($email, '@', true);
-        $maildir = sprintf('%s/%s/', $domain, $local);
+        $maildir = strtr((string) config('iredmail.mailbox_directory_template'), [
+            '{domain}' => $domain,
+            '{local}' => $local,
+            '{email}' => $email,
+        ]);
         $password = $data['password'] ?? '';
         if (strlen($password) < 8) {
             throw ValidationException::withMessages(['password' => 'Password must be at least 8 characters.']);
         }
 
-        DB::connection('vmail')->transaction(function () use ($data, $email, $domain, $maildir, $password) {
+        $this->withAddressCreationLock($email, 'username', function () use ($data, $email, $domain, $maildir, $password) {
             $mailbox = [
                 'username' => $email,
                 'password' => IredMailPassword::hash($password),
                 'name' => $data['name'] ?? '',
-                'language' => 'en_US',
+                'language' => config('iredmail.mailbox_language'),
                 'domain' => $domain,
                 'maildir' => $maildir,
                 'quota' => (int) ($data['quota'] ?? 0),
                 'storagebasedirectory' => config('iredmail.storage_base_directory'),
-                'storagenode' => 'vmail1',
+                'storagenode' => config('iredmail.storage_node'),
                 'transport' => config('iredmail.default_mta_transport'),
                 'created' => now()->toDateTimeString(),
                 'modified' => now()->toDateTimeString(),
@@ -598,12 +626,8 @@ final class AccountRepository
         if (! $address || ! $actor->canManageEmail($address) || $members === []) {
             throw ValidationException::withMessages(['address' => 'Enter a valid alias and at least one member.']);
         }
-        if ($this->accountExists($address)) {
-            throw ValidationException::withMessages(['address' => 'An account with this address already exists.']);
-        }
-
         $domain = IredMailAddress::domainOf($address);
-        DB::connection('vmail')->transaction(function () use ($address, $domain, $members, $data) {
+        $this->withAddressCreationLock($address, 'address', function () use ($address, $domain, $members, $data) {
             DB::connection('vmail')->table('alias')->insert([
                 'address' => $address,
                 'name' => $data['name'] ?? '',
@@ -681,9 +705,6 @@ final class AccountRepository
     {
         $address = $this->newAccountEmail($data, 'address');
         abort_unless($address && $actor->canManageEmail($address), 403);
-        if ($this->accountExists($address)) {
-            throw ValidationException::withMessages(['address' => 'An account with this address already exists.']);
-        }
         $domain = IredMailAddress::domainOf($address);
         $owners = $this->normalizeMembers($data['owners'] ?? '');
         $members = $this->normalizeMembers($data['members'] ?? '');
@@ -691,11 +712,15 @@ final class AccountRepository
             throw ValidationException::withMessages(['owners' => 'Enter at least one list owner.']);
         }
 
-        DB::connection('vmail')->transaction(function () use ($address, $domain, $owners, $members, $data) {
+        $this->withAddressCreationLock($address, 'address', function () use ($address, $domain, $owners, $members, $data) {
             DB::connection('vmail')->table('maillists')->insert([
                 'address' => $address,
                 'domain' => $domain,
-                'transport' => 'mlmmj:'.$address,
+                'transport' => str_replace(
+                    '{address}',
+                    $address,
+                    (string) config('iredmail.mailing_list_transport_template'),
+                ),
                 'accesspolicy' => $data['accesspolicy'] ?? 'public',
                 'maxmsgsize' => (int) ($data['maxmsgsize'] ?? 0),
                 'name' => $data['name'] ?? '',
@@ -822,7 +847,7 @@ final class AccountRepository
                 'username' => $email,
                 'password' => IredMailPassword::hash($password),
                 'name' => $data['name'] ?? '',
-                'language' => 'en_US',
+                'language' => config('iredmail.mailbox_language'),
                 'passwordlastchange' => now()->toDateTimeString(),
                 'created' => now()->toDateTimeString(),
                 'modified' => now()->toDateTimeString(),
@@ -892,7 +917,11 @@ final class AccountRepository
         }
 
         DB::connection('vmail')->table('domain_admins')->where('username', $email)->where('domain', $domain)->delete();
-        $remaining = DB::connection('vmail')->table('domain_admins')->where('username', $email)->pluck('domain')->all();
+        $remaining = DB::connection('vmail')->table('domain_admins')
+            ->where('username', $email)
+            ->where('active', 1)
+            ->pluck('domain')
+            ->all();
         DB::connection('vmail')->table('mailbox')->where('username', $email)->update([
             'isglobaladmin' => in_array('ALL', $remaining, true) ? 1 : 0,
             'isadmin' => count(array_diff($remaining, ['ALL'])) > 0 ? 1 : 0,
@@ -999,6 +1028,14 @@ final class AccountRepository
         } catch (DecryptException) {
             return null;
         }
+    }
+
+    private function passwordRevealUser(CurrentActor $actor, string $email): ?object
+    {
+        $email = IredMailAddress::email($email) ?? abort(404);
+        abort_unless($actor->canManageEmail($email), 403);
+
+        return $this->visibleUsers($actor)->where('username', $email)->first();
     }
 
     private function withoutStoredPasswords(Collection $users): Collection
@@ -1108,6 +1145,50 @@ final class AccountRepository
         }
 
         return false;
+    }
+
+    private function withAddressCreationLock(string $email, string $field, \Closure $create): void
+    {
+        $connection = DB::connection('vmail');
+        $lockName = 'mxc-address:'.substr(hash('sha256', strtolower($email)), 0, 40);
+        $usesAdvisoryLock = $connection->getDriverName() === 'mysql';
+        if ($usesAdvisoryLock) {
+            $result = $connection->selectOne('SELECT GET_LOCK(?, 10) AS acquired', [$lockName]);
+            if ((int) ($result->acquired ?? 0) !== 1) {
+                throw ValidationException::withMessages([
+                    $field => 'Another request is creating this address. Wait a moment and try again.',
+                ]);
+            }
+        }
+
+        try {
+            $connection->transaction(function () use ($email, $field, $create): void {
+                if ($this->accountExists($email)) {
+                    throw ValidationException::withMessages([
+                        $field => 'An account with this email address already exists.',
+                    ]);
+                }
+                $create();
+            });
+        } catch (QueryException $exception) {
+            $driverCode = (int) ($exception->errorInfo[1] ?? 0);
+            $message = strtolower($exception->getMessage());
+            if ($driverCode === 1062 || str_contains($message, 'duplicate entry') || str_contains($message, 'unique constraint')) {
+                throw ValidationException::withMessages([
+                    $field => 'An account with this email address already exists.',
+                ]);
+            }
+
+            throw $exception;
+        } finally {
+            if ($usesAdvisoryLock) {
+                try {
+                    $connection->selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+        }
     }
 
     private function replaceListPeople(string $address, string $domain, array $owners, array $members): void

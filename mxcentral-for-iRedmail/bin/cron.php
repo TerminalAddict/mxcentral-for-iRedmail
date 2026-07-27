@@ -88,8 +88,30 @@ function runArtisan(string $basePath, array $arguments): int
     $php = PHP_BINARY ?: '/usr/bin/php';
     $command = [$php, $basePath.'/artisan', ...$arguments];
 
-    if (runningAsRoot() && wwwDataExists() && is_executable('/usr/bin/sudo')) {
-        $command = ['/usr/bin/sudo', '-u', 'www-data', $php, $basePath.'/artisan', ...$arguments];
+    $runUser = getenv('MXCENTRAL_CRON_USER') ?: '';
+    $sudoPath = getenv('MXCENTRAL_SUDO_PATH') ?: '/usr/bin/sudo';
+    if ($runUser !== '' && preg_match('/^[a-z_][a-z0-9_-]*$/', $runUser) !== 1) {
+        fwrite(STDERR, "MXCENTRAL_CRON_USER is invalid.\n");
+
+        return 1;
+    }
+    if ($sudoPath === '' || $sudoPath[0] !== '/' || ! is_executable($sudoPath)) {
+        fwrite(STDERR, "MXCENTRAL_SUDO_PATH is not an executable absolute path.\n");
+
+        return 1;
+    }
+    if (runningAsRoot()) {
+        if ($runUser === '') {
+            fwrite(STDERR, "Refusing to run Artisan as root; set MXCENTRAL_CRON_USER explicitly.\n");
+
+            return 1;
+        }
+        if (! systemUserExists($runUser)) {
+            fwrite(STDERR, "MXCENTRAL_CRON_USER does not exist: {$runUser}\n");
+
+            return 1;
+        }
+        $command = [$sudoPath, '-u', $runUser, $php, $basePath.'/artisan', ...$arguments];
     }
 
     $process = proc_open($command, [
@@ -112,9 +134,9 @@ function runningAsRoot(): bool
     return function_exists('posix_geteuid') && posix_geteuid() === 0;
 }
 
-function wwwDataExists(): bool
+function systemUserExists(string $user): bool
 {
-    return function_exists('posix_getpwnam') && posix_getpwnam('www-data') !== false;
+    return function_exists('posix_getpwnam') && posix_getpwnam($user) !== false;
 }
 
 function ensureDirectory(string $path): void

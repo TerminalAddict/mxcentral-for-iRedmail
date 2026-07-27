@@ -42,13 +42,13 @@
             <div class="span-2">
                 <strong>Managed file</strong>
                 <span class="field-hint">{{ $settings['path'] }}</span>
-                <span class="field-hint">The app enables the iRedAPD reject_sender_login_mismatch plugin, writes ALLOWED_LOGIN_MISMATCH_SENDERS, and keeps a .bak copy before replacing the file.</span>
+                <span class="field-hint">The root helper enables the iRedAPD reject_sender_login_mismatch plugin and writes ALLOWED_LOGIN_MISMATCH_SENDERS in one validated, rollback-capable transaction.</span>
             </div>
             <div>
                 <strong>File access</strong>
                 <span class="field-hint">
                     Read: {{ $settings['readable'] ? 'yes' : 'no' }}.
-                    Write: {{ $settings['writable'] ? 'yes' : 'no' }}.
+                    Privileged helper: {{ $settings['writable'] ? 'available' : 'unavailable' }}.
                 </span>
             </div>
             <div>
@@ -62,7 +62,7 @@
                 <span class="field-hint">
                     {{ $settings['postfix_sender_login_mismatch_present'] ? 'Still present in main.cf. Saving will remove it.' : 'Removed or not detected in main.cf.' }}
                     Read: {{ $settings['postfix_main_cf_readable'] ? 'yes' : 'no' }}.
-                    Write: {{ $settings['postfix_main_cf_writable'] ? 'yes' : 'no' }}.
+                    Privileged helper: {{ $settings['postfix_main_cf_writable'] ? 'available' : 'unavailable' }}.
                 </span>
             </div>
             <div>
@@ -117,7 +117,7 @@
                 <span class="field-hint">{{ $settings['path'] }}</span>
                 <span class="field-hint">
                     Read: {{ $settings['readable'] ? 'yes' : 'no' }}.
-                    Write: {{ $settings['writable'] ? 'yes' : 'no' }}.
+                    Privileged helper: {{ $settings['writable'] ? 'available' : 'unavailable' }}.
                 </span>
             </div>
             <div class="span-2">
@@ -125,7 +125,7 @@
                 <span class="field-hint">{{ $settings['postfix_sender_access_path'] }}</span>
                 <span class="field-hint">
                     Read: {{ $settings['postfix_sender_access_readable'] ? 'yes' : 'no' }}.
-                    Write: {{ $settings['postfix_sender_access_writable'] ? 'yes' : 'no' }}.
+                    Privileged helper: {{ $settings['postfix_sender_access_writable'] ? 'available' : 'unavailable' }}.
                 </span>
             </div>
             <div>
@@ -172,7 +172,7 @@
                 <strong>Map access</strong>
                 <span class="field-hint">
                     Read: {{ $settings['discard_readable'] ? 'yes' : 'no' }}.
-                    Write: {{ $settings['discard_writable'] ? 'yes' : 'no' }}.
+                    Privileged helper: {{ $settings['discard_writable'] ? 'available' : 'unavailable' }}.
                 </span>
             </div>
             <div>
@@ -234,7 +234,7 @@
                 <span class="field-hint">
                     Exists: {{ $settings['sogo_template_target_exists'] ? 'yes' : 'no' }}.
                     Read: {{ $settings['sogo_template_target_readable'] ? 'yes' : 'no' }}.
-                    Write: {{ $settings['sogo_template_target_writable'] ? 'yes' : 'no' }}.
+                    Privileged helper: {{ $settings['sogo_template_target_writable'] ? 'available' : 'unavailable' }}.
                 </span>
             </div>
             <div>
@@ -264,7 +264,7 @@
             </label>
             <div class="span-2">
                 <strong>Current state</strong>
-                <span class="field-hint">{{ $settings['decryptable_passwords_enabled'] ? 'Enabled. Users with a stored encrypted password can show it from /users.' : 'Disabled. The decryptable password column is not present, and /users will not show the password field.' }}</span>
+                <span class="field-hint">{{ $settings['decryptable_passwords_enabled'] ? 'Enabled. Explicitly authorized global admins can request a one-time, re-authenticated MFA reveal from /users.' : 'Disabled. The decryptable password column is not present, and no password can be revealed.' }}</span>
             </div>
             <div class="span-2">
                 <strong>Important limit</strong>
@@ -272,7 +272,7 @@
             </div>
             <div class="span-2">
                 <strong>Disabling</strong>
-                <span class="field-hint">Turning this off drops the column from vmail.mailbox, removes stored decryptable passwords, and hides the show-password UI.</span>
+                <span class="field-hint">Turning this off drops the column from vmail.mailbox, removes stored decryptable passwords, and disables one-time reveals.</span>
             </div>
         </div>
         <div class="record-form__footer">
@@ -377,12 +377,12 @@
     </table>
     <div class="record-form__grid">
         <div class="span-2">
-            <strong>Recommended restart command</strong>
-            <span class="field-hint">Set IREDAPD_RESTART_COMMAND to a narrow sudo command, for example: /usr/bin/sudo /usr/bin/systemctl restart iredapd.service</span>
+            <strong>Privileged helper</strong>
+            <span class="field-hint">Command paths and service names are root-owned settings in /etc/mxcentral/privileged-helper.json. PHP cannot supply or override them.</span>
         </div>
         <div class="span-2">
             <strong>sudoers rule</strong>
-            <span class="field-hint">Allow only the web server user to run only that service restart without a password. Do not give the app broad sudo access.</span>
+            <span class="field-hint">The only permitted root command is /usr/local/sbin/mxcentral-privileged with no command-line arguments.</span>
         </div>
         <div class="span-2">
             <strong>Postfix discard setup</strong>
@@ -397,8 +397,8 @@
             <span class="field-hint">MXCentral installs and maintains check_sender_access pcre:/etc/postfix/sender_access.pcre when unauthenticated sender settings are saved.</span>
         </div>
         <div class="span-2">
-            <strong>Postfix commands</strong>
-            <span class="field-hint">MXCentral uses the bundled narrow sudo defaults for postmap and Postfix reload. Environment values can override them for hosts with different command paths.</span>
+            <strong>Postfix transaction</strong>
+            <span class="field-hint">The helper atomically applies managed files, runs postmap and postfix check, reloads Postfix, and restores the previous state on failure.</span>
         </div>
         <div class="span-2">
             <strong>SOGo template override</strong>
@@ -406,7 +406,7 @@
         </div>
         <div class="span-2">
             <strong>SOGo reload</strong>
-            <span class="field-hint">Set SOGO_RELOAD_COMMAND to a narrow sudo command such as /usr/bin/sudo /usr/bin/systemctl reload sogo.service.</span>
+            <span class="field-hint">The root helper validates WOX/XML, limits changes to the logo and managed colour block, then reloads the configured SOGo service.</span>
         </div>
     </div>
 </div>

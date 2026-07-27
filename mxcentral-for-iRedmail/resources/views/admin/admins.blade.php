@@ -3,7 +3,7 @@
 @section('content')
 @php
     $selectedDomains = array_flip((array) old('domains', []));
-    $currentAdmin = strtolower((string) session('actor.email'));
+    $currentAdmin = strtolower($currentActor->email);
 @endphp
 
 <div class="page-titlebar">

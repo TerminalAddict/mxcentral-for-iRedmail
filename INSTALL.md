@@ -13,7 +13,19 @@ Put real deployment values in the ignored top-level `Makefile.local`:
 ```make
 DEPLOY_HOST := root@mail.example.com
 DEPLOY_PATH := /opt/www/mxcentral-for-iRedmail
+APP_USER := www-data
+APP_GROUP := www-data
+
+# Optional per-server profiles kept outside the repository:
+SERVER_ENV_FILE := /secure/mxcentral/mail.example.com.env
+PRIVILEGED_CONFIG_FILE := /secure/mxcentral/mail.example.com-helper.json
 ```
+
+There are deliberately no deployable default host or path values. Use a
+different `Makefile.local` or explicit environment values for each mail server.
+If `SERVER_ENV_FILE` is omitted, deployment preserves that server's existing
+remote `.env`. If `PRIVILEGED_CONFIG_FILE` is omitted, it preserves the
+root-owned `/etc/mxcentral/privileged-helper.json`.
 
 ## Get the Code
 
@@ -43,10 +55,15 @@ The deploy target:
 
 - creates required app/cache/storage directories
 - rsyncs the app to `/opt/www/mxcentral-for-iRedmail`
-- does not overwrite remote `.env` or remote `storage/`
+- preserves the remote `.env`, privileged-helper configuration, and `storage/`
+  unless an explicit per-server profile is supplied
 - does not deploy local `database/*.sqlite*` files
-- runs `chown -R www-data:www-data /opt/www/mxcentral-for-iRedmail`
-- runs `sudo -u www-data php artisan optimize:clear`
+- makes application source, dependencies, configuration, and `.env` root-owned
+- sets `.env` to `root:<app-group>` mode `0640`
+- gives the PHP user write access only to `storage/` and `bootstrap/cache/`
+- installs the root-owned privileged helper and its single-command sudo policy
+- runs Laravel cache clearing and fail-closed application, database-schema, and
+  privileged-helper health checks as the configured app user
 
 For updating multiple existing installs, use the generic rsync helper:
 
@@ -55,9 +72,9 @@ scripts/deploy-rsync.sh paul@mail.example.com /opt/www/mxcentral-for-iRedmail
 ```
 
 The helper refuses to deploy unless the remote path already looks like an
-MxCentral deployment. It preserves remote `.env`, `storage/`, local SQLite
-databases, and runtime files, then checks ownership. If it cannot apply
-`www-data:www-data` ownership itself, run the command it prints on the server.
+MXCentral deployment and the remote account has root or passwordless sudo.
+It will not fall back to web-worker ownership because writable application code
+would turn a PHP compromise into persistent code execution.
 
 If an older checkout fails during deploy with `Database file at path
 .../database/database.sqlite does not exist`, create or fix the server `.env`
@@ -67,129 +84,85 @@ so it uses non-database Laravel runtime stores:
 SESSION_DRIVER=file
 CACHE_STORE=array
 QUEUE_CONNECTION=sync
+MXCENTRAL_PRIVILEGED_HELPER_COMMAND="/usr/bin/sudo /usr/local/sbin/mxcentral-privileged"
+MXCENTRAL_LOGIN_RATE_CACHE_STORE=file
+MXCENTRAL_LOGIN_ACCOUNT_LOCK_THRESHOLD=5
+MXCENTRAL_LOGIN_IP_LOCK_THRESHOLD=10
+MXCENTRAL_LOGIN_LOCK_SECONDS=60
+MXCENTRAL_LOGIN_MAX_LOCK_SECONDS=900
 ```
 
 Then rerun `make deploy`.
 
 ## Create Server `.env` and App Key
 
-On the mail server, create the server-local `.env` file. Deploy deliberately
-does not overwrite this file because it contains host-specific secrets.
-
-Run the ownership fix before generating the Laravel app key so `www-data` can
-write the key into `.env`:
+On the mail server, create the server-local `.env` file. Deployment deliberately
+does not overwrite it unless `SERVER_ENV_FILE` names an explicit local profile.
+Generate the key before making the file read-only to PHP:
 
 ```sh
 cd /opt/www/mxcentral-for-iRedmail
-cp .env.example .env
-chown -R www-data:www-data /opt/www/mxcentral-for-iRedmail
-sudo -u www-data php artisan key:generate
-```
-
-If you edit `.env` later as `root`, rerun:
-
-```sh
-chown www-data:www-data /opt/www/mxcentral-for-iRedmail/.env
+install -o root -g www-data -m 0640 .env.production.example .env
+php artisan key:generate
+chown root:www-data .env
+chmod 0640 .env
 ```
 
 Keep the generated `APP_KEY` stable. Optional decryptable mailbox password
 storage encrypts values with this key; if the key is changed, previously stored
 decryptable passwords cannot be recovered.
 
-## Install sudoers Include
+## Install the Privileged Helper
 
-On the mail server:
+The deployment script installs these automatically. For a manual installation:
 
 ```sh
+install -o root -g root -m 0755 /opt/www/mxcentral-for-iRedmail/scripts/mxcentral-privileged /usr/local/sbin/mxcentral-privileged
+install -d -o root -g root -m 0755 /etc/mxcentral
+install -o root -g root -m 0640 /opt/www/mxcentral-for-iRedmail/docs/privileged-helper.json /etc/mxcentral/privileged-helper.json
 visudo -cf /opt/www/mxcentral-for-iRedmail/docs/sudoers.conf
 install -o root -g root -m 0440 /opt/www/mxcentral-for-iRedmail/docs/sudoers.conf /etc/sudoers.d/mxcentral-for-iRedmail
 ```
 
-Do not install the sudoers include with a dot in the target filename, for example
-`/etc/sudoers.d/mxcentral.conf`. Common sudo builds ignore dotted filenames in
-`@includedir`.
+The sudo policy grants only `/usr/local/sbin/mxcentral-privileged` with no
+arguments. Requests arrive as JSON on stdin. The helper validates named
+operations, rejects symlinks and hard links, uses fixed root-configured paths,
+writes with `O_NOFOLLOW`, fsyncs, and atomically renames files. It also owns DKIM
+key creation, mode/ownership changes, service reloads, postmap, and fail2ban
+unban. Do not grant the PHP user write ACLs on `/var/lib/dkim`, Postfix, Amavis,
+iRedAPD, or SOGo files.
 
-## One-Time ACL Setup
+The per-server helper JSON must list the deployed app user in `web_users` and
+must set `file_sources.sogo_template` to the root-owned package template on that
+server. Generic file writes are not exposed: the helper compares every proposed
+file against the live/root source and refuses changes outside MXCentral's
+specific managed blocks and access hooks. Related writes, validation, postmap,
+and reloads run under one root lock. Their root-owned state records in
+`/var/lib/mxcentral/operations` are explicitly `pending`, `applied`, or `failed`;
+a failed validation or reload restores the previous files and service state.
 
-These ACLs are required because the app edits fixed iRedMail/Postfix/SOGo files directly as `www-data` and creates `.bak` files before replacing them.
-
-Run on the mail server as `root`:
-
-```sh
-setfacl -m u:www-data:rwx /etc/amavis/conf.d
-setfacl -m u:www-data:rw /etc/amavis/conf.d/50-user
-setfacl -m u:www-data:rwx /var/lib/dkim
-
-setfacl -m u:www-data:rwx /opt/iredapd
-setfacl -m u:www-data:rw /opt/iredapd/settings.py
-
-if [ -L /opt/iredapd/settings.py ]; then
-    setfacl -m u:www-data:rw "$(readlink -f /opt/iredapd/settings.py)"
-fi
-
-setfacl -m u:www-data:rw /etc/postfix/main.cf
-setfacl -m u:www-data:rwx /etc/postfix
-touch /etc/postfix/sender_access.pcre
-setfacl -m u:www-data:rw /etc/postfix/sender_access.pcre
-touch /etc/postfix/discard_recipients
-setfacl -m u:www-data:rw /etc/postfix/discard_recipients
-
-install -d -m 0755 /var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI
-if [ -f /usr/lib/GNUstep/SOGo/Templates/MainUI/SOGoRootPage.wox ]; then
-    install -m 0644 /usr/lib/GNUstep/SOGo/Templates/MainUI/SOGoRootPage.wox /var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox
-elif [ -f /usr/lib64/GNUstep/SOGo/Templates/MainUI/SOGoRootPage.wox ]; then
-    install -m 0644 /usr/lib64/GNUstep/SOGo/Templates/MainUI/SOGoRootPage.wox /var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox
-fi
-setfacl -m u:www-data:x /var/lib/sogo
-setfacl -m u:www-data:x /var/lib/sogo/GNUstep
-setfacl -m u:www-data:x /var/lib/sogo/GNUstep/Library
-setfacl -m u:www-data:x /var/lib/sogo/GNUstep/Library/SOGo
-setfacl -m u:www-data:x /var/lib/sogo/GNUstep/Library/SOGo/Templates
-setfacl -m u:www-data:rwx /var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI
-setfacl -m u:www-data:rw /var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox
-```
-
-Verify key permissions:
-
-```sh
-sudo -u www-data test -r /opt/iredapd/settings.py && echo iredapd-read-ok
-sudo -u www-data test -w /opt/iredapd/settings.py && echo iredapd-write-ok
-sudo -u www-data grep -E 'ALLOWED_LOGIN_MISMATCH_SENDERS|ALLOWED_FORGED_SENDERS|MYNETWORKS' /opt/iredapd/settings.py
-sudo -u www-data sh -c 'touch /opt/iredapd/.mxcentral-acl-test && rm /opt/iredapd/.mxcentral-acl-test' && echo iredapd-backup-ok
-
-sudo -u www-data test -w /etc/amavis/conf.d/50-user && echo amavis-write-ok
-sudo -u www-data sh -c 'touch /etc/amavis/conf.d/.mxcentral-acl-test && rm /etc/amavis/conf.d/.mxcentral-acl-test' && echo amavis-backup-ok
-
-sudo -u www-data test -w /etc/postfix/sender_access.pcre && echo sender-access-write-ok
-sudo -u www-data sh -c 'touch /etc/postfix/.mxcentral-acl-test && rm /etc/postfix/.mxcentral-acl-test' && echo postfix-backup-ok
-```
+For a dedicated MXCentral PHP-FPM pool, set `APP_USER` and `APP_GROUP` during
+deployment and configure nginx/FPM to use that account. The deploy script
+generates the matching narrow sudoers entry.
 
 ## Required `.env` Settings
 
 Keep the remote `.env` on the server. `make deploy` does not overwrite it.
 
-Create a MySQL/MariaDB user for the app and use a strong unique password.
-This broad grant matches the current app behavior across the iRedMail databases:
+Create separate MySQL/MariaDB identities for each schema, each with a different
+strong password. Never grant MXCentral privileges on `*.*`, `FILE`,
+`GRANT OPTION`, or unrelated schemas.
 
-```sql
-GRANT ALL PRIVILEGES ON *.* TO 'mxcentral'@'localhost' IDENTIFIED BY 'mxcentral-pass';
-FLUSH PRIVILEGES;
-```
-
-Or run it directly from bash with a database admin account:
+Review the table-level grant template, replace all placeholder passwords, then
+apply it with a database administration account:
 
 ```sh
-mysql \
-  -u db_admin_user \
-  -p \
-  -e "
-    GRANT ALL PRIVILEGES
-      ON *.*
-      TO 'mxcentral'@'localhost'
-      IDENTIFIED BY 'mxcentral-pass';
-    FLUSH PRIVILEGES;
-  "
+less /opt/www/mxcentral-for-iRedmail/docs/database-grants.sql
+mysql -u db_admin_user -p < /opt/www/mxcentral-for-iRedmail/docs/database-grants.sql
 ```
+
+The optional commented `ALTER ON vmail.mailbox` grant is needed only if global
+admins will toggle decryptable-password storage from the application.
 
 Core paths and commands:
 
@@ -203,33 +176,28 @@ QUEUE_CONNECTION=sync
 
 IREDMAIL_DB_HOST=127.0.0.1
 IREDMAIL_DB_PORT=3306
-IREDMAIL_DB_USERNAME=mxcentral
-IREDMAIL_DB_PASSWORD=mxcentral-pass
+VMAIL_DB_USERNAME=mxcentral_vmail
+VMAIL_DB_PASSWORD=unique-vmail-secret
+IREDADMIN_DB_USERNAME=mxcentral_iredadmin
+IREDADMIN_DB_PASSWORD=unique-iredadmin-secret
+AMAVISD_DB_USERNAME=mxcentral_amavisd
+AMAVISD_DB_PASSWORD=unique-amavisd-secret
+IREDAPD_DB_USERNAME=mxcentral_iredapd
+IREDAPD_DB_PASSWORD=unique-iredapd-secret
+FAIL2BAN_DB_USERNAME=mxcentral_fail2ban
+FAIL2BAN_DB_PASSWORD=unique-fail2ban-secret
 
 IREDAPD_SETTINGS_PATH=/opt/iredapd/settings.py
-IREDAPD_RESTART_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart iredapd.service"
-
-FAIL2BAN_UNBAN_COMMAND="/usr/bin/sudo /usr/bin/fail2ban-client unban"
 
 POSTFIX_MAIN_CF_PATH=/etc/postfix/main.cf
 POSTFIX_SENDER_ACCESS_PATH=/etc/postfix/sender_access.pcre
 POSTFIX_DISCARD_RECIPIENTS_PATH=/etc/postfix/discard_recipients
 POSTFIX_STAGING_DOMAINS_PATH=/etc/postfix/mxcentral_staging_domains.pcre
-POSTFIX_POSTMAP_COMMAND="/usr/bin/sudo /usr/sbin/postmap"
-POSTFIX_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl reload postfix.service"
 
 AMAVISD_CONFIG_PATH=/etc/amavis/conf.d/50-user
 AMAVISD_DKIM_DIRECTORY=/var/lib/dkim
 AMAVISD_DKIM_SELECTOR=mxcentral
 AMAVISD_DKIM_BITS=1024
-AMAVISD_GENRSA_COMMAND="/usr/bin/sudo /usr/sbin/amavisd genrsa"
-AMAVISD_SHOWKEYS_COMMAND="/usr/bin/sudo /usr/sbin/amavisd showkeys"
-AMAVISD_TESTKEYS_COMMAND="/usr/bin/sudo /usr/sbin/amavisd testkeys"
-AMAVISD_RESTART_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart amavis.service"
-AMAVISD_DKIM_KEY_OWNER=amavis
-AMAVISD_DKIM_KEY_GROUP=amavis
-AMAVISD_DKIM_CHOWN_COMMAND="/usr/bin/sudo /usr/bin/chown"
-AMAVISD_DKIM_CHMOD_COMMAND="/usr/bin/sudo /usr/bin/chmod"
 
 IREDMAIL_SPF_SERVER_HOSTNAME=mail.example.com
 IREDMAIL_SPF_SERVER_IPS=203.0.113.10
@@ -237,7 +205,21 @@ IREDMAIL_DECRYPTABLE_PASSWORD_COLUMN=decrypt-pass
 
 SOGO_ROOT_TEMPLATE_SOURCE=
 SOGO_ROOT_TEMPLATE_TARGET=/var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox
-SOGO_RELOAD_COMMAND="/usr/bin/sudo /usr/bin/systemctl restart sogo.service"
+```
+
+Executable paths, service names, file ownership/modes, and privileged target
+paths are configured in the root-owned
+`/etc/mxcentral/privileged-helper.json`, not in the PHP-readable `.env`.
+
+Login rate-limit state must use a cache that persists between HTTP requests;
+the local `file` store is the default. If an administrator is mistakenly
+locked out, verify the request separately and run:
+
+```sh
+cd /opt/www/mxcentral-for-iRedmail
+sudo -u www-data php artisan mxcentral:unlock-admin admin@example.com
+# Include the source address when an IP lock also needs clearing:
+sudo -u www-data php artisan mxcentral:unlock-admin admin@example.com --ip=192.0.2.10
 ```
 
 Optional decryptable password storage is controlled from `system/settings`.
@@ -245,6 +227,21 @@ When enabled, the app alters `vmail.mailbox` and adds `decrypt-pass` as a
 nullable encrypted text column. Only passwords created or changed after the
 feature is enabled can be stored. Turning the feature off drops the column and
 removes stored decryptable passwords.
+
+Password viewing is separately disabled by default. To authorize a global
+administrator, add the normalized address to
+`MXCENTRAL_PASSWORD_REVEAL_ADMINS` and provide that administrator's Base32 TOTP
+secret in `MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS`, for example:
+
+```dotenv
+MXCENTRAL_PASSWORD_REVEAL_ADMINS=postmaster@example.com
+MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS='{"postmaster@example.com":"BASE32SECRET"}'
+```
+
+Every reveal requires the administrator's current password, a current TOTP
+code, and a recorded purpose. It uses a short-lived, single-use token and all
+authenticated responses are marked private and non-cacheable. Keep the TOTP
+secret and `APP_KEY` root-readable only through the protected `.env`.
 
 The configured vmail database account must therefore have `ALTER` privilege on
 `vmail.mailbox` in addition to its normal mailbox read/write privileges.
@@ -316,10 +313,13 @@ The app `.env` must use:
 APP_URL=https://your-mail-host.example/mxcentral
 ```
 
-Install the provided nginx location template on the mail server:
+Render the nginx template with this server's explicit deployment path, then
+install the rendered file:
 
 ```sh
-ln -sfn /opt/www/mxcentral-for-iRedmail/docs/nginx/mxcentral.tmpl /etc/nginx/templates/mxcentral.tmpl
+/opt/www/mxcentral-for-iRedmail/scripts/render-nginx-template.sh \
+  /opt/www/mxcentral-for-iRedmail/public \
+  /etc/nginx/templates/mxcentral.tmpl
 ```
 
 Then include it from the active iRedMail nginx server block, before any broad
@@ -368,8 +368,12 @@ systemctl reload nginx
 Install one cron entry on the mail server:
 
 ```cron
-* * * * * /usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php >/dev/null 2>&1
+* * * * * MXCENTRAL_CRON_USER=www-data MXCENTRAL_SUDO_PATH=/usr/bin/sudo /usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php >/dev/null 2>&1
 ```
+
+Set the user and executable paths explicitly for each server. If invoked as
+root, the runner refuses to launch Artisan until `MXCENTRAL_CRON_USER` names an
+existing non-root application user.
 
 List scheduled tasks:
 
@@ -439,16 +443,15 @@ When the discard form is saved, the app writes
 check_recipient_access hash:/etc/postfix/discard_recipients
 ```
 
-It then runs postmap and reloads Postfix through the fixed commands in the
-bundled sudoers include. No separate manual `main.cf`, postmap, or reload step
-is required after the base MXCentral permissions have been installed.
+It then runs postmap and reloads Postfix through the privileged helper. No
+separate manual `main.cf`, postmap, or reload step is required after the helper
+has been installed.
 
 ### Staging Domains
 
 Domain staging is controlled from `/domains`. MXCentral creates and maintains
 `/etc/postfix/mxcentral_staging_domains.pcre`, installs its recipient restriction
-before the discard map, and reloads Postfix through the existing fixed sudo
-command.
+before the discard map, and reloads Postfix through the privileged helper.
 
 The map returns a temporary SMTP 450 response for staged primary and alias
 domains. The corresponding `vmail.domain` and `vmail.mailbox` records remain
@@ -456,10 +459,8 @@ active so administrators can create accounts, authenticate, and migrate mail.
 Switching to **Accepting mail** removes the domain patterns and reloads Postfix;
 it does not change public DNS.
 
-The standard installer already grants `www-data` narrow ACL access to
-`/etc/postfix` and grants the fixed Postfix reload command. The staging PCRE map
-does not use postmap, so deploying this feature does not require reinstalling
-the sudoers file.
+The PHP worker has no write access to `/etc/postfix`. The staging PCRE map does
+not use postmap; all writes and reloads are brokered by the helper.
 
 ### Backup MX
 
@@ -494,16 +495,18 @@ The destination must be an existing mailbox.
 ```sh
 cd /opt/www/mxcentral-for-iRedmail
 sudo -u www-data php artisan optimize:clear
+sudo -u www-data php artisan mxcentral:check-production
 sudo -u www-data php artisan route:list >/dev/null
 sudo -u www-data php artisan quarantine:notify-recipients --dry-run
 ```
 
-Check app-managed file access:
+Confirm the PHP worker cannot write application code, `.env`, or service
+configuration; privileged changes must go through the root helper:
 
 ```sh
-sudo -u www-data test -w /opt/iredapd/settings.py && echo ok
-sudo -u www-data test -w /etc/amavis/conf.d/50-user && echo ok
-sudo -u www-data test -w /etc/postfix/main.cf && echo ok
-sudo -u www-data test -w /etc/postfix/sender_access.pcre && echo ok
-sudo -u www-data test -w /etc/postfix/discard_recipients && echo ok
+sudo -u www-data test ! -w app
+sudo -u www-data test ! -w .env
+sudo -u www-data test ! -w /opt/iredapd/settings.py
+sudo -u www-data test ! -w /etc/amavis/conf.d/50-user
+sudo -u www-data test ! -w /etc/postfix/main.cf
 ```

@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Services\IredMail\AuditLogger;
 use App\Services\IredMail\SystemSettingsService;
 use ReflectionClass;
+use Tests\Fakes\FakePrivilegedHelper;
 use Tests\TestCase;
 
 final class SystemSettingsServiceTest extends TestCase
@@ -73,15 +74,12 @@ final class SystemSettingsServiceTest extends TestCase
         );
     }
 
-    public function test_postfix_commands_use_narrow_sudo_defaults_when_environment_values_are_blank(): void
+    public function test_privileged_operations_use_one_fixed_helper_command(): void
     {
-        config([
-            'iredmail.postfix_postmap_command' => '',
-            'iredmail.postfix_reload_command' => '',
-        ]);
-
-        $this->assertSame('/usr/bin/sudo /usr/sbin/postmap', $this->invokePrivate('postmapCommand', []));
-        $this->assertSame('/usr/bin/sudo /usr/bin/systemctl reload postfix.service', $this->invokePrivate('postfixReloadCommand', []));
+        $this->assertSame(
+            '/usr/bin/sudo /usr/local/sbin/mxcentral-privileged',
+            config('iredmail.privileged_helper_command'),
+        );
     }
 
     public function test_sogo_login_colors_are_inserted_after_first_script_and_before_main_content_comment(): void
@@ -144,12 +142,48 @@ WOX;
         $this->assertSame(1, substr_count($updated, '.md-default-theme.md-accent.md-bg'));
     }
 
+    public function test_sogo_logo_replacement_treats_regex_backreferences_and_xml_characters_literally(): void
+    {
+        $template = '<root><img class="md-margin" src="old.svg"/></root>';
+        $url = 'https://example.com/$0-$1-logo?x=one&ampersand=✓';
+
+        $updated = $this->invokePrivate('replaceSogoLogoUrl', [$template, $url]);
+
+        $this->assertStringContainsString(
+            'src="https://example.com/$0-$1-logo?x=one&amp;ampersand=✓"',
+            $updated,
+        );
+        $this->assertStringNotContainsString('src="https://example.com/src=', $updated);
+        $this->assertNotFalse(simplexml_load_string($updated));
+    }
+
+    public function test_sogo_logo_replacement_handles_long_urls_without_substitution(): void
+    {
+        $template = "<root><img rsrc:src='old.svg'/></root>";
+        $url = 'https://example.com/'.str_repeat('a', 4000).'$0';
+
+        $updated = $this->invokePrivate('replaceSogoLogoUrl', [$template, $url]);
+
+        $this->assertStringContainsString(htmlspecialchars($url, ENT_QUOTES | ENT_HTML5), $updated);
+    }
+
+    public function test_managed_sender_blocks_treat_dollar_sequences_as_literal_data(): void
+    {
+        $original = "# BEGIN iredadmin-php managed: login mismatch senders\nALLOWED_LOGIN_MISMATCH_SENDERS = ['old@example.com']\n# END iredadmin-php managed: login mismatch senders\n";
+
+        $updated = $this->invokePrivate('replaceManagedBlock', [$original, ['sender$0@example.com', 'sender$1@example.com']]);
+
+        $this->assertStringContainsString("'sender$0@example.com'", $updated);
+        $this->assertStringContainsString("'sender$1@example.com'", $updated);
+        $this->assertStringNotContainsString('old@example.com', $updated);
+    }
+
     /**
      * @param  array<int, mixed>  $arguments
      */
     private function invokePrivate(string $method, array $arguments): mixed
     {
-        $service = new SystemSettingsService(new AuditLogger());
+        $service = new SystemSettingsService(new AuditLogger, new FakePrivilegedHelper);
         $reflectionMethod = (new ReflectionClass($service))->getMethod($method);
 
         return $reflectionMethod->invokeArgs($service, $arguments);

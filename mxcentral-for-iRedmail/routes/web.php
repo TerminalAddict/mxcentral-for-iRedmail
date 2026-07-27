@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiController;
 use App\Http\Controllers\Admin\MailController;
+use App\Http\Controllers\Admin\PasswordRevealController;
 use App\Http\Controllers\Admin\PolicyController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Auth\LoginController;
@@ -41,6 +42,8 @@ Route::middleware('iredmail.auth:admin')->group(function () {
     Route::patch('/users/{email}', [AdminController::class, 'updateUser'])->where('email', '.*')->name('users.update');
     Route::post('/users/{email}/services', [AdminController::class, 'updateServices'])->where('email', '.*')->name('users.services');
     Route::delete('/users/{email}', [AdminController::class, 'deleteUser'])->where('email', '.*')->name('users.delete');
+    Route::post('/users/{email}/password-reveal', [PasswordRevealController::class, 'request'])->where('email', '.*')->middleware('iredmail.auth:global')->name('users.password.request');
+    Route::get('/users/password-reveal/{token}', [PasswordRevealController::class, 'consume'])->where('token', '[a-f0-9]{64}')->middleware('iredmail.auth:global')->name('users.password.consume');
     Route::get('/aliases', [AdminController::class, 'aliases'])->name('aliases');
     Route::post('/aliases', [AdminController::class, 'createAlias'])->name('aliases.create');
     Route::patch('/aliases/{address}', [AdminController::class, 'updateAlias'])->where('address', '.*')->name('aliases.update');

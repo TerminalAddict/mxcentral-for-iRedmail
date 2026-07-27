@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Services\IredMail\AuthService;
+use App\Services\IredMail\CurrentActor;
+use Tests\Fakes\FakeAuthService;
 use Tests\TestCase;
 
 final class BrandStyleTest extends TestCase
@@ -18,14 +21,20 @@ final class BrandStyleTest extends TestCase
 
     public function test_authenticated_layout_includes_mobile_bottom_nav(): void
     {
+        $actor = new CurrentActor(
+            email: 'postmaster@example.test',
+            type: 'mailbox-admin',
+            globalAdmin: true,
+            domainAdmin: false,
+            selfService: false,
+        );
+        $this->app->instance(AuthService::class, new FakeAuthService($actor));
+
         $this->withSession([
-            'actor' => [
+            'auth_identity' => [
                 'email' => 'postmaster@example.test',
-                'type' => 'mailbox-admin',
-                'global_admin' => true,
-                'domain_admin' => false,
-                'self_service' => false,
-                'domains' => [],
+                'source' => 'mailbox-admin',
+                'version' => 'test-security-version',
             ],
         ])->get('/system/settings')
             ->assertOk()

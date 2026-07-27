@@ -6,6 +6,7 @@ use App\Services\IredMail\AuditLogger;
 use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\SystemSettingsService;
 use Illuminate\Support\Facades\DB;
+use Tests\Fakes\FakePrivilegedHelper;
 use Tests\TestCase;
 
 final class DiscardRecipientAutomationTest extends TestCase
@@ -74,7 +75,7 @@ final class DiscardRecipientAutomationTest extends TestCase
 
     public function test_saving_discard_recipients_installs_hook_runs_commands_and_is_idempotent(): void
     {
-        $service = new SystemSettingsService(new AuditLogger);
+        $service = new SystemSettingsService(new AuditLogger, new FakePrivilegedHelper);
 
         $result = $service->saveDiscardRecipients($this->actor(), ['blackhole@example.com']);
 

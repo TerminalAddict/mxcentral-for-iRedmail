@@ -3,30 +3,44 @@
 namespace App\Services\IredMail;
 
 use App\Support\IredMailAddress;
+use App\Support\PrivilegedConfigurationLock;
 use Closure;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\Process\Process;
 
 final class SystemSettingsService
 {
     private const BEGIN_MARKER = '# BEGIN iredadmin-php managed: login mismatch senders';
+
     private const END_MARKER = '# END iredadmin-php managed: login mismatch senders';
+
     private const UNAUTH_BEGIN_MARKER = '# BEGIN mxcentral managed: unauthenticated senders';
+
     private const UNAUTH_END_MARKER = '# END mxcentral managed: unauthenticated senders';
+
     private const SENDER_ACCESS_BEGIN_MARKER = '# BEGIN mxcentral managed: unauthenticated senders';
+
     private const SENDER_ACCESS_END_MARKER = '# END mxcentral managed: unauthenticated senders';
+
     private const SENDER_MISMATCH_PLUGIN = 'reject_sender_login_mismatch';
+
     private const STAGED_PRIMARY_MARKER = '# MXCentral staged primary domain: ';
+
     private const SOGO_BRANDING_BEGIN_MARKER = '<!-- BEGIN MXCentral managed SOGo login branding -->';
+
     private const SOGO_BRANDING_END_MARKER = '<!-- END MXCentral managed SOGo login branding -->';
+
     private const SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR = '#175f55';
+
     private const SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR = '#ffffff';
 
-    public function __construct(private readonly AuditLogger $audit)
+    private readonly PrivilegedHelper $privileged;
+
+    public function __construct(private readonly AuditLogger $audit, ?PrivilegedHelper $privileged = null)
     {
+        $this->privileged = $privileged ?? app(PrivilegedHelper::class);
     }
 
     public function settings(CurrentActor $actor): array
@@ -34,16 +48,16 @@ final class SystemSettingsService
         abort_unless($actor->globalAdmin, 403);
 
         $path = $this->settingsPath();
-        $content = is_readable($path) ? (string) file_get_contents($path) : '';
+        $content = $this->managedFileContent('iredapd_settings', false);
         $postfixMainCfPath = $this->postfixMainCfPath();
-        $postfixMainCfContent = is_readable($postfixMainCfPath) ? (string) file_get_contents($postfixMainCfPath) : '';
+        $postfixMainCfContent = $this->managedFileContent('postfix_main', false);
         $senderAccessPath = $this->postfixSenderAccessPath();
 
         return [
             'path' => $path,
-            'restart_command_configured' => $this->restartCommand() !== '',
-            'readable' => is_readable($path),
-            'writable' => is_writable($path),
+            'restart_command_configured' => $this->privileged->configured(),
+            'readable' => $content !== '',
+            'writable' => $this->privileged->configured(),
             'allowed_login_mismatch_senders' => $this->extractSenders($content),
             'allowed_forged_senders' => $this->extractAllowedForgedSenders($content),
             'allowed_unauthenticated_networks' => $this->extractMyNetworks($content),
@@ -51,18 +65,18 @@ final class SystemSettingsService
             'discard_recipients' => $this->discardRecipients(),
             'discard_path' => $this->discardRecipientsPath(),
             'discard_readable' => $this->discardRecipientsReadable(),
-            'discard_writable' => $this->discardRecipientsWritable(),
+            'discard_writable' => $this->privileged->configured(),
             'postfix_main_cf_path' => $postfixMainCfPath,
-            'postfix_main_cf_readable' => is_readable($postfixMainCfPath),
-            'postfix_main_cf_writable' => is_writable($postfixMainCfPath),
+            'postfix_main_cf_readable' => $postfixMainCfContent !== '',
+            'postfix_main_cf_writable' => $this->privileged->configured(),
             'postfix_sender_login_mismatch_present' => $this->postfixSenderLoginMismatchPresent($postfixMainCfContent),
             'postfix_recipient_access_configured' => $this->postfixRecipientAccessConfigured(),
             'postfix_sender_access_path' => $senderAccessPath,
             'postfix_sender_access_readable' => $this->postfixSenderAccessReadable(),
-            'postfix_sender_access_writable' => $this->postfixSenderAccessWritable(),
+            'postfix_sender_access_writable' => $this->privileged->configured(),
             'postfix_sender_access_configured' => $this->postfixSenderAccessConfigured(),
-            'postmap_command_configured' => $this->postmapCommand() !== '',
-            'postfix_reload_command_configured' => $this->postfixReloadCommand() !== '',
+            'postmap_command_configured' => $this->privileged->configured(),
+            'postfix_reload_command_configured' => $this->privileged->configured(),
             'sogo_logo_url' => $this->sogoLogoUrl(),
             'sogo_login_background_color' => $this->sogoLoginColors()['background'],
             'sogo_login_foreground_color' => $this->sogoLoginColors()['foreground'],
@@ -70,9 +84,9 @@ final class SystemSettingsService
             'sogo_template_source_readable' => is_readable($this->sogoTemplateSource()),
             'sogo_template_target' => $this->sogoTemplateTarget(),
             'sogo_template_target_exists' => is_file($this->sogoTemplateTarget()),
-            'sogo_template_target_readable' => is_readable($this->sogoTemplateTarget()),
-            'sogo_template_target_writable' => $this->sogoTemplateTargetWritable(),
-            'sogo_reload_command_configured' => $this->sogoReloadCommand() !== '',
+            'sogo_template_target_readable' => $this->managedFileContent('sogo_template', false) !== '',
+            'sogo_template_target_writable' => $this->privileged->configured(),
+            'sogo_reload_command_configured' => $this->privileged->configured(),
             'decryptable_passwords_enabled' => $this->decryptablePasswordsEnabled(),
             'decryptable_password_column' => $this->decryptablePasswordColumn(),
             'hosted_mailboxes' => $this->hostedMailboxes(),
@@ -117,37 +131,40 @@ final class SystemSettingsService
         abort_unless($actor->globalAdmin, 403);
 
         $path = $this->settingsPath();
-        return $this->withFileLock($path, function () use ($path, $value) {
-            if (! is_file($path) || ! is_readable($path)) {
-                throw ValidationException::withMessages(['settings' => "Cannot read {$path}."]);
-            }
-            if (! is_writable($path)) {
-                throw ValidationException::withMessages(['settings' => "Cannot write {$path}. Check file ownership or sudo helper permissions."]);
-            }
 
+        return $this->withFileLock($path, function () use ($value) {
             $senders = $this->normalizeHostedSenders($value);
-            $original = (string) file_get_contents($path);
+            $original = $this->managedFileContent('iredapd_settings');
             $updated = $this->ensureSenderMismatchPluginEnabled($this->replaceManagedBlock($original, $senders));
-
+            $postfixOriginal = $this->managedFileContent('postfix_main');
+            $postfixUpdated = $this->removePostfixSenderLoginMismatchRestriction($postfixOriginal);
+            $writes = [];
             if ($updated !== $original) {
-                $backup = $path.'.bak';
-                if (@copy($path, $backup) === false) {
-                    throw ValidationException::withMessages(['settings' => "Cannot create backup {$backup}."]);
-                }
-
-                if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                    throw ValidationException::withMessages(['settings' => "Cannot write {$path}."]);
-                }
+                $writes['iredapd_settings'] = $updated;
             }
-
-            $postfix = $this->ensurePostfixSenderLoginMismatchRemoved();
-            $restart = $this->restartIredapd();
+            if ($postfixUpdated !== $postfixOriginal) {
+                $writes['postfix_main'] = $postfixUpdated;
+            }
+            $commands = [];
+            if ($postfixUpdated !== $postfixOriginal) {
+                $commands = ['postfix_check', 'postfix_reload'];
+            }
+            if ($updated !== $original) {
+                $commands[] = 'iredapd_restart';
+            }
+            $operation = $this->applyConfiguration($writes, $commands, 'settings');
+            $postfix = [
+                'changed' => $postfixUpdated !== $postfixOriginal,
+                'reload' => $this->operationResult($postfixUpdated !== $postfixOriginal, $operation),
+            ];
+            $restart = $this->operationResult($updated !== $original, $operation);
             $this->audit->log('update', 'Updated iredapd login mismatch senders: '.implode(', ', $senders).'.');
 
             return [
-                'changed' => $updated !== $original,
+                'changed' => $writes !== [],
                 'postfix' => $postfix,
                 'restart' => $restart,
+                'operation' => $operation,
                 'senders' => $senders,
             ];
         });
@@ -158,34 +175,43 @@ final class SystemSettingsService
         abort_unless($actor->globalAdmin, 403);
 
         $path = $this->settingsPath();
-        return $this->withFileLock($path, function () use ($path, $sendersValue, $networksValue) {
-            if (! is_file($path) || ! is_readable($path)) {
-                throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot read {$path}."]);
-            }
-            if (! is_writable($path)) {
-                throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot write {$path}. Check file ownership or sudo helper permissions."]);
-            }
 
+        return $this->withFileLock($path, function () use ($sendersValue, $networksValue) {
             $senders = $this->normalizeHostedSenders($sendersValue, 'allowed_forged_senders');
             $networks = $this->normalizeNetworks($networksValue);
-            $original = (string) file_get_contents($path);
+            $original = $this->managedFileContent('iredapd_settings');
             $updated = $this->replaceUnauthenticatedSettingsBlock($original, $senders, $networks);
-
-            if ($updated !== $original) {
-                $backup = $path.'.bak';
-                if (@copy($path, $backup) === false) {
-                    throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot create backup {$backup}."]);
-                }
-
-                if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                    throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot write {$path}."]);
+            $senderAccessOriginal = $this->managedFileContent('postfix_sender_access', false);
+            $senderAccessUpdated = $this->replaceSenderAccessBlock($senderAccessOriginal, $senders, $networks);
+            $postfixOriginal = $this->managedFileContent('postfix_main');
+            $map = 'check_sender_access pcre:'.$this->postfixSenderAccessPath();
+            $postfixUpdated = $this->addPostfixAccessHook($postfixOriginal, 'smtpd_sender_restrictions', $map);
+            $writes = [];
+            foreach ([
+                'iredapd_settings' => [$original, $updated],
+                'postfix_sender_access' => [$senderAccessOriginal, $senderAccessUpdated],
+                'postfix_main' => [$postfixOriginal, $postfixUpdated],
+            ] as $target => [$before, $after]) {
+                if ($after !== $before) {
+                    $writes[$target] = $after;
                 }
             }
-
-            $senderAccess = $this->saveSenderAccessPcre($senders, $networks);
-            $postfixHook = $this->ensurePostfixSenderAccessHook();
-            $reload = ($senderAccess['changed'] || $postfixHook['changed']) ? $this->reloadPostfix() : ['configured' => true, 'ok' => true, 'message' => 'No Postfix sender access change needed.'];
-            $restart = $this->restartIredapd();
+            $postfixChanged = $senderAccessUpdated !== $senderAccessOriginal || $postfixUpdated !== $postfixOriginal;
+            $commands = $postfixChanged ? ['postfix_check', 'postfix_reload'] : [];
+            if ($updated !== $original) {
+                $commands[] = 'iredapd_restart';
+            }
+            $operation = $this->applyConfiguration($writes, $commands, 'unauthenticated_senders');
+            $senderAccess = [
+                'changed' => $senderAccessUpdated !== $senderAccessOriginal,
+                'path' => $this->postfixSenderAccessPath(),
+            ];
+            $postfixHook = [
+                'changed' => $postfixUpdated !== $postfixOriginal,
+                'path' => $this->postfixMainCfPath(),
+            ];
+            $reload = $this->operationResult($postfixChanged, $operation);
+            $restart = $this->operationResult($updated !== $original, $operation);
 
             $this->audit->log('update', 'Updated unauthenticated sender allow list.');
 
@@ -195,6 +221,7 @@ final class SystemSettingsService
                 'postfix_hook' => $postfixHook,
                 'reload' => $reload,
                 'restart' => $restart,
+                'operation' => $operation,
                 'senders' => $senders,
                 'networks' => $networks,
             ];
@@ -206,8 +233,7 @@ final class SystemSettingsService
         string $url,
         string $backgroundColor = self::SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR,
         string $foregroundColor = self::SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR,
-    ): array
-    {
+    ): array {
         abort_unless($actor->globalAdmin, 403);
 
         $url = trim($url);
@@ -223,20 +249,12 @@ final class SystemSettingsService
         }
 
         $target = $this->sogoTemplateTarget();
-        return $this->withFileLock($target, function () use ($source, $target, $url, $backgroundColor, $foregroundColor) {
-            $directory = dirname($target);
-            if (! is_dir($directory) && @mkdir($directory, 0755, true) === false) {
-                throw ValidationException::withMessages(['sogo_logo_url' => "Cannot create {$directory}."]);
-            }
-            if (! $this->sogoTemplateTargetWritable()) {
-                throw ValidationException::withMessages(['sogo_logo_url' => "Cannot write {$target}. Check ownership or sudo helper permissions."]);
-            }
 
-            if (! is_file($target) && @copy($source, $target) === false) {
-                throw ValidationException::withMessages(['sogo_logo_url' => "Cannot copy {$source} to {$target}."]);
+        return $this->withFileLock($target, function () use ($source, $url, $backgroundColor, $foregroundColor) {
+            $original = $this->managedFileContent('sogo_template', false);
+            if ($original === '') {
+                $original = (string) file_get_contents($source);
             }
-
-            $original = (string) file_get_contents($target);
             $updated = $this->replaceSogoLogoUrl($original, $url);
             if ($updated === $original && $this->sogoLogoUrlFromContent($original) !== $url) {
                 throw ValidationException::withMessages(['sogo_logo_url' => 'Could not find the SOGo logo image tag to update.']);
@@ -249,21 +267,19 @@ final class SystemSettingsService
                 ]);
             }
 
-            if ($updated !== $original) {
-                if (@copy($target, $target.'.bak') === false) {
-                    throw ValidationException::withMessages(['sogo_logo_url' => "Cannot create backup {$target}.bak."]);
-                }
-                if (@file_put_contents($target, $updated, LOCK_EX) === false) {
-                    throw ValidationException::withMessages(['sogo_logo_url' => "Cannot write {$target}."]);
-                }
-            }
-
-            $reload = $this->reloadSogo();
+            $writes = $updated !== $original ? ['sogo_template' => $updated] : [];
+            $operation = $this->applyConfiguration(
+                $writes,
+                $writes === [] ? [] : ['sogo_reload'],
+                'sogo_logo_url',
+            );
+            $reload = $this->operationResult($writes !== [], $operation);
             $this->audit->log('update', "Updated SOGo branding: logo {$url}, login background {$backgroundColor}, login foreground {$foregroundColor}.");
 
             return [
                 'changed' => $updated !== $original,
                 'reload' => $reload,
+                'operation' => $operation,
                 'url' => $url,
                 'background_color' => $backgroundColor,
                 'foreground_color' => $foregroundColor,
@@ -276,35 +292,39 @@ final class SystemSettingsService
         abort_unless($actor->globalAdmin, 403);
 
         $path = $this->discardRecipientsPath();
-        return $this->withFileLock($path, function () use ($path, $value) {
-            $directory = dirname($path);
-            if (! is_dir($directory)) {
-                throw ValidationException::withMessages(['discard_recipients' => "Directory does not exist: {$directory}"]);
-            }
-            if (! $this->discardRecipientsWritable()) {
-                throw ValidationException::withMessages(['discard_recipients' => "Cannot write {$path}. Check file ownership or sudo helper permissions."]);
-            }
 
+        return $this->withFileLock($path, function () use ($path, $value) {
             $recipients = $this->normalizeHostedDomainRecipients($value);
-            $original = is_file($path) ? (string) file_get_contents($path) : '';
+            $original = $this->managedFileContent('postfix_discard_recipients', false);
             $updated = $this->discardRecipientsContent($recipients);
 
+            $postfixOriginal = $this->managedFileContent('postfix_main');
+            $map = 'check_recipient_access hash:'.$path;
+            $insertAfter = 'check_recipient_access pcre:'.$this->postfixStagingDomainsPath();
+            $postfixUpdated = $this->addPostfixAccessHook(
+                $postfixOriginal,
+                'smtpd_recipient_restrictions',
+                $map,
+                $insertAfter,
+            );
+            $writes = [];
             if ($updated !== $original) {
-                if (is_file($path) && @copy($path, $path.'.bak') === false) {
-                    throw ValidationException::withMessages(['discard_recipients' => "Cannot create backup {$path}.bak."]);
-                }
-                if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                    throw ValidationException::withMessages(['discard_recipients' => "Cannot write {$path}."]);
-                }
+                $writes['postfix_discard_recipients'] = $updated;
             }
-
-            $postmap = $this->runPostmap($path);
-            $postfixHook = $postmap['ok']
-                ? $this->ensurePostfixRecipientAccessHook()
-                : ['changed' => false, 'path' => $this->postfixMainCfPath(), 'message' => 'Skipped because postmap failed or is not configured.'];
-            $reload = $postmap['ok']
-                ? $this->reloadPostfix()
-                : ['configured' => $this->postfixReloadCommand() !== '', 'ok' => false, 'message' => 'Skipped because postmap failed or is not configured.'];
+            if ($postfixUpdated !== $postfixOriginal) {
+                $writes['postfix_main'] = $postfixUpdated;
+            }
+            $changed = $writes !== [];
+            $commands = $changed
+                ? [['command' => 'postmap', 'target' => 'postfix_discard_recipients'], 'postfix_check', 'postfix_reload']
+                : [];
+            $operation = $this->applyConfiguration($writes, $commands, 'discard_recipients');
+            $postmap = $this->operationResult($changed, $operation);
+            $postfixHook = [
+                'changed' => $postfixUpdated !== $postfixOriginal,
+                'path' => $this->postfixMainCfPath(),
+            ];
+            $reload = $this->operationResult($changed, $operation);
 
             $this->audit->log('update', 'Updated Postfix discard recipients: '.implode(', ', $recipients).'.');
 
@@ -313,6 +333,7 @@ final class SystemSettingsService
                 'postfix_hook' => $postfixHook,
                 'postmap' => $postmap,
                 'reload' => $reload,
+                'operation' => $operation,
                 'recipients' => $recipients,
             ];
         });
@@ -320,14 +341,9 @@ final class SystemSettingsService
 
     public function stagedDomains(): array
     {
-        $path = $this->postfixStagingDomainsPath();
-        if (! is_file($path) || ! is_readable($path)) {
-            return [];
-        }
-
         preg_match_all(
             '/^'.preg_quote(self::STAGED_PRIMARY_MARKER, '/').'([^\s#]+)\s*$/m',
-            (string) file_get_contents($path),
+            $this->managedFileContent('postfix_staging_domains', false),
             $matches,
         );
 
@@ -409,11 +425,6 @@ final class SystemSettingsService
     private function decryptablePasswordColumn(): string
     {
         return (string) config('iredmail.decryptable_password_column', 'decrypt-pass');
-    }
-
-    private function restartCommand(): string
-    {
-        return trim((string) config('iredmail.iredapd_restart_command'));
     }
 
     private function normalizeSenders(string|array $value): array
@@ -644,16 +655,6 @@ final class SystemSettingsService
         return (string) config('iredmail.postfix_staging_domains_path');
     }
 
-    private function postmapCommand(): string
-    {
-        return trim((string) config('iredmail.postfix_postmap_command')) ?: '/usr/bin/sudo /usr/sbin/postmap';
-    }
-
-    private function postfixReloadCommand(): string
-    {
-        return trim((string) config('iredmail.postfix_reload_command')) ?: '/usr/bin/sudo /usr/bin/systemctl reload postfix.service';
-    }
-
     private function sogoTemplateSource(): string
     {
         $configured = trim((string) config('iredmail.sogo_root_template_source'));
@@ -671,55 +672,20 @@ final class SystemSettingsService
         return (string) config('iredmail.sogo_root_template_target');
     }
 
-    private function sogoReloadCommand(): string
-    {
-        return trim((string) config('iredmail.sogo_reload_command'));
-    }
-
-    private function sogoTemplateTargetWritable(): bool
-    {
-        $target = $this->sogoTemplateTarget();
-
-        return is_file($target) ? is_writable($target) : is_writable(dirname($target));
-    }
-
     private function discardRecipientsReadable(): bool
     {
-        $path = $this->discardRecipientsPath();
-
-        return is_file($path) ? is_readable($path) : is_readable(dirname($path));
-    }
-
-    private function discardRecipientsWritable(): bool
-    {
-        $path = $this->discardRecipientsPath();
-
-        return is_file($path) ? is_writable($path) : is_writable(dirname($path));
+        return $this->privileged->configured();
     }
 
     private function postfixSenderAccessReadable(): bool
     {
-        $path = $this->postfixSenderAccessPath();
-
-        return is_file($path) ? is_readable($path) : is_readable(dirname($path));
-    }
-
-    private function postfixSenderAccessWritable(): bool
-    {
-        $path = $this->postfixSenderAccessPath();
-
-        return is_file($path) ? is_writable($path) : is_writable(dirname($path));
+        return $this->privileged->configured();
     }
 
     private function discardRecipients(): array
     {
-        $path = $this->discardRecipientsPath();
-        if (! is_readable($path)) {
-            return [];
-        }
-
         $recipients = [];
-        foreach (file($path, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+        foreach (preg_split('/\R/', $this->managedFileContent('postfix_discard_recipients', false)) ?: [] as $line) {
             $line = trim(preg_replace('/\s+#.*$/', '', $line) ?? '');
             if ($line === '' || str_starts_with($line, '#')) {
                 continue;
@@ -759,28 +725,35 @@ final class SystemSettingsService
         sort($stagedDomains);
 
         $path = $this->postfixStagingDomainsPath();
-        $directory = dirname($path);
-        if (! is_dir($directory)) {
-            throw ValidationException::withMessages(['staging' => "Directory does not exist: {$directory}"]);
-        }
-
-        $original = is_file($path) ? (string) file_get_contents($path) : '';
+        $original = $this->managedFileContent('postfix_staging_domains', false);
         $updated = $this->stagingDomainsContent($stagedDomains);
         $mapChanged = $updated !== $original;
-
+        $postfixOriginal = $this->managedFileContent('postfix_main');
+        $map = 'check_recipient_access pcre:'.$this->postfixStagingDomainsPath();
+        $postfixUpdated = $this->addPostfixAccessHook(
+            $postfixOriginal,
+            'smtpd_recipient_restrictions',
+            $map,
+        );
+        $writes = [];
         if ($mapChanged) {
-            if (is_file($path) && @copy($path, $path.'.bak') === false) {
-                throw ValidationException::withMessages(['staging' => "Cannot create backup {$path}.bak."]);
-            }
-            if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                throw ValidationException::withMessages(['staging' => "Cannot write {$path}. Check the MXCentral Postfix ACL permissions."]);
-            }
+            $writes['postfix_staging_domains'] = $updated;
         }
-
-        $postfixHook = $this->ensurePostfixStagingAccessHook();
-        $reload = ($mapChanged || $postfixHook['changed'] || $forceReload)
-            ? $this->reloadPostfix()
-            : ['configured' => true, 'ok' => true, 'message' => 'No Postfix staging change needed.'];
+        if ($postfixUpdated !== $postfixOriginal) {
+            $writes['postfix_main'] = $postfixUpdated;
+        }
+        $postfixHook = [
+            'changed' => $postfixUpdated !== $postfixOriginal,
+            'path' => $this->postfixMainCfPath(),
+        ];
+        $needsApply = $writes !== [] || $forceReload;
+        $operation = $this->applyConfiguration(
+            $writes,
+            $needsApply ? ['postfix_check', 'postfix_reload'] : [],
+            'staging',
+            $forceReload,
+        );
+        $reload = $this->operationResult($needsApply, $operation);
 
         return [
             'changed' => $mapChanged || $postfixHook['changed'],
@@ -788,6 +761,7 @@ final class SystemSettingsService
             'path' => $path,
             'postfix_hook' => $postfixHook,
             'reload' => $reload,
+            'operation' => $operation,
             'domains' => $stagedDomains,
         ];
     }
@@ -827,122 +801,16 @@ final class SystemSettingsService
 
     private function postfixRecipientAccessConfigured(): bool
     {
-        $path = $this->postfixMainCfPath();
-        if (! is_readable($path)) {
-            return false;
-        }
-
         $map = 'check_recipient_access hash:'.$this->discardRecipientsPath();
 
-        return $this->postfixConfigurationContains((string) file_get_contents($path), $map);
+        return $this->postfixConfigurationContains($this->managedFileContent('postfix_main', false), $map);
     }
 
     private function postfixSenderAccessConfigured(): bool
     {
-        $path = $this->postfixMainCfPath();
-        if (! is_readable($path)) {
-            return false;
-        }
-
         $map = 'check_sender_access pcre:'.$this->postfixSenderAccessPath();
 
-        return $this->postfixConfigurationContains((string) file_get_contents($path), $map);
-    }
-
-    private function saveSenderAccessPcre(array $senders, array $networks): array
-    {
-        $path = $this->postfixSenderAccessPath();
-
-        return $this->withFileLock($path, function () use ($path, $senders, $networks) {
-            $directory = dirname($path);
-            if (! is_dir($directory)) {
-                throw ValidationException::withMessages(['unauthenticated_senders' => "Directory does not exist: {$directory}"]);
-            }
-            if (! $this->postfixSenderAccessWritable()) {
-                throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot write {$path}. Check file ownership or sudo helper permissions."]);
-            }
-
-            $original = is_file($path) ? (string) file_get_contents($path) : '';
-            $updated = $this->replaceSenderAccessBlock($original, $senders, $networks);
-
-            if ($updated !== $original) {
-                if (is_file($path) && @copy($path, $path.'.bak') === false) {
-                    throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot create backup {$path}.bak."]);
-                }
-                if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                    throw ValidationException::withMessages(['unauthenticated_senders' => "Cannot write {$path}."]);
-                }
-            }
-
-            return [
-                'changed' => $updated !== $original,
-                'path' => $path,
-            ];
-        });
-    }
-
-    private function ensurePostfixSenderAccessHook(): array
-    {
-        return $this->ensurePostfixAccessHook(
-            'smtpd_sender_restrictions',
-            'check_sender_access pcre:'.$this->postfixSenderAccessPath(),
-            'unauthenticated_senders',
-        );
-    }
-
-    private function ensurePostfixRecipientAccessHook(): array
-    {
-        return $this->ensurePostfixAccessHook(
-            'smtpd_recipient_restrictions',
-            'check_recipient_access hash:'.$this->discardRecipientsPath(),
-            'discard_recipients',
-            'check_recipient_access pcre:'.$this->postfixStagingDomainsPath(),
-        );
-    }
-
-    private function ensurePostfixStagingAccessHook(): array
-    {
-        return $this->ensurePostfixAccessHook(
-            'smtpd_recipient_restrictions',
-            'check_recipient_access pcre:'.$this->postfixStagingDomainsPath(),
-            'staging',
-        );
-    }
-
-    private function ensurePostfixAccessHook(
-        string $setting,
-        string $map,
-        string $validationKey,
-        ?string $insertAfter = null,
-    ): array
-    {
-        $path = $this->postfixMainCfPath();
-        if (! is_file($path) || ! is_readable($path)) {
-            throw ValidationException::withMessages([$validationKey => "Cannot read {$path}."]);
-        }
-
-        return $this->withFileLock($path, function () use ($path, $setting, $map, $validationKey, $insertAfter) {
-            $original = (string) file_get_contents($path);
-            $updated = $this->addPostfixAccessHook($original, $setting, $map, $insertAfter);
-
-            if ($updated === $original) {
-                return ['changed' => false, 'path' => $path];
-            }
-
-            if (! is_writable($path)) {
-                throw ValidationException::withMessages([$validationKey => "Cannot write {$path}. Check the MXCentral Postfix ACL permissions."]);
-            }
-
-            if (@copy($path, $path.'.bak') === false) {
-                throw ValidationException::withMessages([$validationKey => "Cannot create backup {$path}.bak."]);
-            }
-
-            if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                throw ValidationException::withMessages([$validationKey => "Cannot write {$path}."]);
-            }
-
-            return ['changed' => true, 'path' => $path];
-        });
+        return $this->postfixConfigurationContains($this->managedFileContent('postfix_main', false), $map);
     }
 
     private function addPostfixSenderAccessHook(string $content): string
@@ -978,8 +846,7 @@ final class SystemSettingsService
         string $setting,
         string $map,
         ?string $insertAfter = null,
-    ): string
-    {
+    ): string {
         if ($insertAfter === null && $this->postfixConfigurationContains($content, $map)) {
             return $content;
         }
@@ -1043,7 +910,7 @@ final class SystemSettingsService
         $block = $this->senderAccessBlock($senders, $networks);
         $managedPattern = '/'.preg_quote(self::SENDER_ACCESS_BEGIN_MARKER, '/').'.*?'.preg_quote(self::SENDER_ACCESS_END_MARKER, '/').'\R?/s';
         if (preg_match($managedPattern, $content)) {
-            return preg_replace($managedPattern, $block."\n", $content, 1) ?? $content;
+            return preg_replace_callback($managedPattern, fn (): string => $block."\n", $content, 1) ?? $content;
         }
 
         return rtrim($content).($content === '' ? '' : "\n\n").$block."\n";
@@ -1114,9 +981,9 @@ final class SystemSettingsService
     private function pcreIpv4CidrPattern(string $ip, int $prefixLength): string
     {
         $ipLong = (int) sprintf('%u', ip2long($ip));
-        $mask = $prefixLength === 0 ? 0 : (0xffffffff << (32 - $prefixLength)) & 0xffffffff;
+        $mask = $prefixLength === 0 ? 0 : (0xFFFFFFFF << (32 - $prefixLength)) & 0xFFFFFFFF;
         $start = $ipLong & $mask;
-        $end = $start | (~$mask & 0xffffffff);
+        $end = $start | (~$mask & 0xFFFFFFFF);
 
         return $this->pcreIpv4RangePattern(
             array_map('intval', explode('.', long2ip($start))),
@@ -1225,11 +1092,13 @@ final class SystemSettingsService
             if ($runStart === null) {
                 $runStart = $text;
                 $previous = $text;
+
                 continue;
             }
 
             if (strlen($text) === strlen($previous) && substr($text, 0, -1) === substr($previous, 0, -1) && (int) substr($text, -1) === (int) substr($previous, -1) + 1) {
                 $previous = $text;
+
                 continue;
             }
 
@@ -1269,12 +1138,14 @@ final class SystemSettingsService
             if (! $collecting && preg_match('/^\s*smtpd_sender_restrictions\s*=(.*)$/', $line, $match)) {
                 $collecting = true;
                 $parts[] = $match[1];
+
                 continue;
             }
 
             if ($collecting) {
                 if (preg_match('/^\s+(.+)$/', $line, $match)) {
                     $parts[] = $match[1];
+
                     continue;
                 }
 
@@ -1283,43 +1154,6 @@ final class SystemSettingsService
         }
 
         return implode(' ', $parts);
-    }
-
-    private function ensurePostfixSenderLoginMismatchRemoved(): array
-    {
-        $path = $this->postfixMainCfPath();
-        if (! is_file($path) || ! is_readable($path)) {
-            throw ValidationException::withMessages(['settings' => "Cannot read {$path}."]);
-        }
-
-        return $this->withFileLock($path, function () use ($path) {
-            $original = (string) file_get_contents($path);
-            $updated = $this->removePostfixSenderLoginMismatchRestriction($original);
-
-            if ($updated === $original) {
-                return [
-                    'changed' => false,
-                    'reload' => ['configured' => true, 'ok' => true, 'message' => 'No Postfix sender restriction change needed.'],
-                ];
-            }
-
-            if (! is_writable($path)) {
-                throw ValidationException::withMessages(['settings' => "Cannot write {$path}. Check file ownership or sudo helper permissions."]);
-            }
-
-            if (@copy($path, $path.'.bak') === false) {
-                throw ValidationException::withMessages(['settings' => "Cannot create backup {$path}.bak."]);
-            }
-
-            if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                throw ValidationException::withMessages(['settings' => "Cannot write {$path}."]);
-            }
-
-            return [
-                'changed' => true,
-                'reload' => $this->reloadPostfix(),
-            ];
-        });
     }
 
     private function removePostfixSenderLoginMismatchRestriction(string $content): string
@@ -1377,34 +1211,14 @@ final class SystemSettingsService
         return $restrictions;
     }
 
-    private function runPostmap(string $path): array
-    {
-        $command = $this->postmapCommand();
-        if ($command === '') {
-            return ['configured' => false, 'ok' => false, 'message' => 'Postmap command is not configured.'];
-        }
-
-        return $this->runConfiguredCommand($command, [$path]);
-    }
-
-    private function reloadPostfix(): array
-    {
-        $command = $this->postfixReloadCommand();
-        if ($command === '') {
-            return ['configured' => false, 'ok' => false, 'message' => 'Postfix reload command is not configured.'];
-        }
-
-        return $this->runConfiguredCommand($command);
-    }
-
     private function sogoLogoUrl(): ?string
     {
-        $target = $this->sogoTemplateTarget();
-        if (! is_readable($target)) {
+        $content = $this->managedFileContent('sogo_template', false);
+        if ($content === '') {
             return null;
         }
 
-        return $this->sogoLogoUrlFromContent((string) file_get_contents($target));
+        return $this->sogoLogoUrlFromContent($content);
     }
 
     private function sogoLogoUrlFromContent(string $content): ?string
@@ -1425,15 +1239,15 @@ final class SystemSettingsService
      */
     private function sogoLoginColors(): array
     {
-        $target = $this->sogoTemplateTarget();
-        if (! is_readable($target)) {
+        $content = $this->managedFileContent('sogo_template', false);
+        if ($content === '') {
             return [
                 'background' => self::SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR,
                 'foreground' => self::SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR,
             ];
         }
 
-        return $this->sogoLoginColorsFromContent((string) file_get_contents($target));
+        return $this->sogoLoginColorsFromContent($content);
     }
 
     /**
@@ -1479,7 +1293,7 @@ final class SystemSettingsService
 
         $managedPattern = '/'.preg_quote(self::SOGO_BRANDING_BEGIN_MARKER, '/').'.*?'.preg_quote(self::SOGO_BRANDING_END_MARKER, '/').'/s';
         if (preg_match($managedPattern, $content)) {
-            return preg_replace($managedPattern, $block, $content, 1) ?? $content;
+            return preg_replace_callback($managedPattern, fn (): string => $block, $content, 1) ?? $content;
         }
 
         if (preg_match_all('/<style\b[^>]*>[\s\S]*?<\/style>/i', $content, $styleMatches, PREG_OFFSET_CAPTURE)) {
@@ -1519,48 +1333,32 @@ final class SystemSettingsService
     private function replaceImgSrc(string $tag, string $escapedUrl): string
     {
         if (preg_match('/(?<![:\w-])src=(["\']).*?\1/is', $tag)) {
-            return preg_replace('/(?<![:\w-])src=(["\']).*?\1/is', 'src="'.$escapedUrl.'"', $tag, 1) ?? $tag;
+            return preg_replace_callback(
+                '/(?<![:\w-])src=(["\']).*?\1/is',
+                fn (): string => 'src="'.$escapedUrl.'"',
+                $tag,
+                1,
+            ) ?? $tag;
         }
 
         if (preg_match('/\brsrc:src=(["\']).*?\1/is', $tag)) {
-            return preg_replace('/\brsrc:src=(["\']).*?\1/is', 'src="'.$escapedUrl.'"', $tag, 1) ?? $tag;
+            return preg_replace_callback(
+                '/\brsrc:src=(["\']).*?\1/is',
+                fn (): string => 'src="'.$escapedUrl.'"',
+                $tag,
+                1,
+            ) ?? $tag;
         }
 
         return rtrim($tag, '>').' src="'.$escapedUrl.'">';
     }
 
-    private function reloadSogo(): array
+    private function withFileLock(string $_targetPath, Closure $callback): mixed
     {
-        $command = $this->sogoReloadCommand();
-        if ($command === '') {
-            return ['configured' => false, 'ok' => false, 'message' => 'SOGo reload command is not configured.'];
-        }
-
-        return $this->runConfiguredCommand($command);
-    }
-
-    private function withFileLock(string $targetPath, Closure $callback): mixed
-    {
-        $lockDirectory = storage_path('framework/locks');
-        if (! is_dir($lockDirectory) && @mkdir($lockDirectory, 0755, true) === false) {
-            throw ValidationException::withMessages(['settings' => "Cannot create lock directory {$lockDirectory}."]);
-        }
-
-        $lockPath = $lockDirectory.'/system-settings-'.sha1($targetPath).'.lock';
-        $handle = @fopen($lockPath, 'c');
-        if (! $handle) {
-            throw ValidationException::withMessages(['settings' => "Cannot open lock file {$lockPath}."]);
-        }
-
         try {
-            if (! flock($handle, LOCK_EX)) {
-                throw ValidationException::withMessages(['settings' => "Cannot acquire lock for {$targetPath}."]);
-            }
-
-            return $callback();
-        } finally {
-            flock($handle, LOCK_UN);
-            fclose($handle);
+            return PrivilegedConfigurationLock::run($callback);
+        } catch (\RuntimeException $exception) {
+            throw ValidationException::withMessages(['settings' => $exception->getMessage()]);
         }
     }
 
@@ -1569,12 +1367,12 @@ final class SystemSettingsService
         $block = $this->managedBlock($senders);
         $managedPattern = '/'.preg_quote(self::BEGIN_MARKER, '/').'.*?'.preg_quote(self::END_MARKER, '/').'\R?/s';
         if (preg_match($managedPattern, $content)) {
-            return preg_replace($managedPattern, $block."\n", $content, 1) ?? $content;
+            return preg_replace_callback($managedPattern, fn (): string => $block."\n", $content, 1) ?? $content;
         }
 
         $assignmentPattern = '/^\s*(?:#\s*Custom addition by iredadmin-php\s*\R)?(?:#\s*Allow forging email address\s*\R)?ALLOWED_LOGIN_MISMATCH_SENDERS\s*=\s*\[.*?\]\s*\R?/ms';
         if (preg_match($assignmentPattern, $content)) {
-            return preg_replace($assignmentPattern, $block."\n", $content, 1) ?? $content;
+            return preg_replace_callback($assignmentPattern, fn (): string => $block."\n", $content, 1) ?? $content;
         }
 
         return $this->insertNearTop($content, $block);
@@ -1585,7 +1383,7 @@ final class SystemSettingsService
         $block = $this->unauthenticatedSettingsBlock($senders, $networks);
         $managedPattern = '/'.preg_quote(self::UNAUTH_BEGIN_MARKER, '/').'.*?'.preg_quote(self::UNAUTH_END_MARKER, '/').'\R?/s';
         if (preg_match($managedPattern, $content)) {
-            return preg_replace($managedPattern, $block."\n", $content, 1) ?? $content;
+            return preg_replace_callback($managedPattern, fn (): string => $block."\n", $content, 1) ?? $content;
         }
 
         $assignmentPattern = '/^\s*(ALLOWED_FORGED_SENDERS|MYNETWORKS)\s*=\s*\[.*?\]\s*\R?/ms';
@@ -1666,7 +1464,7 @@ final class SystemSettingsService
 
     private function pythonSingleQuoted(string $value): string
     {
-        return str_replace(["\\", "'"], ["\\\\", "\\'"], $value);
+        return str_replace(['\\', "'"], ['\\\\', "\\'"], $value);
     }
 
     private function insertNearTop(string $content, string $block): string
@@ -1689,39 +1487,59 @@ final class SystemSettingsService
         return $prefix.$separator.$block."\n\n".$suffix;
     }
 
-    private function restartIredapd(): array
+    private function managedFileContent(string $target, bool $required = true): string
     {
-        $command = $this->restartCommand();
-        if ($command === '') {
-            return ['configured' => false, 'ok' => false, 'message' => 'Restart command is not configured.'];
+        $result = $this->privileged->run('read_file', ['target' => $target]);
+        if (! $result['ok']) {
+            if (! $required) {
+                return '';
+            }
+
+            throw ValidationException::withMessages([
+                'settings' => "Cannot read {$target} through the privileged helper: {$result['message']}",
+            ]);
         }
 
-        return $this->runConfiguredCommand($command);
+        return (string) ($result['data']['content'] ?? '');
     }
 
-    private function runConfiguredCommand(string $command, array $extraArguments = []): array
-    {
-        $arguments = $this->commandArguments($command);
-        if ($arguments === []) {
-            return ['configured' => true, 'ok' => false, 'message' => 'Configured command is empty.', 'status' => 127];
+    private function applyConfiguration(
+        array $writes,
+        array $commands,
+        string $validationKey,
+        bool $runWithoutWrites = false,
+    ): array {
+        if ($writes === [] && (! $runWithoutWrites || $commands === [])) {
+            return [
+                'operation_id' => null,
+                'status' => 'unchanged',
+            ];
         }
 
-        $process = new Process(array_merge($arguments, $extraArguments));
-        $process->setTimeout(30);
-        $process->run();
+        $result = $this->privileged->run('apply_configuration', [
+            'writes' => $writes,
+            'commands' => $commands,
+        ]);
+        if (! $result['ok']) {
+            throw ValidationException::withMessages([
+                $validationKey => "Configuration transaction failed and was rolled back: {$result['message']}",
+            ]);
+        }
 
         return [
-            'configured' => true,
-            'ok' => $process->isSuccessful(),
-            'message' => trim($process->getOutput()."\n".$process->getErrorOutput()),
-            'status' => $process->getExitCode(),
+            'operation_id' => $result['data']['operation_id'] ?? null,
+            'status' => $result['data']['status'] ?? 'applied',
         ];
     }
 
-    private function commandArguments(string $command): array
+    private function operationResult(bool $changed, array $operation): array
     {
-        $arguments = array_values(array_filter(str_getcsv($command, ' ', '"', '\\'), fn (string $argument) => $argument !== ''));
-
-        return array_map('trim', $arguments);
+        return [
+            'configured' => true,
+            'ok' => true,
+            'message' => $changed
+                ? 'Applied in configuration transaction '.($operation['operation_id'] ?? '(local test)').'.'
+                : 'No service configuration change needed.',
+        ];
     }
 }

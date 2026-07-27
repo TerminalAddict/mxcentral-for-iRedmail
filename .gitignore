@@ -5,12 +5,14 @@ Makefile.local
 .env
 .env.*
 !.env.example
+!.env.production.example
 auth.json
 *.pem
 *.key
 *.crt
 *.p12
 *.sql
+!mxcentral-for-iRedmail/docs/database-grants.sql
 *.sqlite
 *.sqlite3
 *.bak
@@ -25,6 +27,7 @@ mxcentral-for-iRedmail/node_modules/
 mxcentral-for-iRedmail/.env
 mxcentral-for-iRedmail/.env.*
 !mxcentral-for-iRedmail/.env.example
+!mxcentral-for-iRedmail/.env.production.example
 mxcentral-for-iRedmail/auth.json
 mxcentral-for-iRedmail/storage/*.key
 mxcentral-for-iRedmail/storage/pail/

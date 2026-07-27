@@ -3,8 +3,12 @@
 MXCentral uses one cron runner for scheduled jobs. Install one cron entry:
 
 ```cron
-* * * * * /usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php >/dev/null 2>&1
+* * * * * MXCENTRAL_CRON_USER=www-data MXCENTRAL_SUDO_PATH=/usr/bin/sudo /usr/bin/php /opt/www/mxcentral-for-iRedmail/bin/cron.php >/dev/null 2>&1
 ```
+
+Replace the app user, sudo path, PHP path, and deployment path with the
+validated values for that server. A root-owned cron invocation fails closed if
+`MXCENTRAL_CRON_USER` is omitted or does not exist.
 
 The runner keeps per-task state in `storage/app/cron-state.json`, so it can be called every minute while each task controls its own interval. Quarantine notifications run every 6 hours. iRedMail upgrade checks run every 24 hours.
 

@@ -2,6 +2,7 @@
 
 namespace App\Services\IredMail;
 
+use App\Support\AtomicJsonFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -10,6 +11,14 @@ use Illuminate\Support\Str;
 final class IredMailUpgradeCheckService
 {
     public function check(bool $dryRun = false, bool $notify = true): array
+    {
+        return AtomicJsonFile::locked(
+            $this->statePath(),
+            fn (): array => $this->checkWhileLocked($dryRun, $notify),
+        );
+    }
+
+    private function checkWhileLocked(bool $dryRun, bool $notify): array
     {
         $previous = $this->status();
         $state = [
@@ -373,14 +382,7 @@ final class IredMailUpgradeCheckService
     private function saveStatus(array $state): void
     {
         $path = $this->statePath();
-        $directory = dirname($path);
-        if (! is_dir($directory) && @mkdir($directory, 0755, true) === false) {
-            throw new \RuntimeException("Cannot create {$directory}.");
-        }
-
-        if (@file_put_contents($path, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n", LOCK_EX) === false) {
-            throw new \RuntimeException("Cannot write {$path}.");
-        }
+        AtomicJsonFile::write($path, $state);
     }
 
     private function statePath(): string

@@ -1,7 +1,10 @@
 <?php
 
+use App\Services\IredMail\DeploymentHealthCheck;
 use App\Services\IredMail\IredMailUpgradeCheckService;
+use App\Services\IredMail\LoginRateLimiter;
 use App\Services\IredMail\QuarantineNotificationService;
+use App\Support\IredMailAddress;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Console\Command\Command;
@@ -9,6 +12,44 @@ use Symfony\Component\Console\Command\Command;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('mxcentral:check-production', function (DeploymentHealthCheck $check) {
+    $errors = $check->errors();
+    foreach ($errors as $error) {
+        $this->error($error);
+    }
+    if ($errors !== []) {
+        return Command::FAILURE;
+    }
+
+    $this->info('Production environment safety checks passed.');
+
+    return Command::SUCCESS;
+})->purpose('Fail unless application, database schemas, and the privileged helper are production-safe.');
+
+Artisan::command('mxcentral:unlock-admin {email : Admin email address} {--ip= : Also clear a blocked source IP}', function (LoginRateLimiter $limiter) {
+    $email = IredMailAddress::email((string) $this->argument('email'));
+    if (! $email) {
+        $this->error('Enter a valid admin email address.');
+
+        return Command::INVALID;
+    }
+
+    $limiter->clearAccount($email);
+    $ip = trim((string) $this->option('ip'));
+    if ($ip !== '') {
+        if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            $this->error('The --ip value is not a valid IP address.');
+
+            return Command::INVALID;
+        }
+        $limiter->clearIp($ip);
+    }
+
+    $this->info("Cleared login lockout state for {$email}".($ip === '' ? '.' : " and {$ip}."));
+
+    return Command::SUCCESS;
+})->purpose('Clear an administrator login lockout after verifying the request out of band.');
 
 Artisan::command('quarantine:notify-recipients {--force-all : Notify recipients for all currently quarantined messages, including messages already notified before} {--dry-run : Count notifications without sending mail or updating notification state}', function (QuarantineNotificationService $notifications) {
     $result = $notifications->notify(

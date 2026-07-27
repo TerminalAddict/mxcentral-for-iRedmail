@@ -13,8 +13,8 @@
 @endphp
 
 <div class="page-titlebar">
-    <h1>{{ session('actor.self_service') ? 'Preferences' : 'Users' }}</h1>
-    @unless(session('actor.self_service'))
+    <h1>{{ $currentActor->selfService ? 'Preferences' : 'Users' }}</h1>
+    @unless($currentActor->selfService)
         <form class="search-compact">
             <input name="q" value="{{ request('q') }}" placeholder="Search users">
             <select name="domain" aria-label="Filter by domain">
@@ -28,7 +28,7 @@
     @endunless
 </div>
 
-@unless(session('actor.self_service'))
+@unless($currentActor->selfService)
 <div class="panel">
     <h2>Create User</h2>
     <form method="post" action="{{ route('users.create') }}" class="user-form">@csrf
@@ -55,8 +55,8 @@
 @endunless
 
 <div class="panel">
-    <h2>{{ session('actor.self_service') ? 'Edit Preferences' : 'Edit User' }}</h2>
-    @unless(session('actor.self_service'))
+    <h2>{{ $currentActor->selfService ? 'Edit Preferences' : 'Edit User' }}</h2>
+    @unless($currentActor->selfService)
         <form method="get" action="{{ route('users') }}" class="user-selector-row">
             <label>Select mailbox
                 <select name="edit" onchange="this.form.submit()">
@@ -77,16 +77,7 @@
                 <label>Name<input name="name" value="{{ $selectedUser->name ?? '' }}"><span class="field-hint">Display name.</span></label>
                 <label>Quota MB<input name="quota" type="number" min="0" value="{{ $selectedUser->quota ?? 0 }}"><span class="field-hint">0 = unlimited mailbox quota.</span></label>
                 <label class="span-2">New password<input name="password" type="password" placeholder="Leave blank"><span class="field-hint">Leave blank to keep the current password.</span></label>
-                @if(!session('actor.self_service') && !empty($selectedUser->decryptable_password))
-                    <label class="span-2 decryptable-password-field">Stored password
-                        <span class="password-toggle-row">
-                            <input value="{{ $selectedUser->decryptable_password }}" type="password" readonly data-password-toggle-input>
-                            <button class="secondary" type="button" data-password-toggle>Show</button>
-                        </span>
-                        <span class="field-hint">This value exists only because the password was created or changed while decryptable password storage was enabled.</span>
-                    </label>
-                @endif
-                @unless(session('actor.self_service'))
+                @unless($currentActor->selfService)
                     <label class="checkbox-field">
                         <input type="hidden" name="active" value="0"><input name="active" type="checkbox" value="1" @checked($selectedUser->active ?? false)>
                         <span class="checkbox-field__body"><span class="checkbox-field__label">Active</span><span class="field-hint">Disable to stop this mailbox being treated as live.</span></span>
@@ -100,6 +91,28 @@
                 <button class="secondary">Save profile</button>
             </div>
         </form>
+
+        @if($canRevealPasswords && ($selectedUser->has_decryptable_password ?? false))
+            <form method="post" action="{{ route('users.password.request', $selectedUser->username) }}" class="user-form decryptable-password-field">@csrf
+                <h2>One-time Password Reveal</h2>
+                <p class="field-hint">Requires your current administrator password, a configured MFA code, and an audited access purpose. The password is never embedded in this user page.</p>
+                <div class="user-form__grid">
+                    <label class="span-2">Current administrator password
+                        <input name="current_password" type="password" required autocomplete="current-password">
+                    </label>
+                    <label>MFA code
+                        <input name="totp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code">
+                    </label>
+                    <label class="span-4">Access purpose
+                        <textarea name="purpose" minlength="10" maxlength="500" required></textarea>
+                    </label>
+                </div>
+                <div class="user-actions-row">
+                    <span class="field-hint">The reveal authorization and purpose are written to the audit log.</span>
+                    <button class="danger">Authorize one-time reveal</button>
+                </div>
+            </form>
+        @endif
 
         <form method="post" action="{{ route('users.forwarding', $selectedUser->username) }}" class="user-form user-forwarding-form">@csrf
             <h2>Mail Forwarding</h2>
@@ -118,7 +131,7 @@
             </div>
         </form>
 
-        @unless(session('actor.self_service'))
+        @unless($currentActor->selfService)
             <form method="post" action="{{ route('users.services', $selectedUser->username) }}" class="user-form" style="margin-top:18px">@csrf
                 <h2>Service Control</h2>
                 <div class="user-service-grid">
@@ -170,18 +183,4 @@
     </tbody>
 </table>
 <div class="pagination">{{ $rows->links() }}</div>
-<script>
-    (() => {
-        document.querySelectorAll('[data-password-toggle]').forEach((button) => {
-            const input = button.closest('.password-toggle-row')?.querySelector('[data-password-toggle-input]');
-            if (!input) return;
-
-            button.addEventListener('click', () => {
-                const hidden = input.type === 'password';
-                input.type = hidden ? 'text' : 'password';
-                button.textContent = hidden ? 'Hide' : 'Show';
-            });
-        });
-    })();
-</script>
 @endsection

@@ -13,24 +13,17 @@ final class CurrentActor
         public readonly bool $domainAdmin,
         public readonly bool $selfService,
         public readonly array $domains = [],
-    ) {
-    }
+    ) {}
 
     public static function fromSession(): ?self
     {
-        $data = session('actor');
-        if (! is_array($data) || empty($data['email'])) {
+        if (! app()->bound('request')) {
             return null;
         }
 
-        return new self(
-            email: $data['email'],
-            type: $data['type'] ?? 'user',
-            globalAdmin: (bool) ($data['global_admin'] ?? false),
-            domainAdmin: (bool) ($data['domain_admin'] ?? false),
-            selfService: (bool) ($data['self_service'] ?? false),
-            domains: $data['domains'] ?? [],
-        );
+        $actor = request()->attributes->get('mxcentral.current_actor');
+
+        return $actor instanceof self ? $actor : null;
     }
 
     public function canManageDomain(string $domain): bool

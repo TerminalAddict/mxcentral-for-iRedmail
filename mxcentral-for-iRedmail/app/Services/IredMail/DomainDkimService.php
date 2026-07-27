@@ -3,18 +3,21 @@
 namespace App\Services\IredMail;
 
 use App\Support\IredMailAddress;
-use Closure;
+use App\Support\PrivilegedConfigurationLock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\Process\Process;
 
 final class DomainDkimService
 {
     private const BEGIN_MARKER = '# BEGIN mxcentral-for-iRedmail managed DKIM keys';
+
     private const END_MARKER = '# END mxcentral-for-iRedmail managed DKIM keys';
 
-    public function __construct(private readonly AuditLogger $audit)
+    private readonly PrivilegedHelper $privileged;
+
+    public function __construct(private readonly AuditLogger $audit, ?PrivilegedHelper $privileged = null)
     {
+        $this->privileged = $privileged ?? app(PrivilegedHelper::class);
     }
 
     public function status(CurrentActor $actor, string $domain, bool $lookupDns = false): array
@@ -22,6 +25,8 @@ final class DomainDkimService
         $domain = $this->validatedHostedDomain($actor, $domain);
         $keyPath = $this->keyPath($domain);
         $expected = $this->expectedDnsRecord($domain);
+        $keyStatus = $this->privileged->run('dkim_status', ['domain' => $domain]);
+        $keyExists = ($keyStatus['ok'] ?? false) && ($keyStatus['data']['exists'] ?? false);
 
         return [
             'domain' => $domain,
@@ -29,15 +34,15 @@ final class DomainDkimService
             'dns_name' => $this->dnsName($domain),
             'key_path' => $keyPath,
             'config_path' => $this->configPath(),
-            'key_exists' => is_file($keyPath),
-            'key_readable' => is_readable($keyPath),
-            'config_readable' => is_readable($this->configPath()),
-            'config_writable' => $this->configWritable(),
+            'key_exists' => $keyExists,
+            'key_readable' => $keyExists,
+            'config_readable' => $this->privileged->configured(),
+            'config_writable' => $this->privileged->configured(),
             'configured' => $this->domainConfigured($domain),
-            'genrsa_configured' => $this->genrsaCommand() !== '',
-            'showkeys_configured' => $this->showkeysCommand() !== '',
-            'restart_configured' => $this->restartCommand() !== '',
-            'testkeys_configured' => $this->testkeysCommand() !== '',
+            'genrsa_configured' => $this->privileged->configured(),
+            'showkeys_configured' => $this->privileged->configured(),
+            'restart_configured' => $this->privileged->configured(),
+            'testkeys_configured' => $this->privileged->configured(),
             'expected_txt' => $expected['txt'],
             'expected_chunks' => $expected['chunks'],
             'dns' => $lookupDns ? $this->dnsStatus($domain) : null,
@@ -50,37 +55,44 @@ final class DomainDkimService
         $domain = $this->validatedHostedDomain($actor, $domain);
         $bits = $this->validBits($bits);
 
-        $keyPath = $this->keyPath($domain);
-        $directory = dirname($keyPath);
-        if (! is_dir($directory) && @mkdir($directory, 0750, true) === false) {
-            throw ValidationException::withMessages(['dkim' => "Cannot create DKIM directory {$directory}."]);
-        }
-        if (! is_writable($directory)) {
-            throw ValidationException::withMessages(['dkim' => "Cannot write DKIM directory {$directory}."]);
-        }
+        return PrivilegedConfigurationLock::run(function () use ($actor, $domain, $bits): array {
+            $keyPath = $this->keyPath($domain);
+            $original = $this->readAmavisdConfig();
+            $domains = $this->configuredManagedDomains($original);
+            $domains[$domain] = true;
+            ksort($domains);
+            $updated = $this->replaceManagedBlock($original, array_keys($domains));
+            $generated = $this->privileged->run('dkim_apply', [
+                'action' => 'generate',
+                'domain' => $domain,
+                'bits' => $bits,
+                'amavis_content' => $updated,
+            ]);
+            if (! $generated['ok']) {
+                throw ValidationException::withMessages(['dkim' => 'DKIM key/config transaction failed and was rolled back: '.$generated['message']]);
+            }
 
-        $rotated = is_file($keyPath);
-        $generated = $this->generateKeyFile($keyPath, $bits);
-        if (! $generated['ok']) {
-            throw ValidationException::withMessages(['dkim' => 'DKIM key generation failed: '.$generated['message']]);
-        }
+            $rotated = (bool) ($generated['data']['key']['rotated'] ?? false);
+            $changed = $updated !== $original;
+            $restart = [
+                'configured' => true,
+                'ok' => true,
+                'message' => 'Applied in DKIM transaction '.($generated['data']['operation_id'] ?? '').'.',
+            ];
+            $testkeys = $this->testKeys();
+            $this->audit->log('update', ($rotated ? 'Rotated' : 'Generated')." {$bits}-bit DKIM key for {$domain} with selector ".$this->selector().'.', $domain);
 
-        $this->secureKeyFile($keyPath);
-        $changed = $this->ensureAmavisdConfig($domain);
-        $restart = $this->restartAmavisd();
-        $testkeys = $this->testKeys();
-        $this->audit->log('update', ($rotated ? 'Rotated' : 'Generated')." {$bits}-bit DKIM key for {$domain} with selector ".$this->selector().'.', $domain);
-
-        return [
-            'domain' => $domain,
-            'key_path' => $keyPath,
-            'bits' => $bits,
-            'rotated' => $rotated,
-            'changed' => $changed,
-            'restart' => $restart,
-            'testkeys' => $testkeys,
-            'status' => $this->status($actor, $domain),
-        ];
+            return [
+                'domain' => $domain,
+                'key_path' => $keyPath,
+                'bits' => $bits,
+                'rotated' => $rotated,
+                'changed' => $changed,
+                'restart' => $restart,
+                'testkeys' => $testkeys,
+                'status' => $this->status($actor, $domain),
+            ];
+        });
     }
 
     public function cleanupRemovedDomain(CurrentActor $actor, string $domain): array
@@ -88,28 +100,45 @@ final class DomainDkimService
         abort_unless($actor->globalAdmin, 403);
         $domain = IredMailAddress::domain($domain) ?? abort(404);
 
-        $config = $this->removeAmavisdConfig($domain);
-        $keys = $this->deleteKeyFiles($domain);
-        $needsRestart = $config['changed'] || $keys['deleted'] !== [];
-        $restart = $needsRestart
-            ? $this->restartAmavisd()
-            : ['configured' => $this->restartCommand() !== '', 'ok' => true, 'message' => 'No restart needed.'];
+        return PrivilegedConfigurationLock::run(function () use ($domain): array {
+            $original = $this->readAmavisdConfig();
+            $domains = $this->configuredManagedDomains($original);
+            $configured = isset($domains[$domain]);
+            unset($domains[$domain]);
+            ksort($domains);
+            $updated = $this->replaceManagedBlock($original, array_keys($domains));
+            $applied = $this->privileged->run('dkim_apply', [
+                'action' => 'delete',
+                'domain' => $domain,
+                'amavis_content' => $updated,
+            ]);
+            if (! $applied['ok']) {
+                throw ValidationException::withMessages(['dkim' => 'DKIM cleanup transaction failed and was rolled back: '.$applied['message']]);
+            }
+            $config = [
+                'changed' => $updated !== $original,
+                'path' => $this->configPath(),
+                'message' => $configured ? "Removed {$domain} from the mxcentral-managed DKIM block." : 'No amavisd config change needed.',
+            ];
+            $keys = [
+                'deleted' => $applied['data']['key']['deleted'] ?? [],
+                'path' => $this->keyPath($domain),
+            ];
+            $restart = [
+                'configured' => true,
+                'ok' => true,
+                'message' => 'Applied in DKIM transaction '.($applied['data']['operation_id'] ?? '').'.',
+            ];
 
-        if ($needsRestart && ! ($restart['configured'] ?? false)) {
-            throw ValidationException::withMessages(['dkim' => 'DKIM cleanup changed files, but AMAVISD_RESTART_COMMAND is not configured. Restart amavis manually before deleting the domain.']);
-        }
-        if ($needsRestart && ! ($restart['ok'] ?? false)) {
-            throw ValidationException::withMessages(['dkim' => 'DKIM cleanup changed files, but amavisd restart failed: '.$restart['message']]);
-        }
+            $this->audit->log('delete', "Cleaned up DKIM config and key files for deleted domain {$domain}.", $domain);
 
-        $this->audit->log('delete', "Cleaned up DKIM config and key files for deleted domain {$domain}.", $domain);
-
-        return [
-            'domain' => $domain,
-            'config' => $config,
-            'keys' => $keys,
-            'restart' => $restart,
-        ];
+            return [
+                'domain' => $domain,
+                'config' => $config,
+                'keys' => $keys,
+                'restart' => $restart,
+            ];
+        });
     }
 
     public function checkDns(CurrentActor $actor, string $domain): array
@@ -131,78 +160,6 @@ final class DomainDkimService
         }
 
         return $domain;
-    }
-
-    private function ensureAmavisdConfig(string $domain): bool
-    {
-        $path = $this->configPath();
-
-        return $this->withFileLock($path, function () use ($path, $domain) {
-            if (! is_file($path) || ! is_readable($path)) {
-                throw ValidationException::withMessages(['dkim' => "Cannot read amavisd config {$path}."]);
-            }
-            if (! $this->configWritable()) {
-                throw ValidationException::withMessages(['dkim' => "Cannot write amavisd config {$path}."]);
-            }
-
-            $original = (string) file_get_contents($path);
-            $domains = $this->configuredManagedDomains($original);
-            $domains[$domain] = true;
-            ksort($domains);
-
-            $updated = $this->replaceManagedBlock($original, array_keys($domains));
-            if ($updated === $original) {
-                return false;
-            }
-
-            if (@copy($path, $path.'.bak') === false) {
-                throw ValidationException::withMessages(['dkim' => "Cannot create backup {$path}.bak."]);
-            }
-            if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                throw ValidationException::withMessages(['dkim' => "Cannot write {$path}."]);
-            }
-
-            return true;
-        });
-    }
-
-    private function removeAmavisdConfig(string $domain): array
-    {
-        $path = $this->configPath();
-
-        return $this->withFileLock($path, function () use ($path, $domain) {
-            if (! is_file($path)) {
-                return ['changed' => false, 'path' => $path, 'message' => "Amavisd config {$path} does not exist."];
-            }
-            if (! is_readable($path)) {
-                throw ValidationException::withMessages(['dkim' => "Cannot read amavisd config {$path}."]);
-            }
-            if (! $this->configWritable()) {
-                throw ValidationException::withMessages(['dkim' => "Cannot write amavisd config {$path}."]);
-            }
-
-            $original = (string) file_get_contents($path);
-            $domains = $this->configuredManagedDomains($original);
-            if (! isset($domains[$domain])) {
-                return ['changed' => false, 'path' => $path, 'message' => "{$domain} was not present in the mxcentral-managed DKIM block."];
-            }
-
-            unset($domains[$domain]);
-            ksort($domains);
-            $updated = $this->replaceManagedBlock($original, array_keys($domains));
-            if ($updated === $original) {
-                return ['changed' => false, 'path' => $path, 'message' => 'No amavisd config change needed.'];
-            }
-
-            if (@copy($path, $path.'.bak') === false) {
-                throw ValidationException::withMessages(['dkim' => "Cannot create backup {$path}.bak."]);
-            }
-            if (@file_put_contents($path, $updated, LOCK_EX) === false) {
-                throw ValidationException::withMessages(['dkim' => "Cannot write {$path}."]);
-            }
-
-            return ['changed' => true, 'path' => $path, 'message' => "Removed {$domain} from the mxcentral-managed DKIM block."];
-        });
     }
 
     private function configuredManagedDomains(string $content): array
@@ -238,34 +195,10 @@ final class DomainDkimService
 
         $block = $this->managedBlock($domains);
         if (preg_match($pattern, $content)) {
-            return preg_replace($pattern, $block."\n", $content, 1) ?? $content;
+            return preg_replace_callback($pattern, fn (): string => $block."\n", $content, 1) ?? $content;
         }
 
         return rtrim($content)."\n\n".$block."\n";
-    }
-
-    private function deleteKeyFiles(string $domain): array
-    {
-        $keyPath = $this->keyPath($domain);
-        $paths = array_values(array_unique(array_merge([$keyPath], glob($keyPath.'.previous-*') ?: [])));
-        $deleted = [];
-
-        foreach ($paths as $path) {
-            if (! is_file($path)) {
-                continue;
-            }
-
-            if (! @unlink($path)) {
-                throw ValidationException::withMessages(['dkim' => "Cannot delete DKIM key file {$path}."]);
-            }
-
-            $deleted[] = $path;
-        }
-
-        return [
-            'deleted' => $deleted,
-            'path' => $keyPath,
-        ];
     }
 
     private function managedBlock(array $domains): string
@@ -292,12 +225,13 @@ final class DomainDkimService
 
     private function domainConfigured(string $domain): bool
     {
-        $path = $this->configPath();
-        if (! is_readable($path)) {
+        try {
+            $content = $this->readAmavisdConfig();
+        } catch (ValidationException) {
             return false;
         }
 
-        return isset($this->configuredManagedDomains((string) file_get_contents($path))[$domain]);
+        return isset($this->configuredManagedDomains($content)[$domain]);
     }
 
     private function expectedDnsRecord(string $domain): array
@@ -326,17 +260,12 @@ final class DomainDkimService
 
     private function showKeysDnsRecord(string $domain): array
     {
-        $command = $this->showkeysCommand();
-        if ($command === '') {
-            return ['txt' => null, 'chunks' => []];
-        }
-
-        $result = $this->runConfiguredCommand($command);
+        $result = $this->privileged->run('amavis_showkeys');
         if (! $result['ok']) {
             return ['txt' => null, 'chunks' => []];
         }
 
-        $record = $this->extractShowkeysRecord($result['message'], $this->dnsName($domain));
+        $record = $this->extractShowkeysRecord((string) ($result['data']['output'] ?? ''), $this->dnsName($domain));
         if ($record === null) {
             return ['txt' => null, 'chunks' => []];
         }
@@ -404,192 +333,19 @@ final class DomainDkimService
         }, $records)));
     }
 
-    private function runGenrsa(string $keyPath, int $bits): array
-    {
-        return $this->runConfiguredCommand($this->genrsaCommand(), [$keyPath, (string) $bits]);
-    }
-
-    private function generateKeyFile(string $keyPath, int $bits): array
-    {
-        if (! is_file($keyPath)) {
-            return $this->runGenrsa($keyPath, $bits);
-        }
-
-        $backupPath = $keyPath.'.previous-'.date('YmdHis').'-'.uniqid();
-        if (! @rename($keyPath, $backupPath)) {
-            return ['configured' => true, 'ok' => false, 'message' => "Cannot rotate existing DKIM key {$keyPath}.", 'status' => 1];
-        }
-
-        $generated = $this->runGenrsa($keyPath, $bits);
-        if (! $generated['ok']) {
-            @rename($backupPath, $keyPath);
-
-            return $generated;
-        }
-
-        @unlink($backupPath);
-
-        return $generated;
-    }
-
     private function testKeys(): array
     {
-        $command = $this->testkeysCommand();
-        if ($command === '') {
-            return ['configured' => false, 'ok' => false, 'message' => 'amavisd testkeys command is not configured.'];
-        }
-
-        return $this->runConfiguredCommand($command);
+        return $this->privileged->run('amavis_testkeys');
     }
 
-    private function restartAmavisd(): array
+    private function readAmavisdConfig(): string
     {
-        $command = $this->restartCommand();
-        if ($command === '') {
-            return ['configured' => false, 'ok' => false, 'message' => 'Amavisd restart command is not configured.'];
+        $result = $this->privileged->run('read_file', ['target' => 'amavis_config']);
+        if (! $result['ok']) {
+            throw ValidationException::withMessages(['dkim' => 'Cannot read amavisd configuration through the privileged helper: '.$result['message']]);
         }
 
-        return $this->runConfiguredCommand($command);
-    }
-
-    private function secureKeyFile(string $keyPath): void
-    {
-        clearstatcache(true, $keyPath);
-
-        if (($this->fileMode($keyPath) & 0777) !== 0400) {
-            @chmod($keyPath, 0400);
-            clearstatcache(true, $keyPath);
-        }
-
-        $owner = $this->keyOwner();
-        $group = $this->keyGroup();
-
-        if ($owner !== '' && ! $this->fileOwnerMatches($keyPath, $owner) && function_exists('chown')) {
-            @chown($keyPath, $owner);
-            clearstatcache(true, $keyPath);
-        }
-        if ($group !== '' && ! $this->fileGroupMatches($keyPath, $group) && function_exists('chgrp')) {
-            @chgrp($keyPath, $group);
-            clearstatcache(true, $keyPath);
-        }
-
-        if (($this->fileMode($keyPath) & 0777) !== 0400 && $this->chmodCommand() !== '') {
-            $this->runConfiguredCommand($this->chmodCommand(), ['0400', $keyPath]);
-            clearstatcache(true, $keyPath);
-        }
-
-        if (! $this->keyOwnershipMatches($keyPath, $owner, $group) && $this->chownCommand() !== '') {
-            $ownerGroup = $group !== '' ? "{$owner}:{$group}" : $owner;
-            $this->runConfiguredCommand($this->chownCommand(), [$ownerGroup, $keyPath]);
-            clearstatcache(true, $keyPath);
-        }
-
-        if (($this->fileMode($keyPath) & 0777) !== 0400) {
-            throw ValidationException::withMessages(['dkim' => "Cannot chmod {$keyPath} to 0400."]);
-        }
-    }
-
-    private function keyOwnershipMatches(string $path, string $owner, string $group): bool
-    {
-        return ($owner === '' || $this->fileOwnerMatches($path, $owner))
-            && ($group === '' || $this->fileGroupMatches($path, $group));
-    }
-
-    private function fileMode(string $path): int
-    {
-        $perms = @fileperms($path);
-
-        return $perms === false ? 0 : $perms;
-    }
-
-    private function fileOwnerMatches(string $path, string $owner): bool
-    {
-        if (! function_exists('posix_getpwuid')) {
-            return false;
-        }
-
-        $current = @fileowner($path);
-        if ($current === false) {
-            return false;
-        }
-
-        $info = posix_getpwuid($current);
-
-        return is_array($info) && ($info['name'] ?? '') === $owner;
-    }
-
-    private function fileGroupMatches(string $path, string $group): bool
-    {
-        if (! function_exists('posix_getgrgid')) {
-            return false;
-        }
-
-        $current = @filegroup($path);
-        if ($current === false) {
-            return false;
-        }
-
-        $info = posix_getgrgid($current);
-
-        return is_array($info) && ($info['name'] ?? '') === $group;
-    }
-
-    private function withFileLock(string $targetPath, Closure $callback): mixed
-    {
-        $lockDirectory = storage_path('framework/locks');
-        if (! is_dir($lockDirectory) && @mkdir($lockDirectory, 0755, true) === false) {
-            throw ValidationException::withMessages(['dkim' => "Cannot create lock directory {$lockDirectory}."]);
-        }
-
-        $lockPath = $lockDirectory.'/dkim-'.sha1($targetPath).'.lock';
-        $handle = @fopen($lockPath, 'c');
-        if (! $handle) {
-            throw ValidationException::withMessages(['dkim' => "Cannot open lock file {$lockPath}."]);
-        }
-
-        try {
-            if (! flock($handle, LOCK_EX)) {
-                throw ValidationException::withMessages(['dkim' => "Cannot acquire lock for {$targetPath}."]);
-            }
-
-            return $callback();
-        } finally {
-            flock($handle, LOCK_UN);
-            fclose($handle);
-        }
-    }
-
-    private function runConfiguredCommand(string $command, array $extraArguments = []): array
-    {
-        $arguments = $this->commandArguments($command);
-        if ($arguments === []) {
-            return ['configured' => false, 'ok' => false, 'message' => 'Command is not configured.', 'status' => 127];
-        }
-
-        $process = new Process(array_merge($arguments, $extraArguments));
-        $process->setTimeout(30);
-        $process->run();
-
-        return [
-            'configured' => true,
-            'ok' => $process->isSuccessful(),
-            'message' => trim($process->getOutput()."\n".$process->getErrorOutput()),
-            'status' => $process->getExitCode(),
-        ];
-    }
-
-    private function commandArguments(string $command): array
-    {
-        $arguments = array_values(array_filter(str_getcsv($command, ' ', '"', '\\'), fn (string $argument) => $argument !== ''));
-
-        return array_map('trim', $arguments);
-    }
-
-    private function configWritable(): bool
-    {
-        $path = $this->configPath();
-
-        return is_file($path) ? is_writable($path) : is_writable(dirname($path));
+        return (string) ($result['data']['content'] ?? '');
     }
 
     private function configPath(): string
@@ -614,58 +370,13 @@ final class DomainDkimService
         return preg_match('/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/', $selector) ? $selector : 'mxcentral';
     }
 
-    private function bits(): int
-    {
-        return $this->validBits((int) config('iredmail.amavisd_dkim_bits'));
-    }
-
     private function validBits(int $bits): int
     {
         return in_array($bits, [1024, 2048], true) ? $bits : 1024;
     }
 
-    private function genrsaCommand(): string
-    {
-        return trim((string) config('iredmail.amavisd_genrsa_command'));
-    }
-
-    private function testkeysCommand(): string
-    {
-        return trim((string) config('iredmail.amavisd_testkeys_command'));
-    }
-
-    private function showkeysCommand(): string
-    {
-        return trim((string) config('iredmail.amavisd_showkeys_command'));
-    }
-
-    private function restartCommand(): string
-    {
-        return trim((string) config('iredmail.amavisd_restart_command'));
-    }
-
-    private function keyOwner(): string
-    {
-        return trim((string) config('iredmail.amavisd_dkim_key_owner'));
-    }
-
-    private function keyGroup(): string
-    {
-        return trim((string) config('iredmail.amavisd_dkim_key_group'));
-    }
-
-    private function chownCommand(): string
-    {
-        return trim((string) config('iredmail.amavisd_dkim_chown_command'));
-    }
-
-    private function chmodCommand(): string
-    {
-        return trim((string) config('iredmail.amavisd_dkim_chmod_command'));
-    }
-
     private function perlSingleQuoted(string $value): string
     {
-        return str_replace(["\\", "'"], ["\\\\", "\\'"], $value);
+        return str_replace(['\\', "'"], ['\\\\', "\\'"], $value);
     }
 }
