@@ -146,7 +146,7 @@ Include it from the active iRedMail nginx server block in the same way as the ot
 ### DKIM Management
 
 The domain edit screen can generate DKIM keys for hosted domains with selector `mxcentral`, producing DNS records at `mxcentral._domainkey.<domain>`.
-The DNS records panel also checks MX, SPF, and DMARC. MX is checked against the configured mail server hostname and public IPs. For SPF expansion, set `IREDMAIL_SPF_SERVER_HOSTNAME` and `IREDMAIL_SPF_SERVER_IPS` to the outbound mail server hostname and public sending IPs. DMARC checks include external report authorization records, for example `example.com._report._dmarc.reports.example.net TXT "v=DMARC1"`.
+The DNS records panel also checks MX, SPF, and DMARC. Results are saved in the local Laravel file cache and page loads only display that saved snapshot; **Check DNS** performs a fresh lookup and replaces it. Set `IREDMAIL_DNS_CACHE_STORE` if a different persistent Laravel cache store is required. MX is checked against the configured mail server hostname and public IPs. For SPF expansion, set `IREDMAIL_SPF_SERVER_HOSTNAME` and `IREDMAIL_SPF_SERVER_IPS` to the outbound mail server hostname and public sending IPs. DMARC checks include external report authorization records, for example `example.com._report._dmarc.reports.example.net TXT "v=DMARC1"`.
 
 On Debian/Ubuntu iRedMail installs, amavisd custom settings are normally in `/etc/amavis/conf.d/50-user` and DKIM private keys are normally kept in `/var/lib/dkim`. Configure these values in `.env`:
 

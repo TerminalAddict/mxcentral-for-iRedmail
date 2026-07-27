@@ -3,6 +3,7 @@
 @section('content')
 @php
     $selectedDomains = array_flip((array) old('domains', []));
+    $currentAdmin = strtolower((string) session('actor.email'));
 @endphp
 
 <div class="page-titlebar">
@@ -46,15 +47,23 @@
     <thead><tr><th>Admin</th><th>Managed domains</th><th>Remove assignment</th></tr></thead>
     <tbody>
     @foreach($rows as $row)
+        @php($isCurrentAdmin = strtolower($row->username) === $currentAdmin)
         <tr>
-            <td>{{ $row->username }}</td>
+            <td>
+                {{ $row->username }}
+                @if($isCurrentAdmin)<span class="muted">(current account)</span>@endif
+            </td>
             <td>{{ $row->domains }}</td>
             <td>
-                @foreach(array_filter(array_map('trim', explode(',', $row->domains ?? ''))) as $domain)
-                    <form method="post" action="{{ route('admins.delete', [$row->username, $domain]) }}" style="display:inline">@csrf @method('delete')
-                        <button class="danger">Remove {{ $domain }}</button>
-                    </form>
-                @endforeach
+                @if($isCurrentAdmin)
+                    <span class="muted">Your own assignments cannot be changed here.</span>
+                @else
+                    @foreach(array_filter(array_map('trim', explode(',', $row->domains ?? ''))) as $domain)
+                        <form method="post" action="{{ route('admins.delete', [$row->username, $domain]) }}" style="display:inline">@csrf @method('delete')
+                            <button class="danger">Remove {{ $domain }}</button>
+                        </form>
+                    @endforeach
+                @endif
             </td>
         </tr>
     @endforeach

@@ -806,6 +806,9 @@ final class AccountRepository
         if (! $email || $domains === []) {
             throw ValidationException::withMessages(['username' => 'Enter a valid admin email and select at least one domain.']);
         }
+        if ($email === strtolower($actor->email)) {
+            throw ValidationException::withMessages(['username' => 'You cannot change your own admin assignments.']);
+        }
 
         $mailboxExists = DB::connection('vmail')->table('mailbox')->where('username', $email)->exists();
         $adminExists = DB::connection('vmail')->table('admin')->where('username', $email)->exists();
@@ -884,6 +887,9 @@ final class AccountRepository
         abort_unless($actor->globalAdmin, 403);
         $email = IredMailAddress::email($email) ?? abort(404);
         $domain = strtoupper($domain) === 'ALL' ? 'ALL' : (IredMailAddress::domain($domain) ?? abort(404));
+        if ($email === strtolower($actor->email)) {
+            throw ValidationException::withMessages(['admin' => 'You cannot remove your own admin assignments.']);
+        }
 
         DB::connection('vmail')->table('domain_admins')->where('username', $email)->where('domain', $domain)->delete();
         $remaining = DB::connection('vmail')->table('domain_admins')->where('username', $email)->pluck('domain')->all();

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\IredMail\AccountRepository;
 use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\DomainDkimService;
+use App\Services\IredMail\DomainDnsService;
 use App\Services\IredMail\MailActivityRepository;
 use App\Services\IredMail\PolicyRepository;
 use App\Services\IredMail\SetupInspector;
@@ -55,13 +56,14 @@ final class ApiController extends Controller
         return ['ok' => true, 'staging' => $result['enabled']];
     }
 
-    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, SystemSettingsService $settings, CurrentActor $actor, string $domain): array
+    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, DomainDnsService $dns, SystemSettingsService $settings, CurrentActor $actor, string $domain): array
     {
         if (in_array(strtolower($domain), $settings->stagedDomains(), true)) {
             $this->ensureStagingReloadSucceeded($settings->saveDomainStaging($actor, $domain, false));
         }
 
         $dkim->cleanupRemovedDomain($actor, $domain);
+        $dns->forget($actor, $domain);
         $accounts->deleteDomain($actor, $domain, (int) $request->input('keep_days', 0));
         return ['ok' => true];
     }

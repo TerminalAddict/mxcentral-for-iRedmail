@@ -229,18 +229,21 @@
             </div>
         @endif
 
-        @if($dnsStatus)
-            <div class="domain-dkim">
-                <div class="domain-dkim__header">
-                    <div>
-                        <h3>DNS records</h3>
-                        <p>Check the published authentication records receivers use for this domain.</p>
-                    </div>
-                    <form method="post" action="{{ route('domains.dns.check', $selectedDomain->domain) }}">@csrf
-                        <button class="secondary">Check DNS</button>
-                    </form>
+        <div class="domain-dkim">
+            <div class="domain-dkim__header">
+                <div>
+                    <h3>DNS records</h3>
+                    <p>Check the published authentication records receivers use for this domain.</p>
+                    @if($dnsStatus)
+                        <span class="field-hint">Last checked {{ $dnsStatus['checked_at'] }}</span>
+                    @endif
                 </div>
+                <form method="post" action="{{ route('domains.dns.check', $selectedDomain->domain) }}">@csrf
+                    <button class="secondary">Check DNS</button>
+                </form>
+            </div>
 
+            @if($dnsStatus)
                 <table class="summary-table domain-dns-table">
                     <thead><tr><th>Record</th><th>Name</th><th>Status</th><th>Published TXT</th></tr></thead>
                     <tbody>
@@ -301,8 +304,10 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>
-        @endif
+            @else
+                <p class="muted">No cached DNS results yet. Select Check DNS to look up and save the current records.</p>
+            @endif
+        </div>
 
         @if(session('actor.global_admin'))
             <form method="post" action="{{ route('domains.delete', $selectedDomain->domain) }}" onsubmit="return confirm('Delete this domain and all related accounts?')" class="domain-danger-row">@csrf @method('delete')

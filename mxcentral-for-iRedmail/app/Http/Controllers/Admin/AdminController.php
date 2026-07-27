@@ -149,7 +149,7 @@ final class AdminController extends Controller
         return back()->with('status', 'Catch-all destination removed.');
     }
 
-    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, SystemSettingsService $settings, CurrentActor $actor, string $domain)
+    public function deleteDomain(Request $request, AccountRepository $accounts, DomainDkimService $dkim, DomainDnsService $dns, SystemSettingsService $settings, CurrentActor $actor, string $domain)
     {
         if (in_array(strtolower($domain), $settings->stagedDomains(), true)) {
             $this->ensureStagingReloadSucceeded(
@@ -159,6 +159,7 @@ final class AdminController extends Controller
         }
 
         $dkimCleanup = $dkim->cleanupRemovedDomain($actor, $domain);
+        $dns->forget($actor, $domain);
         $accounts->deleteDomain($actor, $domain, (int) $request->input('keep_days', 0));
 
         $message = 'Domain deleted; mailbox paths logged.';
@@ -169,9 +170,10 @@ final class AdminController extends Controller
         return back()->with('status', $message);
     }
 
-    public function generateDomainDkim(Request $request, DomainDkimService $dkim, CurrentActor $actor, string $domain)
+    public function generateDomainDkim(Request $request, DomainDkimService $dkim, DomainDnsService $dns, CurrentActor $actor, string $domain)
     {
         $result = $dkim->generate($actor, $domain, (int) $request->input('bits', 1024));
+        $dns->forget($actor, $domain);
         $verb = ($result['rotated'] ?? false) ? 'rotated' : 'ready';
         $message = "DKIM key is {$verb} for {$result['domain']} using {$result['bits']} bits. Publish the TXT record shown below.";
         if (! ($result['restart']['configured'] ?? false)) {

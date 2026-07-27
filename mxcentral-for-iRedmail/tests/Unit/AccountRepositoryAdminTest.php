@@ -6,6 +6,7 @@ use App\Services\IredMail\AccountRepository;
 use App\Services\IredMail\AuditLogger;
 use App\Services\IredMail\CurrentActor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 final class AccountRepositoryAdminTest extends TestCase
@@ -107,6 +108,36 @@ final class AccountRepositoryAdminTest extends TestCase
 
         $this->assertSame(['ALL'], $domains);
         $this->assertSame(1, DB::connection('vmail')->table('mailbox')->where('username', 'admin@example.com')->value('isglobaladmin'));
+    }
+
+    public function test_admin_cannot_change_their_own_assignments(): void
+    {
+        $this->expectExceptionMessage('You cannot change your own admin assignments.');
+
+        $this->repository()->assignAdmin($this->actor(), [
+            'username' => 'postmaster@example.com',
+            'domains' => ['example.com'],
+        ]);
+    }
+
+    public function test_admin_cannot_remove_their_own_assignment(): void
+    {
+        DB::connection('vmail')->table('domain_admins')->insert([
+            'username' => 'postmaster@example.com',
+            'domain' => 'ALL',
+        ]);
+
+        try {
+            $this->repository()->deleteAdminAssignment($this->actor(), 'postmaster@example.com', 'ALL');
+            $this->fail('Expected self-removal to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertSame('You cannot remove your own admin assignments.', $exception->getMessage());
+        }
+
+        $this->assertTrue(DB::connection('vmail')->table('domain_admins')
+            ->where('username', 'postmaster@example.com')
+            ->where('domain', 'ALL')
+            ->exists());
     }
 
     private function repository(): AccountRepository

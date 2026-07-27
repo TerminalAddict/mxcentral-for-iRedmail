@@ -17,7 +17,12 @@
     @unless(session('actor.self_service'))
         <form class="search-compact">
             <input name="q" value="{{ request('q') }}" placeholder="Search users">
-            <input name="domain" value="{{ request('domain') }}" placeholder="Domain">
+            <select name="domain" aria-label="Filter by domain">
+                <option value="">All domains</option>
+                @foreach($domainOptions as $domain)
+                    <option value="{{ $domain->domain }}" @selected(request('domain') === $domain->domain)>{{ $domain->domain }}</option>
+                @endforeach
+            </select>
             <button class="secondary">Search</button>
         </form>
     @endunless

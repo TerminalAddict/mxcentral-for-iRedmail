@@ -7,6 +7,7 @@ return [
     'webmail_url' => env('IREDMAIL_WEBMAIL_URL', '/SOGo/'),
     'spf_server_hostname' => env('IREDMAIL_SPF_SERVER_HOSTNAME', gethostname() ?: ''),
     'spf_server_ips' => env('IREDMAIL_SPF_SERVER_IPS', ''),
+    'dns_cache_store' => env('IREDMAIL_DNS_CACHE_STORE', 'file'),
     'amavisd_quarantine_host' => env('AMAVISD_QUARANTINE_HOST', env('AMAVISD_DB_HOST', '127.0.0.1')),
     'amavisd_quarantine_port' => (int) env('AMAVISD_QUARANTINE_PORT', 9998),
     'quarantine_notification_state_path' => env('QUARANTINE_NOTIFICATION_STATE_PATH', storage_path('app/quarantine-notifications.json')),

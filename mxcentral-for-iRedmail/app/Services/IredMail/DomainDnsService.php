@@ -3,6 +3,7 @@
 namespace App\Services\IredMail;
 
 use App\Support\IredMailAddress;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 final class DomainDnsService
@@ -11,10 +12,19 @@ final class DomainDnsService
     {
     }
 
-    public function status(CurrentActor $actor, string $domain): array
+    public function status(CurrentActor $actor, string $domain): ?array
     {
         $domain = $this->validatedHostedDomain($actor, $domain);
-        $dkimStatus = $this->dkim->status($actor, $domain);
+
+        $status = Cache::store($this->cacheStore())->get($this->cacheKey($domain));
+
+        return is_array($status) ? $status : null;
+    }
+
+    public function refresh(CurrentActor $actor, string $domain): array
+    {
+        $domain = $this->validatedHostedDomain($actor, $domain);
+        $dkimStatus = $this->dkim->status($actor, $domain, true);
         $mx = $this->mxStatus($domain);
         $spfRecords = $this->prefixedTxtRecords($domain, 'v=spf1');
         $spf = $this->spfStatus($domain, $spfRecords);
@@ -22,7 +32,7 @@ final class DomainDnsService
         $dmarcRecords = $this->prefixedTxtRecords($dmarcName, 'v=DMARC1');
         $dmarc = $this->dmarcStatus($domain, $dmarcRecords);
 
-        return [
+        $status = [
             'domain' => $domain,
             'checked_at' => now()->toDateTimeString(),
             'dkim' => [
@@ -57,11 +67,22 @@ final class DomainDnsService
                 'external_reports' => $dmarc['external_reports'],
             ],
         ];
+
+        Cache::store($this->cacheStore())->forever($this->cacheKey($domain), $status);
+
+        return $status;
+    }
+
+    public function forget(CurrentActor $actor, string $domain): void
+    {
+        $domain = $this->validatedHostedDomain($actor, $domain);
+
+        Cache::store($this->cacheStore())->forget($this->cacheKey($domain));
     }
 
     public function summary(CurrentActor $actor, string $domain): string
     {
-        $status = $this->status($actor, $domain);
+        $status = $this->refresh($actor, $domain);
 
         return sprintf(
             'DNS check complete for %s: DKIM %s, MX %s, SPF %s, DMARC %s.',
@@ -71,6 +92,16 @@ final class DomainDnsService
             $status['spf']['label'],
             $status['dmarc']['label'],
         );
+    }
+
+    private function cacheStore(): string
+    {
+        return (string) config('iredmail.dns_cache_store', 'file');
+    }
+
+    private function cacheKey(string $domain): string
+    {
+        return 'mxcentral:domain-dns:v1:'.$domain;
     }
 
     private function validatedHostedDomain(CurrentActor $actor, string $domain): string

@@ -17,12 +17,11 @@ final class DomainDkimService
     {
     }
 
-    public function status(CurrentActor $actor, string $domain): array
+    public function status(CurrentActor $actor, string $domain, bool $lookupDns = false): array
     {
         $domain = $this->validatedHostedDomain($actor, $domain);
         $keyPath = $this->keyPath($domain);
         $expected = $this->expectedDnsRecord($domain);
-        $dns = $this->dnsStatus($domain);
 
         return [
             'domain' => $domain,
@@ -41,7 +40,7 @@ final class DomainDkimService
             'testkeys_configured' => $this->testkeysCommand() !== '',
             'expected_txt' => $expected['txt'],
             'expected_chunks' => $expected['chunks'],
-            'dns' => $dns,
+            'dns' => $lookupDns ? $this->dnsStatus($domain) : null,
         ];
     }
 
@@ -116,7 +115,7 @@ final class DomainDkimService
     public function checkDns(CurrentActor $actor, string $domain): array
     {
         $domain = $this->validatedHostedDomain($actor, $domain);
-        $status = $this->status($actor, $domain);
+        $status = $this->status($actor, $domain, true);
         $this->audit->log('check', "Checked DKIM DNS for {$domain}.", $domain);
 
         return $status['dns'];
