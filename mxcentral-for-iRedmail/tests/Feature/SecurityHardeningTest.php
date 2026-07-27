@@ -45,6 +45,24 @@ final class SecurityHardeningTest extends TestCase
         $this->assertStringNotContainsString('operation == "postmap"', $helper);
     }
 
+    public function test_deployment_uploads_repository_level_server_scripts(): void
+    {
+        $deployment = (string) file_get_contents(base_path('../scripts/deploy-rsync.sh'));
+
+        $this->assertStringContainsString(
+            'rsync "${UPLOAD_ARGS[@]}" scripts/mxcentral-privileged',
+            $deployment,
+        );
+        $this->assertStringContainsString(
+            'rsync "${UPLOAD_ARGS[@]}" scripts/render-nginx-template.sh',
+            $deployment,
+        );
+        $this->assertStringContainsString(
+            '$REMOTE_Q/mxcentral-privileged.mxcentral-upload $REMOTE_Q/scripts/mxcentral-privileged',
+            $deployment,
+        );
+    }
+
     public function test_self_service_user_cannot_call_admin_user_update_api(): void
     {
         $actor = new CurrentActor(

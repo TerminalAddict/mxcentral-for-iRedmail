@@ -66,6 +66,12 @@ if [[ ! -d "$APP_DIR" || ! -f "$APP_DIR/artisan" || ! -f "$APP_DIR/composer.json
     echo "ERROR: run this script from the repository root." >&2
     exit 1
 fi
+for deployment_script in scripts/mxcentral-privileged scripts/render-nginx-template.sh; do
+    if [[ ! -f "$deployment_script" ]]; then
+        echo "ERROR: required deployment file is missing: $deployment_script" >&2
+        exit 1
+    fi
+done
 
 REMOTE_Q="$(quote_remote "$REMOTE_PATH")"
 APP_USER_Q="$(quote_remote "$APP_USER")"
@@ -146,6 +152,12 @@ if [[ "$REMOTE_ACCESS" == "sudo" ]]; then
     UPLOAD_ARGS+=(--rsync-path='sudo -n rsync')
 fi
 
+echo "Uploading server-side deployment scripts."
+rsync "${UPLOAD_ARGS[@]}" scripts/mxcentral-privileged \
+    "${SSH_TARGET}:${REMOTE_PATH}/mxcentral-privileged.mxcentral-upload"
+rsync "${UPLOAD_ARGS[@]}" scripts/render-nginx-template.sh \
+    "${SSH_TARGET}:${REMOTE_PATH}/render-nginx-template.mxcentral-upload"
+
 if [[ -n "$SERVER_ENV_FILE" ]]; then
     echo "Uploading server-specific environment."
     rsync "${UPLOAD_ARGS[@]}" "$SERVER_ENV_FILE" "${SSH_TARGET}:${REMOTE_PATH}/.env.mxcentral-upload"
@@ -158,6 +170,10 @@ fi
 echo "Installing the root helper, sudoers policy, and secure ownership."
 ssh "$SSH_TARGET" "set -eu
     if [ \"\$(id -u)\" -eq 0 ]; then ROOT_RUN=''; else ROOT_RUN='sudo -n'; fi
+    \$ROOT_RUN install -d -o root -g root -m 0755 $REMOTE_Q/scripts
+    \$ROOT_RUN install -o root -g root -m 0755 $REMOTE_Q/mxcentral-privileged.mxcentral-upload $REMOTE_Q/scripts/mxcentral-privileged
+    \$ROOT_RUN install -o root -g root -m 0755 $REMOTE_Q/render-nginx-template.mxcentral-upload $REMOTE_Q/scripts/render-nginx-template.sh
+    \$ROOT_RUN rm $REMOTE_Q/mxcentral-privileged.mxcentral-upload $REMOTE_Q/render-nginx-template.mxcentral-upload
     \$ROOT_RUN test \"\$(stat -c %U $REMOTE_Q/scripts/mxcentral-privileged)\" != '$APP_USER'
     \$ROOT_RUN install -o root -g root -m 0755 $REMOTE_Q/scripts/mxcentral-privileged /usr/local/sbin/mxcentral-privileged
     \$ROOT_RUN install -d -o root -g root -m 0755 /etc/mxcentral
