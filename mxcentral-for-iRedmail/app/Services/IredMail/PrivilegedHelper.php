@@ -30,7 +30,7 @@ class PrivilegedHelper
         $process = new Process($arguments);
         $process->setInput(json_encode([
             'operation' => $operation,
-            'parameters' => $parameters,
+            'parameters' => (object) $parameters,
         ], JSON_THROW_ON_ERROR));
         $process->setTimeout((float) config('iredmail.privileged_helper_timeout', 60));
         $process->run();
