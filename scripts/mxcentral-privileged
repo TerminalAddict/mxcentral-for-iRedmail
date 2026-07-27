@@ -103,14 +103,16 @@ def secure_regular_file(path: str, *, required: bool = True) -> os.stat_result |
     return info
 
 
-def secure_directory(path: str) -> int:
-    if not os.path.isabs(path):
-        raise RequestError("Configured paths must be absolute.")
+def validate_directory_path(path: str, *, allow_root_symlinks: bool) -> None:
     current = "/"
     for component in Path(path).parts[1:]:
         current = os.path.join(current, component)
         info = os.lstat(current)
-        if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+        if stat.S_ISLNK(info.st_mode):
+            if not allow_root_symlinks or info.st_uid != 0:
+                raise RequestError(f"Refusing unsafe directory symlink: {current}")
+            continue
+        if not stat.S_ISDIR(info.st_mode):
             raise RequestError(f"Refusing unsafe directory component: {current}")
         if info.st_mode & 0o022:
             raise RequestError(f"Directory must not be group/other writable: {current}")
@@ -122,7 +124,23 @@ def secure_directory(path: str) -> int:
                 raise RequestError(f"Configured web user does not exist: {user}") from error
         if info.st_uid in web_uids:
             raise RequestError(f"Directory must not be owned by the web worker: {current}")
-    return os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+
+
+def secure_directory(path: str) -> int:
+    if not os.path.isabs(path):
+        raise RequestError("Configured paths must be absolute.")
+    if ".." in Path(path).parts:
+        raise RequestError("Configured paths must not contain traversal.")
+
+    # iRedMail exposes versioned package directories through aliases such as
+    # /opt/iredapd -> /opt/iRedAPD-6.1. Only root-owned aliases in already
+    # protected parents are accepted. The canonical target is then validated
+    # independently and opened without following a final symlink.
+    validate_directory_path(path, allow_root_symlinks=True)
+    resolved = os.path.realpath(path)
+    validate_directory_path(resolved, allow_root_symlinks=False)
+
+    return os.open(resolved, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
 
 
 def read_secure_config() -> dict:

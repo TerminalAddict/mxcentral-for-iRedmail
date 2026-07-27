@@ -141,6 +141,13 @@ and reloads run under one root lock. Their root-owned state records in
 `/var/lib/mxcentral/operations` are explicitly `pending`, `applied`, or `failed`;
 a failed validation or reload restores the previous files and service state.
 
+iRedMail commonly provides versioned packages through root-owned aliases such
+as `/opt/iredapd -> /opt/iRedAPD-6.1`. The helper accepts an alias only when the
+alias is root-owned, its containing path is not writable by the PHP worker, and
+every component of the resolved target is independently secure. The resolved
+directory is still opened with `O_NOFOLLOW`. Web-worker-owned aliases and
+aliases in writable directories remain rejected.
+
 For a dedicated MXCentral PHP-FPM pool, set `APP_USER` and `APP_GROUP` during
 deployment and configure nginx/FPM to use that account. The deploy script
 generates the matching narrow sudoers entry.
