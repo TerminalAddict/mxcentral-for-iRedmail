@@ -60,9 +60,31 @@ MXCENTRAL_PRIVILEGED_HELPER_COMMAND="/usr/bin/sudo /usr/local/sbin/mxcentral-pri
 Use [the table-level grant template](mxcentral-for-iRedmail/docs/database-grants.sql)
 to provision these accounts. Do not grant global privileges.
 
-Do not commit `.env`. It contains live database credentials and server-specific
-application settings. Keep privileged command paths in the root-owned
-`/etc/mxcentral/privileged-helper.json`.
+Keep one protected environment profile and SQL grant file per deployment host:
+
+```text
+$(HOME)/.config/mxcentral/$(HOSTNAME).env
+$(HOME)/.config/mxcentral/$(HOSTNAME).sql
+```
+
+For example, the `mail` host uses `mail.env` and `mail.sql`, while
+`ccl-mailbox` uses `ccl-mailbox.env` and `ccl-mailbox.sql`. In
+`Makefile.local`, set `SERVER_ENV_FILE` with Make syntax:
+
+```make
+HOSTNAME := mail
+DEPLOY_HOST := $(HOSTNAME)
+SERVER_ENV_FILE := $(HOME)/.config/mxcentral/$(HOSTNAME).env
+```
+
+Use `$HOME` rather than `$(HOME)` in interactive shell commands. Set the
+profile directory to mode `0700` and both files to mode `0600`. Apply the
+matching SQL file manually before deployment; the deploy script does not
+execute SQL.
+
+Do not commit either file. They contain live database credentials and
+server-specific application settings. Keep privileged command paths in the
+root-owned `/etc/mxcentral/privileged-helper.json`.
 
 MxCentral does not require a local Laravel application database for normal
 operation. Keep `SESSION_DRIVER=file`, `CACHE_STORE=array`, and

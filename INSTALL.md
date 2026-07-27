@@ -11,21 +11,50 @@ root@mail.example.com:/opt/www/mxcentral-for-iRedmail
 Put real deployment values in the ignored top-level `Makefile.local`:
 
 ```make
-DEPLOY_HOST := root@mail.example.com
+# Short per-server profile name and SSH target.
+HOSTNAME := mail
+DEPLOY_HOST := $(HOSTNAME)
 DEPLOY_PATH := /opt/www/mxcentral-for-iRedmail
 APP_USER := www-data
 APP_GROUP := www-data
 
-# Optional per-server profiles kept outside the repository:
-SERVER_ENV_FILE := /secure/mxcentral/mail.example.com.env
-PRIVILEGED_CONFIG_FILE := /secure/mxcentral/mail.example.com-helper.json
+# Per-server files kept outside the repository:
+SERVER_ENV_FILE := $(HOME)/.config/mxcentral/$(HOSTNAME).env
+
+# Applied manually; the deploy target does not execute SQL:
+DATABASE_GRANTS_FILE := $(HOME)/.config/mxcentral/$(HOSTNAME).sql
+
+# Optional, only when this host needs non-default privileged paths:
+# PRIVILEGED_CONFIG_FILE := $(HOME)/.config/mxcentral/$(HOSTNAME)-helper.json
 ```
 
 There are deliberately no deployable default host or path values. Use a
 different `Makefile.local` or explicit environment values for each mail server.
+In a Makefile, use `$(HOME)` and `$(HOSTNAME)` as shown; `~` is not guaranteed
+to expand after the value is passed through the quoted deploy command.
 If `SERVER_ENV_FILE` is omitted, deployment preserves that server's existing
 remote `.env`. If `PRIVILEGED_CONFIG_FILE` is omitted, it preserves the
 root-owned `/etc/mxcentral/privileged-helper.json`.
+
+Create the local profile directory once:
+
+```sh
+install -d -m 0700 "$HOME/.config/mxcentral"
+```
+
+Use one matching `.env` and `.sql` filename per `HOSTNAME`. For example:
+
+```text
+~/.config/mxcentral/mail.env
+~/.config/mxcentral/mail.sql
+~/.config/mxcentral/ccl-mailbox.env
+~/.config/mxcentral/ccl-mailbox.sql
+```
+
+The `~` notation above is descriptive. Use `$HOME` in shell commands and
+`$(HOME)` in `Makefile.local`. Keep these files outside the repository and set
+both environment and SQL profiles to mode `0600` because they contain live
+credentials.
 
 ## Get the Code
 
@@ -96,9 +125,10 @@ Then rerun `make deploy`.
 
 ## Create Server `.env` and App Key
 
-On the mail server, create the server-local `.env` file. Deployment deliberately
-does not overwrite it unless `SERVER_ENV_FILE` names an explicit local profile.
-Generate the key before making the file read-only to PHP:
+For a new installation, create the server-local `.env` file on the mail server.
+Deployment deliberately does not overwrite it unless `SERVER_ENV_FILE` names
+an explicit local profile. Generate the key before making the file read-only to
+PHP:
 
 ```sh
 cd /opt/www/mxcentral-for-iRedmail
@@ -111,6 +141,19 @@ chmod 0640 .env
 Keep the generated `APP_KEY` stable. Optional decryptable mailbox password
 storage encrypts values with this key; if the key is changed, previously stored
 decryptable passwords cannot be recovered.
+
+For an existing installation, initialize the workstation profile from the
+server's current `.env` so its `APP_KEY` and server-specific values are
+preserved. This example uses the `mail` SSH/profile name:
+
+```sh
+ssh mail 'sudo -n cat /opt/www/mxcentral-for-iRedmail/.env' \
+  > "$HOME/.config/mxcentral/mail.env"
+chmod 0600 "$HOME/.config/mxcentral/mail.env"
+```
+
+Repeat with the matching hostname/profile name for every server. Never copy one
+server's `APP_KEY` or database passwords into another server's profile.
 
 ## Install the Privileged Helper
 
@@ -161,12 +204,26 @@ strong password. Never grant MXCentral privileges on `*.*`, `FILE`,
 `GRANT OPTION`, or unrelated schemas.
 
 Review the table-level grant template, replace all placeholder passwords, then
-apply it with a database administration account:
+save a separate protected copy for each server:
 
 ```sh
-less /opt/www/mxcentral-for-iRedmail/docs/database-grants.sql
-mysql -u db_admin_user -p < /opt/www/mxcentral-for-iRedmail/docs/database-grants.sql
+cp mxcentral-for-iRedmail/docs/database-grants.sql \
+  "$HOME/.config/mxcentral/mail.sql"
+chmod 0600 "$HOME/.config/mxcentral/mail.sql"
+editor "$HOME/.config/mxcentral/mail.sql"
 ```
+
+The passwords in `mail.sql` must match the five schema-specific passwords in
+`mail.env`. Apply the SQL explicitly to the matching host; deployment never
+executes SQL automatically:
+
+```sh
+ssh mail 'sudo -n mysql' < "$HOME/.config/mxcentral/mail.sql"
+```
+
+For another `HOSTNAME`, use its matching files and SSH target, for example
+`ccl-mailbox.env`, `ccl-mailbox.sql`, and `ssh ccl-mailbox`. Do not reuse SQL
+passwords between servers.
 
 The optional commented `ALTER ON vmail.mailbox` grant is needed only if global
 admins will toggle decryptable-password storage from the application.
