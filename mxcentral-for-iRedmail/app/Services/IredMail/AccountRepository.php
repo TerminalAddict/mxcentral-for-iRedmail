@@ -1136,15 +1136,28 @@ final class AccountRepository
         $this->audit->log('update', "Updated forwarding for {$email}".($summary === '' ? ' with local delivery only.' : ": {$summary}."), $domain, $email);
     }
 
-    private function accountExists(string $email): bool
+    private function existingAccountType(string $email): ?string
     {
-        foreach (['mailbox' => 'username', 'alias' => 'address', 'maillists' => 'address'] as $table => $column) {
-            if (DB::connection('vmail')->table($table)->where($column, $email)->exists()) {
-                return true;
+        foreach ([
+            'mailbox' => ['column' => 'username', 'label' => 'a mailbox'],
+            'alias' => ['column' => 'address', 'label' => 'an alias'],
+            'maillists' => ['column' => 'address', 'label' => 'a mailing list'],
+        ] as $table => $account) {
+            if (DB::connection('vmail')->table($table)->where($account['column'], $email)->exists()) {
+                return $account['label'];
             }
         }
 
-        return false;
+        return null;
+    }
+
+    private function accountConflictMessage(string $email): string
+    {
+        $type = $this->existingAccountType($email);
+
+        return $type
+            ? "This email address already exists as {$type}."
+            : 'An account with this email address already exists.';
     }
 
     private function withAddressCreationLock(string $email, string $field, \Closure $create): void
@@ -1163,9 +1176,9 @@ final class AccountRepository
 
         try {
             $connection->transaction(function () use ($email, $field, $create): void {
-                if ($this->accountExists($email)) {
+                if ($this->existingAccountType($email) !== null) {
                     throw ValidationException::withMessages([
-                        $field => 'An account with this email address already exists.',
+                        $field => $this->accountConflictMessage($email),
                     ]);
                 }
                 $create();
@@ -1175,7 +1188,7 @@ final class AccountRepository
             $message = strtolower($exception->getMessage());
             if ($driverCode === 1062 || str_contains($message, 'duplicate entry') || str_contains($message, 'unique constraint')) {
                 throw ValidationException::withMessages([
-                    $field => 'An account with this email address already exists.',
+                    $field => $this->accountConflictMessage($email),
                 ]);
             }
 

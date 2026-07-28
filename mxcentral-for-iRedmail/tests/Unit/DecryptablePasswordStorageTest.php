@@ -402,10 +402,39 @@ final class DecryptablePasswordStorageTest extends TestCase
             $this->fail('An alias was created over an existing mailbox address.');
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('address', $exception->errors());
+            $this->assertSame(
+                'This email address already exists as a mailbox.',
+                $exception->errors()['address'][0],
+            );
         }
 
         $this->assertSame(1, DB::connection('vmail')->table('mailbox')->where('username', 'shared@example.com')->count());
         $this->assertSame(0, DB::connection('vmail')->table('alias')->where('address', 'shared@example.com')->count());
+    }
+
+    public function test_account_conflict_identifies_existing_alias_or_mailing_list(): void
+    {
+        DB::connection('vmail')->table('alias')->insert(['address' => 'existing-alias@example.com']);
+        DB::connection('vmail')->table('maillists')->insert(['address' => 'existing-list@example.com']);
+
+        foreach ([
+            'existing-alias@example.com' => 'This email address already exists as an alias.',
+            'existing-list@example.com' => 'This email address already exists as a mailing list.',
+        ] as $email => $expectedMessage) {
+            [$local, $domain] = explode('@', $email, 2);
+
+            try {
+                $this->repository()->createUser($this->actor(), [
+                    'local_part' => $local,
+                    'domain' => $domain,
+                    'name' => 'Conflicting mailbox',
+                    'password' => 'first-password',
+                ]);
+                $this->fail("A mailbox was created over {$email}.");
+            } catch (ValidationException $exception) {
+                $this->assertSame($expectedMessage, $exception->errors()['username'][0]);
+            }
+        }
     }
 
     private function repository(): AccountRepository
