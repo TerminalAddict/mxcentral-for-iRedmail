@@ -31,7 +31,6 @@ final class AdminController extends Controller
             'domainOptions' => $accounts->domainOptions($actor),
             'selectedDomain' => $selectedDomain,
             'aliasDomains' => $selectedDomain ? $accounts->aliasDomains($actor, $selectedDomain->domain) : collect(),
-            'catchAllDestinations' => $selectedDomain ? $accounts->catchAllDestinations($actor, $selectedDomain->domain) : collect(),
             'backupMxPrimaryIp' => $accounts->backupMxPrimaryIp($selectedDomain),
             'stagedDomains' => $stagedDomains,
             'dkimStatus' => $selectedDomain ? $dkim->status($actor, $selectedDomain->domain) : null,
@@ -62,6 +61,7 @@ final class AdminController extends Controller
                 $request->query('direction'),
             ),
             'domainOptions' => $accounts->domainOptions($actor),
+            'catchAlls' => $accounts->catchAlls($actor),
             'selectedAlias' => $accounts->alias($actor, $request->query('edit')),
         ]);
     }
@@ -139,16 +139,16 @@ final class AdminController extends Controller
             : "Domain {$result['domain']} is accepting inbound mail.");
     }
 
-    public function createCatchAll(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
+    public function createCatchAll(Request $request, AccountRepository $accounts, CurrentActor $actor)
     {
-        $accounts->createCatchAll($actor, $domain, $request->all());
+        $accounts->createCatchAll($actor, (string) $request->input('catch_all_domain'), $request->all());
 
-        return back()->with('status', 'Catch-all destination added.');
+        return back()->with('status', 'Catch-all forwarding added. Mail to unknown recipients at this domain will be sent to the destination.');
     }
 
-    public function deleteCatchAll(AccountRepository $accounts, CurrentActor $actor, string $domain, string $destination)
+    public function deleteCatchAll(Request $request, AccountRepository $accounts, CurrentActor $actor, string $domain)
     {
-        $accounts->deleteCatchAll($actor, $domain, $destination);
+        $accounts->deleteCatchAll($actor, $domain, (string) $request->input('forwarding'));
 
         return back()->with('status', 'Catch-all destination removed.');
     }

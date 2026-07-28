@@ -332,14 +332,14 @@ Mail for `user@domain.ltd` is delivered to `user@example.com`.
 
 ### Catch-All
 
-The Domains screen supports per-domain catch-all destinations. Adding `dest@example.com` as catch-all for `domain.com` inserts:
+The Aliases screen supports per-domain catch-all forwarding for global administrators and domain administrators. The domain selector contains only domains the signed-in administrator can manage. Adding `dest@example.net` as the destination for `domain.com` inserts:
 
 ```sql
 INSERT INTO forwardings (address, forwarding, domain, dest_domain)
-VALUES ('domain.com', 'dest@example.com', 'domain.com', 'example.com');
+VALUES ('domain.com', 'dest@example.net', 'domain.com', 'example.net');
 ```
 
-The destination must be an existing mailbox.
+Mail sent to an address that does not otherwise exist at `domain.com` is then forwarded to the destination. The destination can be a local account or an external email address. If the destination domain is hosted on the same server, the destination must already exist as a mailbox, alias, or mailing list so catch-all rules cannot form a delivery loop.
 
 ### Quarantine Notifications
 

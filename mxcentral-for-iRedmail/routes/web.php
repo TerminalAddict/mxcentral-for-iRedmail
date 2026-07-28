@@ -32,8 +32,6 @@ Route::middleware('iredmail.auth:admin')->group(function () {
     Route::post('/domains/{domain}/staging', [AdminController::class, 'updateDomainStaging'])->where('domain', '.*')->middleware('iredmail.auth:global')->name('domains.staging.update');
     Route::post('/domains/{domain}/alias-domains', [AdminController::class, 'createAliasDomain'])->where('domain', '.*')->name('domains.alias-domains.create');
     Route::delete('/alias-domains/{aliasDomain}', [AdminController::class, 'deleteAliasDomain'])->where('aliasDomain', '.*')->name('domains.alias-domains.delete');
-    Route::post('/domains/{domain}/catch-all', [AdminController::class, 'createCatchAll'])->where('domain', '.*')->name('domains.catch-all.create');
-    Route::delete('/domains/{domain}/catch-all/{destination}', [AdminController::class, 'deleteCatchAll'])->where('domain', '[^/]+')->where('destination', '.*')->name('domains.catch-all.delete');
     Route::post('/domains/{domain}/dkim/generate', [AdminController::class, 'generateDomainDkim'])->where('domain', '.*')->middleware('iredmail.auth:global')->name('domains.dkim.generate');
     Route::post('/domains/{domain}/dkim/check', [AdminController::class, 'checkDomainDkim'])->where('domain', '.*')->name('domains.dkim.check');
     Route::post('/domains/{domain}/dns/check', [AdminController::class, 'checkDomainDns'])->where('domain', '.*')->name('domains.dns.check');
@@ -47,6 +45,8 @@ Route::middleware('iredmail.auth:admin')->group(function () {
     Route::get('/users/password-reveal/{token}', [PasswordRevealController::class, 'consume'])->where('token', '[a-f0-9]{64}')->middleware('iredmail.auth:global')->name('users.password.consume');
     Route::get('/aliases', [AdminController::class, 'aliases'])->name('aliases');
     Route::post('/aliases', [AdminController::class, 'createAlias'])->name('aliases.create');
+    Route::post('/aliases/catch-all', [AdminController::class, 'createCatchAll'])->name('aliases.catch-all.create');
+    Route::delete('/aliases/catch-all/{domain}', [AdminController::class, 'deleteCatchAll'])->where('domain', '[^/]+')->name('aliases.catch-all.delete');
     Route::patch('/aliases/{address}', [AdminController::class, 'updateAlias'])->where('address', '.*')->name('aliases.update');
     Route::delete('/aliases/{address}', [AdminController::class, 'deleteAlias'])->where('address', '.*')->name('aliases.delete');
     Route::get('/mls', [AdminController::class, 'lists'])->name('lists');

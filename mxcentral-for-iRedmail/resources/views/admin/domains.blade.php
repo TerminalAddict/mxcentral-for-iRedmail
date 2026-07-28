@@ -141,46 +141,6 @@
             </table>
         </div>
 
-        <div class="domain-dkim">
-            <div class="domain-dkim__header">
-                <div>
-                    <h3>Catch-all</h3>
-                    <p>Mail sent to non-existing addresses at this domain is delivered to the configured destination mailbox.</p>
-                </div>
-            </div>
-
-            <form method="post" action="{{ route('domains.catch-all.create', $selectedDomain->domain) }}" class="record-form">@csrf
-                <div class="record-form__grid">
-                    <label class="span-3">Destination mailbox
-                        <input name="forwarding" type="email" placeholder="dest@example.com">
-                        <span class="field-hint">Destination must be an existing mailbox. This creates address={{ $selectedDomain->domain }} in vmail.forwardings.</span>
-                    </label>
-                </div>
-                <div class="record-form__footer">
-                    <button>Add catch-all</button>
-                </div>
-            </form>
-
-            <table class="summary-table">
-                <thead><tr><th>Domain address</th><th>Destination</th><th>Actions</th></tr></thead>
-                <tbody>
-                    @forelse($catchAllDestinations as $catchAll)
-                        <tr>
-                            <td>{{ $catchAll->address }}</td>
-                            <td>{{ $catchAll->forwarding }}</td>
-                            <td>
-                                <form method="post" action="{{ route('domains.catch-all.delete', [$selectedDomain->domain, $catchAll->forwarding]) }}" onsubmit="return confirm('Remove this catch-all destination?')">@csrf @method('delete')
-                                    <button class="danger">Remove</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="3" class="muted">No catch-all destination configured.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
         @if($dkimStatus)
             <div class="domain-dkim">
                 <div class="domain-dkim__header">

@@ -570,14 +570,14 @@ INSERT INTO alias_domain (alias_domain, target_domain) VALUES ('domain.ltd', 'ex
 
 ### Catch-All
 
-Catch-all destinations are rows in `vmail.forwardings` where `address` is the domain name:
+Global administrators and domain administrators manage catch-all forwarding from the **Aliases** screen. The domain selector is limited to domains the administrator can manage. Catch-all destinations are rows in `vmail.forwardings` where `address` is the domain name:
 
 ```sql
 INSERT INTO forwardings (address, forwarding, domain, dest_domain)
-VALUES ('domain.com', 'dest@example.com', 'domain.com', 'example.com');
+VALUES ('domain.com', 'dest@example.net', 'domain.com', 'example.net');
 ```
 
-The destination must be an existing mailbox.
+The destination can be local or external. If its domain is hosted on the same server, it must already exist as a mailbox, alias, or mailing list to prevent a delivery loop.
 
 ## Post-Install Checks
 

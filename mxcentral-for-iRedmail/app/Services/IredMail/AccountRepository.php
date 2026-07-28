@@ -89,16 +89,19 @@ final class AccountRepository
         return $query->get();
     }
 
-    public function catchAllDestinations(CurrentActor $actor, string $domain)
+    public function catchAlls(CurrentActor $actor): LengthAwarePaginator
     {
-        $domain = IredMailAddress::domain($domain) ?? abort(404);
-        abort_unless($actor->canManageDomain($domain), 403);
+        $query = DB::connection('vmail')->table('forwardings')
+            ->whereColumn('address', 'domain');
 
-        return DB::connection('vmail')->table('forwardings')
-            ->where('address', $domain)
-            ->where('domain', $domain)
+        if (! $actor->globalAdmin) {
+            $query->whereIn('domain', $actor->domains ?: ['']);
+        }
+
+        return $query
+            ->orderBy('domain')
             ->orderBy('forwarding')
-            ->get();
+            ->paginate(config('iredmail.page_size'), ['*'], 'catchall_page');
     }
 
     public function users(CurrentActor $actor, ?string $domain = null, ?string $search = null): LengthAwarePaginator
@@ -411,7 +414,10 @@ final class AccountRepository
 
     public function createCatchAll(CurrentActor $actor, string $domain, array $data): void
     {
-        $domain = IredMailAddress::domain($domain) ?? abort(404);
+        $domain = IredMailAddress::domain($domain);
+        if (! $domain) {
+            throw ValidationException::withMessages(['catch_all_domain' => 'Choose a valid hosted domain.']);
+        }
         abort_unless($actor->canManageDomain($domain), 403);
 
         $destination = IredMailAddress::email($data['forwarding'] ?? $data['destination'] ?? '');
@@ -419,28 +425,38 @@ final class AccountRepository
             throw ValidationException::withMessages(['forwarding' => 'Enter a valid destination email address.']);
         }
 
-        if (! DB::connection('vmail')->table('mailbox')->where('username', $destination)->exists()) {
-            throw ValidationException::withMessages(['forwarding' => 'Catch-all destination must be an existing mailbox.']);
-        }
-
         $destDomain = IredMailAddress::domainOf($destination);
-        $exists = DB::connection('vmail')->table('forwardings')
-            ->where('address', $domain)
-            ->where('forwarding', $destination)
-            ->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages(['forwarding' => 'This catch-all destination already exists.']);
+        if (isset($this->hostedDomainSet()[$destDomain]) && $this->existingAccountType($destination) === null) {
+            throw ValidationException::withMessages([
+                'forwarding' => 'A destination hosted on this server must be an existing mailbox, alias, or mailing list to prevent a delivery loop.',
+            ]);
         }
 
-        DB::connection('vmail')->table('forwardings')->insert([
-            'address' => $domain,
-            'forwarding' => $destination,
-            'domain' => $domain,
-            'dest_domain' => $destDomain,
-            'is_forwarding' => 1,
-            'active' => 1,
-        ]);
+        DB::connection('vmail')->transaction(function () use ($domain, $destination, $destDomain) {
+            $hostedDomain = DB::connection('vmail')->table('domain')->where('domain', $domain)->lockForUpdate()->first();
+            if (! $hostedDomain) {
+                throw ValidationException::withMessages(['catch_all_domain' => 'Choose a hosted domain.']);
+            }
+
+            $exists = DB::connection('vmail')->table('forwardings')
+                ->where('address', $domain)
+                ->where('domain', $domain)
+                ->where('forwarding', $destination)
+                ->exists();
+
+            if ($exists) {
+                throw ValidationException::withMessages(['forwarding' => 'This catch-all destination already exists.']);
+            }
+
+            DB::connection('vmail')->table('forwardings')->insert([
+                'address' => $domain,
+                'forwarding' => $destination,
+                'domain' => $domain,
+                'dest_domain' => $destDomain,
+                'is_forwarding' => 1,
+                'active' => 1,
+            ]);
+        });
 
         $this->audit->log('create', "Added catch-all for {$domain} -> {$destination}.", $domain);
     }
@@ -454,6 +470,7 @@ final class AccountRepository
 
         $deleted = DB::connection('vmail')->table('forwardings')
             ->where('address', $domain)
+            ->where('domain', $domain)
             ->where('forwarding', $destination)
             ->delete();
         abort_unless($deleted > 0, 404);

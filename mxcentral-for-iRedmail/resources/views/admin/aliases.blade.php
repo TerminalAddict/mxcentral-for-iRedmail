@@ -44,6 +44,65 @@
     </form>
 </div>
 
+<div class="panel" id="catch-all">
+    <h2>Catch-all Forwarding</h2>
+    <p>
+        Deliver mail sent to unknown or misspelled addresses at a hosted domain to one destination address.
+        Existing mailboxes, aliases, and mailing lists continue to receive their own mail normally.
+    </p>
+    <p class="muted">The destination may be hosted on this server or at an external mail provider. Catch-all forwarding can attract additional spam.</p>
+
+    @if($domainOptions->isNotEmpty())
+        <form method="post" action="{{ route('aliases.catch-all.create') }}" class="record-form">@csrf
+            <div class="record-form__grid">
+                <label class="span-2">Catch all unknown email for domain
+                    <select name="catch_all_domain" required>
+                        @foreach($domainOptions as $domain)
+                            <option value="{{ $domain->domain }}" @selected(old('catch_all_domain', request('domain')) === $domain->domain)>{{ $domain->domain }}</option>
+                        @endforeach
+                    </select>
+                    <span class="field-hint">Only domains you are allowed to manage are shown.</span>
+                </label>
+                <label class="span-2">Forward unmatched mail to
+                    <input name="forwarding" type="email" value="{{ old('forwarding') }}" required placeholder="paul@example.net">
+                    <span class="field-hint">Enter a complete local or external email address.</span>
+                </label>
+            </div>
+            <div class="record-form__footer">
+                <button>Add catch-all forwarding</button>
+            </div>
+        </form>
+    @else
+        <p class="muted">You do not manage any hosted domains, so no catch-all forwarding can be added.</p>
+    @endif
+
+    <table class="summary-table">
+        <thead><tr><th>Hosted domain</th><th>Unknown recipients forward to</th><th>Actions</th></tr></thead>
+        <tbody>
+            @forelse($catchAlls as $catchAll)
+                <tr>
+                    <td><span class="mono">{{ $catchAll->domain }}</span></td>
+                    <td>{{ $catchAll->forwarding }}</td>
+                    <td>
+                        <form method="post" action="{{ route('aliases.catch-all.delete', $catchAll->domain) }}" onsubmit="return confirm('Remove this catch-all destination?')">@csrf @method('delete')
+                            <input type="hidden" name="forwarding" value="{{ $catchAll->forwarding }}">
+                            <button class="danger">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="3" class="muted">No catch-all forwarding is configured for your domains.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+    <div class="pagination">
+        @if($catchAlls->total() > 0)
+            <p class="muted">Showing {{ $catchAlls->firstItem() }}–{{ $catchAlls->lastItem() }} of {{ $catchAlls->total() }} catch-all destinations.</p>
+        @endif
+        {{ $catchAlls->withQueryString()->links() }}
+    </div>
+</div>
+
 <div class="panel">
     <h2>Create Alias</h2>
     <form method="post" action="{{ route('aliases.create') }}" class="record-form">@csrf
