@@ -10,6 +10,7 @@ return [
     'login_lock_seconds' => (int) env('MXCENTRAL_LOGIN_LOCK_SECONDS', 60),
     'login_max_lock_seconds' => (int) env('MXCENTRAL_LOGIN_MAX_LOCK_SECONDS', 900),
     'password_reveal_admins' => env('MXCENTRAL_PASSWORD_REVEAL_ADMINS', ''),
+    'password_reveal_require_totp' => (bool) env('MXCENTRAL_PASSWORD_REVEAL_REQUIRE_TOTP', true),
     'password_reveal_totp_secrets' => env('MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS', '{}'),
     'password_reveal_cache_store' => env('MXCENTRAL_PASSWORD_REVEAL_CACHE_STORE', 'file'),
     'password_reveal_token_seconds' => (int) env('MXCENTRAL_PASSWORD_REVEAL_TOKEN_SECONDS', 60),

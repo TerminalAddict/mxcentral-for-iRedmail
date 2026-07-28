@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Services\IredMail\AccountRepository;
 use App\Services\IredMail\AuditLogger;
+use App\Services\IredMail\AuthService;
 use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\PasswordRevealAccess;
 use App\Services\IredMail\PasswordRevealService;
@@ -38,6 +39,7 @@ final class DecryptablePasswordStorageTest extends TestCase
             'iredmail.decryptable_password_column' => 'decrypt-pass',
             'iredmail.storage_base_directory' => '/var/vmail/vmail1',
             'iredmail.default_mta_transport' => 'dovecot',
+            'iredmail.password_reveal_require_totp' => true,
         ]);
 
         DB::purge('vmail');
@@ -234,6 +236,7 @@ final class DecryptablePasswordStorageTest extends TestCase
         $secret = 'JBSWY3DPEHPK3PXP';
         config([
             'iredmail.password_reveal_admins' => $actor->email,
+            'iredmail.password_reveal_require_totp' => true,
             'iredmail.password_reveal_totp_secrets' => json_encode([$actor->email => $secret]),
             'iredmail.password_reveal_cache_store' => 'file',
             'iredmail.password_reveal_token_seconds' => 60,
@@ -270,6 +273,20 @@ final class DecryptablePasswordStorageTest extends TestCase
             $this->assertArrayHasKey('current_password', $exception->errors());
         }
 
+        try {
+            $service->request(
+                $actor,
+                'admin-record',
+                'user@example.com',
+                'current-password',
+                '000000',
+                'Customer-authorized migration support.',
+            );
+            $this->fail('Password reveal accepted an invalid MFA code.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('totp_code', $exception->errors());
+        }
+
         $token = $service->request(
             $actor,
             'admin-record',
@@ -284,6 +301,88 @@ final class DecryptablePasswordStorageTest extends TestCase
 
         $this->expectException(HttpException::class);
         $service->consume($actor, $token);
+    }
+
+    public function test_allowlisted_global_admin_can_reveal_without_totp_when_override_is_disabled(): void
+    {
+        $actor = $this->actor();
+        config([
+            'iredmail.password_reveal_admins' => $actor->email,
+            'iredmail.password_reveal_require_totp' => false,
+            'iredmail.password_reveal_totp_secrets' => '{}',
+            'iredmail.password_reveal_cache_store' => 'file',
+            'iredmail.password_reveal_token_seconds' => 60,
+        ]);
+        app()->instance(CurrentActor::class, $actor);
+        app()->instance(AuthService::class, new FakeAuthService($actor));
+
+        (new SystemSettingsService(new AuditLogger))->saveDecryptablePasswords($actor, true);
+        $this->repository()->createUser($actor, [
+            'local_part' => 'user',
+            'domain' => 'example.com',
+            'name' => 'Example User',
+            'password' => 'stored-password',
+        ]);
+
+        $session = [
+            'auth_identity' => [
+                'email' => $actor->email,
+                'source' => 'admin-record',
+                'version' => 'test-security-version',
+            ],
+        ];
+
+        $this->withSession($session)
+            ->get(route('users', ['edit' => 'user@example.com']))
+            ->assertOk()
+            ->assertSee('TOTP is disabled by deployment configuration.')
+            ->assertDontSee('name="totp_code"', false);
+
+        $this->withSession($session)->post(
+            route('users.password.request', ['email' => 'user@example.com']),
+            [
+                'current_password' => 'wrong-password',
+                'purpose' => 'Customer-authorized migration support.',
+            ],
+        )->assertSessionHasErrors('current_password');
+
+        $response = $this->withSession($session)->post(
+            route('users.password.request', ['email' => 'user@example.com']),
+            [
+                'current_password' => 'current-password',
+                'purpose' => 'Customer-authorized migration support.',
+            ],
+        );
+        $response->assertRedirect();
+
+        $this->withSession($session)
+            ->get($response->headers->get('Location'))
+            ->assertOk()
+            ->assertSee('stored-password');
+    }
+
+    public function test_totp_override_does_not_bypass_global_admin_allowlist(): void
+    {
+        $actor = $this->actor();
+        config([
+            'iredmail.password_reveal_admins' => 'another-admin@example.com',
+            'iredmail.password_reveal_require_totp' => false,
+            'iredmail.password_reveal_totp_secrets' => '{}',
+        ]);
+
+        $this->assertFalse((new PasswordRevealAccess)->allows($actor));
+
+        config(['iredmail.password_reveal_admins' => $actor->email]);
+        $domainAdmin = new CurrentActor(
+            email: $actor->email,
+            type: 'admin',
+            globalAdmin: false,
+            domainAdmin: true,
+            selfService: false,
+            domains: ['example.com'],
+        );
+
+        $this->assertFalse((new PasswordRevealAccess)->allows($domainAdmin));
     }
 
     public function test_cross_type_address_conflict_is_rejected_inside_serialized_creation(): void

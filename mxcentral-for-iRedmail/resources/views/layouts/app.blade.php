@@ -884,6 +884,7 @@
     if (($currentActor ?? null)?->globalAdmin) {
         $adminNav[] = ['label' => 'Admins', 'route' => 'admins', 'match' => 'admins*', 'icon' => $icon('<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M19 8v4"/><path d="M21 10h-4"/>')];
         $adminNav[] = ['label' => 'Fail2ban', 'route' => 'fail2ban', 'match' => 'fail2ban*', 'icon' => $icon('<path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6l-8-3Z"/><path d="m9.5 9.5 5 5"/><path d="m14.5 9.5-5 5"/>')];
+        $adminNav[] = ['label' => 'Audit Log', 'route' => 'system.audit-log', 'match' => 'system.audit-log', 'icon' => $icon('<path d="M6 3h12v18H6z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h4"/>')];
         $adminNav[] = ['label' => 'System Settings', 'route' => 'system.settings', 'match' => 'system.settings*', 'icon' => $icon('<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 3.4-.2-.1a1.7 1.7 0 0 0-2 .2 1.7 1.7 0 0 0-.8 1.6V22H9.2v-.2a1.7 1.7 0 0 0-.8-1.6 1.7 1.7 0 0 0-2-.2l-.2.1-2-3.4.1-.1A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3 14H2v-4h1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-3.4.2.1a1.7 1.7 0 0 0 2-.2A1.7 1.7 0 0 0 9.2 2V2h5.6v.2a1.7 1.7 0 0 0 .8 1.6 1.7 1.7 0 0 0 2 .2l.2-.1 2 3.4-.1.1a1.7 1.7 0 0 0-.3 1.9A1.7 1.7 0 0 0 21 10h1v4h-1a1.7 1.7 0 0 0-1.6 1Z"/>')];
     }
     $selfNav = [

@@ -38,11 +38,13 @@ final class PasswordRevealService
             ]);
         }
 
-        $secret = $this->access->totpSecret($actor->email);
-        if (! $secret || ! $this->verifyTotp($secret, $totpCode)) {
-            throw ValidationException::withMessages([
-                'totp_code' => 'The one-time authentication code is invalid.',
-            ]);
+        if ($this->access->requiresTotp()) {
+            $secret = $this->access->totpSecret($actor->email);
+            if (! $secret || ! $this->verifyTotp($secret, $totpCode)) {
+                throw ValidationException::withMessages([
+                    'totp_code' => 'The one-time authentication code is invalid.',
+                ]);
+            }
         }
         if (! $this->accounts->hasDecryptablePassword($actor, $targetEmail)) {
             throw ValidationException::withMessages([

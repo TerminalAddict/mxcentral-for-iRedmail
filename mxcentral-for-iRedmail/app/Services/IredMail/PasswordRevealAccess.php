@@ -8,7 +8,12 @@ final class PasswordRevealAccess
     {
         return $actor->globalAdmin
             && in_array(strtolower($actor->email), $this->allowedAdmins(), true)
-            && $this->totpSecret($actor->email) !== null;
+            && (! $this->requiresTotp() || $this->totpSecret($actor->email) !== null);
+    }
+
+    public function requiresTotp(): bool
+    {
+        return (bool) config('iredmail.password_reveal_require_totp', true);
     }
 
     public function totpSecret(string $email): ?string

@@ -225,6 +225,15 @@ For another `HOSTNAME`, use its matching files and SSH target, for example
 `ccl-mailbox.env`, `ccl-mailbox.sql`, and `ssh ccl-mailbox`. Do not reuse SQL
 passwords between servers.
 
+The global-admin Audit Log page reads `iredadmin.log`. Existing deployments
+that previously granted insert-only access must apply this one-time upgrade
+before deploying the Audit Log feature:
+
+```sql
+GRANT SELECT, INSERT ON iredadmin.log TO 'mxcentral_iredadmin'@'localhost';
+FLUSH PRIVILEGES;
+```
+
 The optional commented `ALTER ON vmail.mailbox` grant is needed only if global
 admins will toggle decryptable-password storage from the application.
 
@@ -299,6 +308,7 @@ secret in `MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS`, for example:
 
 ```dotenv
 MXCENTRAL_PASSWORD_REVEAL_ADMINS=postmaster@example.com
+MXCENTRAL_PASSWORD_REVEAL_REQUIRE_TOTP=true
 MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS='{"postmaster@example.com":"BASE32SECRET"}'
 ```
 
@@ -306,6 +316,21 @@ Every reveal requires the administrator's current password, a current TOTP
 code, and a recorded purpose. It uses a short-lived, single-use token and all
 authenticated responses are marked private and non-cacheable. Keep the TOTP
 secret and `APP_KEY` root-readable only through the protected `.env`.
+
+TOTP remains required by default. A deployment can explicitly rely on the
+global-admin allowlist and current-password reauthentication instead:
+
+```dotenv
+MXCENTRAL_PASSWORD_REVEAL_ADMINS=postmaster@example.com
+MXCENTRAL_PASSWORD_REVEAL_REQUIRE_TOTP=false
+```
+
+With this override, `MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS` is not required.
+The administrator must still be a global admin named in the allowlist, enter
+their current password for every reveal, record an access purpose, and use the
+short-lived single-use result. Disabling TOTP reduces protection if an
+allowlisted administrator's password is compromised, so set the override only
+as a deliberate per-server decision.
 
 The configured vmail database account must therefore have `ALTER` privilege on
 `vmail.mailbox` in addition to its normal mailbox read/write privileges.

@@ -30,6 +30,9 @@ final class DeploymentHealthCheck
                         $errors[] = "{$connection}.{$table} is missing or inaccessible.";
                     }
                 }
+                if ($connection === 'iredadmin') {
+                    DB::connection('iredadmin')->table('log')->select('id')->limit(1)->get();
+                }
             } catch (\Throwable $exception) {
                 $errors[] = "{$connection} database health check failed: ".$exception->getMessage();
             }

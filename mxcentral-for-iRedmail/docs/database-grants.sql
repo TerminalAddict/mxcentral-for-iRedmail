@@ -18,7 +18,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON vmail.maillist_owners TO 'mxcentral_vmai
 GRANT SELECT, INSERT, UPDATE, DELETE ON vmail.maillists TO 'mxcentral_vmail'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON vmail.moderators TO 'mxcentral_vmail'@'localhost';
 
-GRANT INSERT ON iredadmin.log TO 'mxcentral_iredadmin'@'localhost';
+GRANT SELECT, INSERT ON iredadmin.log TO 'mxcentral_iredadmin'@'localhost';
 GRANT INSERT ON iredadmin.deleted_mailboxes TO 'mxcentral_iredadmin'@'localhost';
 
 GRANT SELECT, DELETE ON amavisd.msgs TO 'mxcentral_amavisd'@'localhost';

@@ -95,14 +95,20 @@
         @if($canRevealPasswords && ($selectedUser->has_decryptable_password ?? false))
             <form method="post" action="{{ route('users.password.request', $selectedUser->username) }}" class="user-form decryptable-password-field">@csrf
                 <h2>One-time Password Reveal</h2>
-                <p class="field-hint">Requires your current administrator password, a configured MFA code, and an audited access purpose. The password is never embedded in this user page.</p>
+                @if($passwordRevealRequiresTotp)
+                    <p class="field-hint">Requires your current administrator password, a configured MFA code, and an audited access purpose. The password is never embedded in this user page.</p>
+                @else
+                    <p class="field-hint">Requires your current administrator password and an audited access purpose. TOTP is disabled by deployment configuration. The password is never embedded in this user page.</p>
+                @endif
                 <div class="user-form__grid">
                     <label class="span-2">Current administrator password
                         <input name="current_password" type="password" required autocomplete="current-password">
                     </label>
-                    <label>MFA code
-                        <input name="totp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code">
-                    </label>
+                    @if($passwordRevealRequiresTotp)
+                        <label>MFA code
+                            <input name="totp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code">
+                        </label>
+                    @endif
                     <label class="span-4">Access purpose
                         <textarea name="purpose" minlength="10" maxlength="500" required></textarea>
                     </label>

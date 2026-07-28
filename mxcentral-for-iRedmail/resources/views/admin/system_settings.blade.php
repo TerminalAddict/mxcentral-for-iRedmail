@@ -10,6 +10,7 @@
 
 <div class="page-titlebar">
     <h1>System Settings</h1>
+    <a class="button secondary" href="{{ route('system.audit-log') }}">View Audit Log</a>
 </div>
 
 <div class="panel">
@@ -264,7 +265,7 @@
             </label>
             <div class="span-2">
                 <strong>Current state</strong>
-                <span class="field-hint">{{ $settings['decryptable_passwords_enabled'] ? 'Enabled. Explicitly authorized global admins can request a one-time, re-authenticated MFA reveal from /users.' : 'Disabled. The decryptable password column is not present, and no password can be revealed.' }}</span>
+                <span class="field-hint">{{ $settings['decryptable_passwords_enabled'] ? ($settings['password_reveal_requires_totp'] ? 'Enabled. Explicitly authorized global admins can request a one-time, password- and MFA-authenticated reveal from /users.' : 'Enabled. Explicitly authorized global admins can request a one-time, password-reauthenticated reveal from /users; TOTP is disabled by deployment configuration.') : 'Disabled. The decryptable password column is not present, and no password can be revealed.' }}</span>
             </div>
             <div class="span-2">
                 <strong>Important limit</strong>

@@ -89,6 +89,7 @@ final class SystemSettingsService
             'sogo_reload_command_configured' => $this->privileged->configured(),
             'decryptable_passwords_enabled' => $this->decryptablePasswordsEnabled(),
             'decryptable_password_column' => $this->decryptablePasswordColumn(),
+            'password_reveal_requires_totp' => (bool) config('iredmail.password_reveal_require_totp', true),
             'hosted_mailboxes' => $this->hostedMailboxes(),
             'hosted_domains' => $this->hostedDomains(),
         ];

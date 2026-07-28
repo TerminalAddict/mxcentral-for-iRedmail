@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\IredMail\CurrentActor;
+use App\Services\IredMail\PasswordRevealAccess;
 use App\Services\IredMail\PasswordRevealService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,12 +15,13 @@ final class PasswordRevealController extends Controller
     public function request(
         Request $request,
         PasswordRevealService $passwords,
+        PasswordRevealAccess $passwordRevealAccess,
         CurrentActor $actor,
         string $email,
     ): RedirectResponse {
         $data = $request->validate([
             'current_password' => ['required', 'string'],
-            'totp_code' => ['required', 'string', 'size:6'],
+            'totp_code' => [$passwordRevealAccess->requiresTotp() ? 'required' : 'nullable', 'string', 'size:6'],
             'purpose' => ['required', 'string', 'min:10', 'max:500'],
         ]);
         $source = (string) $request->session()->get('auth_identity.source');
@@ -28,7 +30,7 @@ final class PasswordRevealController extends Controller
             $source,
             $email,
             $data['current_password'],
-            $data['totp_code'],
+            (string) ($data['totp_code'] ?? ''),
             $data['purpose'],
         );
 

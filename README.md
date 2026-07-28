@@ -91,6 +91,13 @@ operation. Keep `SESSION_DRIVER=file`, `CACHE_STORE=array`, and
 `QUEUE_CONNECTION=sync` unless you intentionally create and migrate a separate
 Laravel database.
 
+Global administrators can review the paginated, searchable administrative
+Audit Log under **System → Audit Log**. It includes the administrator, source
+IP, target account/domain, action, message, and the recorded purpose for
+one-time password reveals. Domain administrators cannot access the route or
+query the audit repository. The `mxcentral_iredadmin` account therefore needs
+`SELECT, INSERT` on `iredadmin.log`; it does not need broader schema access.
+
 ## Subdirectory Deployment
 
 The app can be mounted below any URL prefix, for example `https://domain.example/mxcentral`.
@@ -226,7 +233,7 @@ When enabled:
   Laravel's application encryption key before being stored.
 - Only an explicitly allowlisted global admin can request a reveal from the
   user edit screen. Each reveal requires current-password re-authentication, a
-  configured TOTP code, and a recorded access purpose.
+  recorded access purpose, and, by default, a configured TOTP code.
 - Existing password hashes are not converted. A password becomes available only
   after it is created or changed while the feature is enabled.
 
@@ -238,8 +245,12 @@ Keep `APP_KEY` stable and secret. Changing it makes existing encrypted values
 unreadable. The vmail database account needs `ALTER` privilege on
 `vmail.mailbox` so the global-admin toggle can add and drop the column.
 Reveals use short-lived single-use links, never embed plaintext in the user
-listing, and are disabled unless `MXCENTRAL_PASSWORD_REVEAL_ADMINS` and
-`MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS` explicitly authorize the administrator.
+listing, and are disabled unless `MXCENTRAL_PASSWORD_REVEAL_ADMINS` explicitly
+authorizes the global administrator. TOTP is required by default and configured
+through `MXCENTRAL_PASSWORD_REVEAL_TOTP_SECRETS`. A server can explicitly set
+`MXCENTRAL_PASSWORD_REVEAL_REQUIRE_TOTP=false` to rely on the allowlist and
+current-password reauthentication without TOTP; purpose auditing and the
+single-use reveal remain enforced.
 
 ### Deployment-specific mailbox settings
 

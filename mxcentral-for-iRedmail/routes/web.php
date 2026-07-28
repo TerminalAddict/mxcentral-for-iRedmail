@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApiController;
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\MailController;
 use App\Http\Controllers\Admin\PasswordRevealController;
 use App\Http\Controllers\Admin\PolicyController;
@@ -71,6 +72,7 @@ Route::middleware('iredmail.auth:admin')->group(function () {
     Route::post('/system/settings/discard-recipients', [SystemSettingsController::class, 'updateDiscardRecipients'])->middleware('iredmail.auth:global')->name('system.settings.discard.update');
     Route::post('/system/settings/sogo-logo', [SystemSettingsController::class, 'updateSogoLogo'])->middleware('iredmail.auth:global')->name('system.settings.sogo.update');
     Route::post('/system/settings/decryptable-passwords', [SystemSettingsController::class, 'updateDecryptablePasswords'])->middleware('iredmail.auth:global')->name('system.settings.decryptable-passwords.update');
+    Route::get('/system/audit-log', [AuditLogController::class, 'index'])->middleware('iredmail.auth:global')->name('system.audit-log');
     Route::get('/activities/fail2ban/banned', [PolicyController::class, 'fail2ban'])->name('fail2ban');
     Route::post('/activities/fail2ban/unban/{ip}', [PolicyController::class, 'unban'])->name('fail2ban.unban');
 });

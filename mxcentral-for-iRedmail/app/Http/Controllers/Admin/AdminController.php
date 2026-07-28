@@ -47,6 +47,7 @@ final class AdminController extends Controller
             'userOptions' => $accounts->userOptions($actor, $request->query('domain')),
             'selectedUser' => $accounts->user($actor, $request->query('edit')),
             'canRevealPasswords' => $passwordReveal->allows($actor),
+            'passwordRevealRequiresTotp' => $passwordReveal->requiresTotp(),
         ]);
     }
 
