@@ -200,29 +200,46 @@
 
 <div class="panel">
     <h2>SOGo Branding</h2>
+    <p>Choose the original or a custom value independently for the logo and login colours.</p>
     <form method="post" action="{{ route('system.settings.sogo.update') }}" class="record-form">@csrf
         <div class="record-form__grid">
             <label class="span-3">Logo image URL
                 <input name="sogo_logo_url" type="url" value="{{ old('sogo_logo_url', $settings['sogo_logo_url'] ?? '') }}" placeholder="https://static.example.com/logo.svg">
-                <span class="field-hint">Hosted image URL to use on the SOGo login/root page. SVG, PNG, JPG, or WebP URLs are acceptable if the browser can load them.</span>
+                <span class="field-hint">Used when custom logo is selected. SVG, PNG, JPG, or WebP URLs are acceptable if the browser can load them.</span>
             </label>
             <div class="settings-image-preview">
                 <strong>Current image</strong>
                 <div class="settings-image-preview__frame">
-                    @if(!empty($settings['sogo_logo_url']))
+                    @if($settings['sogo_logo_custom'] && !empty($settings['sogo_logo_url']))
                         <img src="{{ $settings['sogo_logo_url'] }}" alt="Configured SOGo logo">
                     @else
-                        <span class="field-hint">No custom SOGo logo detected.</span>
+                        <span class="field-hint">Original SOGo logo.</span>
                     @endif
                 </div>
             </div>
+            <label class="checkbox-field span-2">
+                <input type="hidden" name="sogo_use_original_logo" value="0">
+                <input name="sogo_use_original_logo" type="checkbox" value="1" @checked((bool) old('sogo_use_original_logo', ! $settings['sogo_logo_custom']))>
+                <span class="checkbox-field__body">
+                    <span class="checkbox-field__label">Use original SOGo logo</span>
+                    <span class="field-hint">Restores SOGo’s packaged logo. The custom URL is ignored while selected.</span>
+                </span>
+            </label>
             <label>Login background colour
                 <input name="sogo_login_background_color" type="color" value="{{ old('sogo_login_background_color', $settings['sogo_login_background_color']) }}">
-                <span class="field-hint">Background colour for the SOGo login page.</span>
+                <span class="field-hint">Used when custom login colours are selected.</span>
             </label>
             <label>Login foreground colour
                 <input name="sogo_login_foreground_color" type="color" value="{{ old('sogo_login_foreground_color', $settings['sogo_login_foreground_color']) }}">
-                <span class="field-hint">Text and form input colour within the SOGo login form.</span>
+                <span class="field-hint">Used when custom login colours are selected.</span>
+            </label>
+            <label class="checkbox-field span-2">
+                <input type="hidden" name="sogo_use_original_colors" value="0">
+                <input name="sogo_use_original_colors" type="checkbox" value="1" @checked((bool) old('sogo_use_original_colors', ! $settings['sogo_login_colors_custom']))>
+                <span class="checkbox-field__body">
+                    <span class="checkbox-field__label">Use original SOGo login colours</span>
+                    <span class="field-hint">Removes MXCentral’s colour override while leaving the logo choice unchanged.</span>
+                </span>
             </label>
             <div class="span-2">
                 <strong>Source template</strong>

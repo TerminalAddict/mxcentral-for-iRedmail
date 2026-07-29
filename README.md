@@ -5,7 +5,7 @@ Laravel-based MXCentral admin panel for iRedMail SQL installations using MySQL o
 This app manages the existing iRedMail databases directly:
 
 - `vmail`: domains, users, aliases, mailing lists, admin ownership.
-- `iredadmin`: sessions, settings, audit logs, deleted mailbox path logs.
+- `iredadmin`: audit logs and deleted mailbox path logs.
 - `amavisd`: sent/received mail metadata, quarantine, white/blacklists.
 - `iredapd`: throttling.
 - `fail2ban`: optional banned IP view/unban integration.
@@ -418,9 +418,11 @@ then perform final incremental synchronization while old DNS answers expire.
 
 This manages the per-user SOGo root page template override, the logo image URL, and the login page colours.
 
-- UI input: an `http` or `https` image URL.
+- A custom logo accepts an `http` or `https` image URL.
+- Logo and colour customization are independent: either can use the original SOGo value while the other remains customized.
+- Restoring the original logo reinstates SOGo's packaged `rsrc:src` resource reference; restoring the original colours removes MXCentral's style override.
 - The app copies `SOGoRootPage.wox` to the SOGo override template path when needed.
-- The app updates the `src` attribute of the SOGo logo image and shows the currently configured image.
+- The app shows a preview for custom logos and clearly labels the original-logo state.
 - The login background and foreground colour pickers maintain a style block immediately after the template's first `</script>` tag and before its `MAIN CONTENT ROW` comment.
 - The foreground colour applies to text and form controls inside `#login`.
 

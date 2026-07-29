@@ -252,7 +252,12 @@ def without_marker_block(content: str, begin: str, end: str) -> str:
     )
 
 
-def canonical_iredapd(content: str) -> str:
+def canonical_iredapd(
+    content: str,
+    *,
+    strip_legacy_login_mismatch: bool = False,
+    strip_legacy_unauthenticated: bool = False,
+) -> str:
     content = without_marker_block(
         content,
         "# BEGIN iredadmin-php managed: login mismatch senders",
@@ -263,6 +268,23 @@ def canonical_iredapd(content: str) -> str:
         "# BEGIN mxcentral managed: unauthenticated senders",
         "# END mxcentral managed: unauthenticated senders",
     )
+    if strip_legacy_login_mismatch:
+        content = re.sub(
+            r"^[ \t]*(?:#[ \t]*Custom addition by iredadmin-php[ \t]*\r?\n)?"
+            r"(?:#[ \t]*Allow forging email address[ \t]*\r?\n)?"
+            r"ALLOWED_LOGIN_MISMATCH_SENDERS[ \t]*=[ \t]*\[.*?\][ \t]*(?:\r?\n)?",
+            "",
+            content,
+            count=1,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+    if strip_legacy_unauthenticated:
+        content = re.sub(
+            r"^[ \t]*(?:ALLOWED_FORGED_SENDERS|MYNETWORKS)[ \t]*=[ \t]*\[.*?\][ \t]*(?:\r?\n)?",
+            "",
+            content,
+            flags=re.MULTILINE | re.DOTALL,
+        )
 
     def normalize_plugins(match: re.Match) -> str:
         try:
@@ -337,7 +359,12 @@ def validate_managed_change(config: dict, target_id: str, current: str, candidat
         validate_amavis_dkim_block(config, candidate)
         return
     if target_id == "iredapd_settings":
-        if canonical_iredapd(current) != canonical_iredapd(candidate):
+        current_canonical = canonical_iredapd(
+            current,
+            strip_legacy_login_mismatch="# BEGIN iredadmin-php managed: login mismatch senders" in candidate,
+            strip_legacy_unauthenticated="# BEGIN mxcentral managed: unauthenticated senders" in candidate,
+        )
+        if current_canonical != canonical_iredapd(candidate):
             raise RequestError("Refusing an iRedAPD change outside approved MXCentral settings.")
         validate_iredapd_managed_blocks(candidate)
         return
@@ -480,27 +507,37 @@ def validate_sogo_branding(content: str) -> None:
     begin = "<!-- BEGIN MXCentral managed SOGo login branding -->"
     end = "<!-- END MXCentral managed SOGo login branding -->"
     match = re.search(re.escape(begin) + r"(.*?)" + re.escape(end), content, flags=re.DOTALL)
-    if match is None:
-        raise RequestError("The managed SOGo branding block is missing.")
-    expected = re.compile(
-        r"\s*<style type=\"text/css\">\s*"
-        r"\.md-default-theme\.md-accent\.md-bg\s*\{\s*"
-        r"background-color:\s*#[0-9a-fA-F]{6}\s*!important;\s*\}\s*"
-        r"#login\s+\*\s*\{\s*color:\s*#[0-9a-fA-F]{6}\s*!important;\s*\}\s*"
-        r"</style>\s*"
-    )
-    if expected.fullmatch(match.group(1)) is None:
-        raise RequestError("The managed SOGo branding block contains unapproved markup or CSS.")
+    if match is not None:
+        expected = re.compile(
+            r"\s*<style type=\"text/css\">\s*"
+            r"\.md-default-theme\.md-accent\.md-bg\s*\{\s*"
+            r"background-color:\s*#[0-9a-fA-F]{6}\s*!important;\s*\}\s*"
+            r"#login\s+\*\s*\{\s*color:\s*#[0-9a-fA-F]{6}\s*!important;\s*\}\s*"
+            r"</style>\s*"
+        )
+        if expected.fullmatch(match.group(1)) is None:
+            raise RequestError("The managed SOGo branding block contains unapproved markup or CSS.")
     preferred = re.search(r"<img\b(?=[^>]*\bclass=([\"'])[^\"']*\bmd-margin\b[^\"']*\1)[^>]*>", content, flags=re.IGNORECASE | re.DOTALL)
     image = preferred or re.search(r"<img\b[^>]*>", content, flags=re.IGNORECASE | re.DOTALL)
     if image is None:
         raise RequestError("The SOGo login image is missing.")
     source = re.search(r"(?<![:\w-])src=([\"'])(.*?)\1", image.group(0), flags=re.IGNORECASE | re.DOTALL)
-    if source is None:
+    resource_source = re.search(r"\brsrc:src=([\"'])(.*?)\1", image.group(0), flags=re.IGNORECASE | re.DOTALL)
+    if source is None and resource_source is None:
         raise RequestError("The SOGo login image source is missing.")
-    parsed = urllib.parse.urlparse(html.unescape(source.group(2)))
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise RequestError("The SOGo logo URL must use http or https.")
+    if source is not None:
+        parsed = urllib.parse.urlparse(html.unescape(source.group(2)))
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise RequestError("The custom SOGo logo URL must use http or https.")
+    else:
+        resource = html.unescape(resource_source.group(2))
+        if (
+            not resource
+            or len(resource) > 512
+            or ".." in Path(resource).parts
+            or re.fullmatch(r"[A-Za-z0-9_./-]+", resource) is None
+        ):
+            raise RequestError("The original SOGo logo resource path is invalid.")
 
 
 def redact_managed_read(target_id: str, content: str) -> str:
@@ -686,7 +723,7 @@ def run_configuration_command(config: dict, specification: object) -> dict:
     raise RequestError("Invalid configuration command specification.")
 
 
-def apply_configuration(config: dict, parameters: dict) -> dict:
+def prepare_configuration(config: dict, parameters: dict) -> tuple[dict[str, str], dict[str, bytes | None], list]:
     writes = parameters.get("writes", {})
     commands = parameters.get("commands", [])
     if not isinstance(writes, dict) or not isinstance(commands, list) or (not writes and not commands):
@@ -725,6 +762,20 @@ def apply_configuration(config: dict, parameters: dict) -> dict:
         ):
             raise RequestError("Invalid configuration command specification.")
 
+    return normalized, snapshots, commands
+
+
+def validate_configuration(config: dict, parameters: dict) -> dict:
+    normalized, _, commands = prepare_configuration(config, parameters)
+    return {
+        "status": "valid",
+        "targets": sorted(normalized),
+        "commands": len(commands),
+    }
+
+
+def apply_configuration(config: dict, parameters: dict) -> dict:
+    normalized, snapshots, commands = prepare_configuration(config, parameters)
     operation_id = secrets.token_hex(16)
     targets = sorted(normalized)
     write_operation_state(config, operation_id, "pending", "Configuration transaction is pending.", targets)
@@ -776,16 +827,13 @@ def generate_dkim(config: dict, parameters: dict) -> dict:
     directory = str(settings["directory"])
     directory_fd = secure_directory(directory)
     filename = f"{domain}.pem"
-    temporary = f".mxcentral-{domain}-{secrets.token_hex(12)}.tmp"
+    temporary_directory = f".mxcentral-{domain}-{secrets.token_hex(12)}.tmp"
+    temporary = f"{temporary_directory}/key.pem"
+    temporary_directory_created = False
     try:
         existing = secure_regular_file(os.path.join(directory, filename), required=False)
-        descriptor = os.open(
-            temporary,
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-            0o600,
-            dir_fd=directory_fd,
-        )
-        os.close(descriptor)
+        os.mkdir(temporary_directory, 0o700, dir_fd=directory_fd)
+        temporary_directory_created = True
         command = settings.get("genrsa")
         if not isinstance(command, list) or not command:
             raise RequestError("DKIM generation command is not configured.")
@@ -798,11 +846,9 @@ def generate_dkim(config: dict, parameters: dict) -> dict:
             env=SAFE_COMMAND_ENV,
         )
         if result.returncode != 0:
-            os.unlink(temporary, dir_fd=directory_fd)
             raise RequestError((result.stdout + "\n" + result.stderr).strip() or "DKIM generation failed.")
         generated = secure_regular_file(os.path.join(directory, temporary))
         if generated is None or generated.st_size == 0:
-            os.unlink(temporary, dir_fd=directory_fd)
             raise RequestError("DKIM generator did not produce a regular non-empty key.")
         descriptor = os.open(temporary, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
         try:
@@ -821,10 +867,15 @@ def generate_dkim(config: dict, parameters: dict) -> dict:
         os.fsync(directory_fd)
         return {"rotated": existing is not None, "path": os.path.join(directory, filename)}
     finally:
-        try:
-            os.unlink(temporary, dir_fd=directory_fd)
-        except FileNotFoundError:
-            pass
+        if temporary_directory_created:
+            try:
+                os.unlink(temporary, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
+            try:
+                os.rmdir(temporary_directory, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
         os.close(directory_fd)
 
 
@@ -1009,6 +1060,8 @@ def dispatch(config: dict, request: dict) -> dict:
         raise RequestError("Parameters must be an object.")
     if operation == "apply_configuration":
         return apply_configuration(config, parameters)
+    if operation == "validate_configuration":
+        return validate_configuration(config, parameters)
     if operation == "read_file":
         target_id = str(parameters.get("target", ""))
         if target_id not in config["files"]:

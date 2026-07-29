@@ -17,6 +17,11 @@ final class FakePrivilegedHelper extends PrivilegedHelper
             $data = match ($operation) {
                 'read_file' => ['content' => $this->read((string) $parameters['target'])],
                 'apply_configuration' => $this->applyConfiguration($parameters),
+                'validate_configuration' => [
+                    'status' => 'valid',
+                    'targets' => array_keys($parameters['writes'] ?? []),
+                    'commands' => count($parameters['commands'] ?? []),
+                ],
                 'dkim_status' => $this->dkimStatus((string) $parameters['domain']),
                 'dkim_generate' => $this->generateDkim((string) $parameters['domain']),
                 'dkim_delete' => $this->deleteDkim((string) $parameters['domain']),

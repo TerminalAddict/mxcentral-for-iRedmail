@@ -10,6 +10,7 @@ final class DeploymentHealthCheck
     public function __construct(
         private readonly ProductionSafetyCheck $production,
         private readonly PrivilegedHelper $privileged,
+        private readonly SystemSettingsService $settings,
     ) {}
 
     public function errors(): array
@@ -41,6 +42,10 @@ final class DeploymentHealthCheck
         $helper = $this->privileged->run('health_check');
         if (! $helper['ok']) {
             $errors[] = 'Privileged helper health check failed: '.$helper['message'];
+        } else {
+            foreach ($this->settings->deploymentCompatibilityErrors() as $error) {
+                $errors[] = 'iRedAPD settings compatibility check failed: '.$error;
+            }
         }
 
         return $errors;

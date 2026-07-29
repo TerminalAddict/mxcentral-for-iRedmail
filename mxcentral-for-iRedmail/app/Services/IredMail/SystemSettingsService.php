@@ -52,6 +52,7 @@ final class SystemSettingsService
         $postfixMainCfPath = $this->postfixMainCfPath();
         $postfixMainCfContent = $this->managedFileContent('postfix_main', false);
         $senderAccessPath = $this->postfixSenderAccessPath();
+        $sogoBranding = $this->sogoBrandingStatus();
 
         return [
             'path' => $path,
@@ -77,9 +78,11 @@ final class SystemSettingsService
             'postfix_sender_access_configured' => $this->postfixSenderAccessConfigured(),
             'postmap_command_configured' => $this->privileged->configured(),
             'postfix_reload_command_configured' => $this->privileged->configured(),
-            'sogo_logo_url' => $this->sogoLogoUrl(),
-            'sogo_login_background_color' => $this->sogoLoginColors()['background'],
-            'sogo_login_foreground_color' => $this->sogoLoginColors()['foreground'],
+            'sogo_logo_url' => $sogoBranding['logo_url'],
+            'sogo_logo_custom' => $sogoBranding['logo_custom'],
+            'sogo_login_background_color' => $sogoBranding['colors']['background'],
+            'sogo_login_foreground_color' => $sogoBranding['colors']['foreground'],
+            'sogo_login_colors_custom' => $sogoBranding['colors_custom'],
             'sogo_template_source' => $this->sogoTemplateSource(),
             'sogo_template_source_readable' => is_readable($this->sogoTemplateSource()),
             'sogo_template_target' => $this->sogoTemplateTarget(),
@@ -93,6 +96,52 @@ final class SystemSettingsService
             'hosted_mailboxes' => $this->hostedMailboxes(),
             'hosted_domains' => $this->hostedDomains(),
         ];
+    }
+
+    public function deploymentCompatibilityErrors(): array
+    {
+        try {
+            $original = $this->managedFileContent('iredapd_settings');
+            $senders = $this->extractSenders($original);
+            $forgedSenders = $this->extractAllowedForgedSenders($original);
+            $networks = $this->extractMyNetworks($original);
+
+            $senderCandidate = $this->ensureSenderMismatchPluginEnabled(
+                $this->replaceManagedBlock($original, $senders),
+            );
+            $unauthenticatedCandidate = $this->replaceUnauthenticatedSettingsBlock(
+                $original,
+                $forgedSenders,
+                $networks,
+            );
+            $candidates = [
+                'Sender Mismatch' => $senderCandidate,
+                'Unauthenticated Senders' => $unauthenticatedCandidate,
+                'Sender Mismatch then Unauthenticated Senders' => $this->replaceUnauthenticatedSettingsBlock(
+                    $senderCandidate,
+                    $forgedSenders,
+                    $networks,
+                ),
+                'Unauthenticated Senders then Sender Mismatch' => $this->ensureSenderMismatchPluginEnabled(
+                    $this->replaceManagedBlock($unauthenticatedCandidate, $senders),
+                ),
+            ];
+
+            $errors = [];
+            foreach ($candidates as $label => $candidate) {
+                $result = $this->privileged->run('validate_configuration', [
+                    'writes' => ['iredapd_settings' => $candidate],
+                    'commands' => [],
+                ]);
+                if (! $result['ok']) {
+                    $errors[] = "{$label} preflight failed: {$result['message']}";
+                }
+            }
+
+            return $errors;
+        } catch (\Throwable $exception) {
+            return ['Cannot prepare the iRedAPD settings preflight: '.$exception->getMessage()];
+        }
     }
 
     public function saveDecryptablePasswords(CurrentActor $actor, bool $enabled): array
@@ -234,15 +283,19 @@ final class SystemSettingsService
         string $url,
         string $backgroundColor = self::SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR,
         string $foregroundColor = self::SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR,
+        bool $useOriginalLogo = false,
+        bool $useOriginalColors = false,
     ): array {
         abort_unless($actor->globalAdmin, 403);
 
         $url = trim($url);
-        if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+        if (! $useOriginalLogo && ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true))) {
             throw ValidationException::withMessages(['sogo_logo_url' => 'Enter a valid http or https image URL.']);
         }
-        $backgroundColor = $this->normalizeSogoColor($backgroundColor, 'sogo_login_background_color');
-        $foregroundColor = $this->normalizeSogoColor($foregroundColor, 'sogo_login_foreground_color');
+        if (! $useOriginalColors) {
+            $backgroundColor = $this->normalizeSogoColor($backgroundColor, 'sogo_login_background_color');
+            $foregroundColor = $this->normalizeSogoColor($foregroundColor, 'sogo_login_foreground_color');
+        }
 
         $source = $this->sogoTemplateSource();
         if (! is_file($source) || ! is_readable($source)) {
@@ -251,21 +304,43 @@ final class SystemSettingsService
 
         $target = $this->sogoTemplateTarget();
 
-        return $this->withFileLock($target, function () use ($source, $url, $backgroundColor, $foregroundColor) {
+        return $this->withFileLock($target, function () use ($source, $url, $backgroundColor, $foregroundColor, $useOriginalLogo, $useOriginalColors) {
+            $sourceContent = (string) file_get_contents($source);
             $original = $this->managedFileContent('sogo_template', false);
             if ($original === '') {
-                $original = (string) file_get_contents($source);
+                $original = $sourceContent;
             }
-            $updated = $this->replaceSogoLogoUrl($original, $url);
-            if ($updated === $original && $this->sogoLogoUrlFromContent($original) !== $url) {
+
+            if ($useOriginalLogo) {
+                $sourceLogo = $this->sogoLogoSourceFromContent($sourceContent);
+                if ($sourceLogo === null) {
+                    throw ValidationException::withMessages(['sogo_logo_url' => 'Could not find the original SOGo logo image source.']);
+                }
+                $updated = $this->replaceSogoLogoSource($original, $sourceLogo['attribute'], $sourceLogo['value']);
+            } else {
+                $updated = $this->replaceSogoLogoSource($original, 'src', $url);
+            }
+
+            $expectedLogo = $useOriginalLogo ? $this->sogoLogoSourceFromContent($sourceContent) : ['attribute' => 'src', 'value' => $url];
+            if ($this->sogoLogoSourceFromContent($updated) !== $expectedLogo) {
                 throw ValidationException::withMessages(['sogo_logo_url' => 'Could not find the SOGo logo image tag to update.']);
             }
-            $updated = $this->replaceSogoLoginColors($updated, $backgroundColor, $foregroundColor);
-            $colors = $this->sogoLoginColorsFromContent($updated);
-            if ($colors['background'] !== $backgroundColor || $colors['foreground'] !== $foregroundColor) {
-                throw ValidationException::withMessages([
-                    'sogo_login_background_color' => 'Could not insert the SOGo login colours after the first script block.',
-                ]);
+
+            if ($useOriginalColors) {
+                $updated = $this->removeSogoLoginColors($updated);
+                if ($this->hasSogoLoginColorOverride($updated)) {
+                    throw ValidationException::withMessages([
+                        'sogo_login_background_color' => 'Could not restore the original SOGo login colours.',
+                    ]);
+                }
+            } else {
+                $updated = $this->replaceSogoLoginColors($updated, $backgroundColor, $foregroundColor);
+                $colors = $this->sogoLoginColorsFromContent($updated);
+                if ($colors['background'] !== $backgroundColor || $colors['foreground'] !== $foregroundColor) {
+                    throw ValidationException::withMessages([
+                        'sogo_login_background_color' => 'Could not insert the SOGo login colours after the first script block.',
+                    ]);
+                }
             }
 
             $writes = $updated !== $original ? ['sogo_template' => $updated] : [];
@@ -275,15 +350,19 @@ final class SystemSettingsService
                 'sogo_logo_url',
             );
             $reload = $this->operationResult($writes !== [], $operation);
-            $this->audit->log('update', "Updated SOGo branding: logo {$url}, login background {$backgroundColor}, login foreground {$foregroundColor}.");
+            $logoSummary = $useOriginalLogo ? 'original SOGo logo' : "custom logo {$url}";
+            $colorSummary = $useOriginalColors ? 'original SOGo colours' : "custom login colours {$backgroundColor}/{$foregroundColor}";
+            $this->audit->log('update', "Updated SOGo branding: {$logoSummary}, {$colorSummary}.");
 
             return [
                 'changed' => $updated !== $original,
                 'reload' => $reload,
                 'operation' => $operation,
-                'url' => $url,
-                'background_color' => $backgroundColor,
-                'foreground_color' => $foregroundColor,
+                'url' => $useOriginalLogo ? null : $url,
+                'background_color' => $useOriginalColors ? null : $backgroundColor,
+                'foreground_color' => $useOriginalColors ? null : $foregroundColor,
+                'logo_custom' => ! $useOriginalLogo,
+                'colors_custom' => ! $useOriginalColors,
             ];
         });
     }
@@ -1212,43 +1291,56 @@ final class SystemSettingsService
         return $restrictions;
     }
 
-    private function sogoLogoUrl(): ?string
+    /**
+     * @return array{logo_url: ?string, logo_custom: bool, colors: array{background: string, foreground: string}, colors_custom: bool}
+     */
+    private function sogoBrandingStatus(): array
     {
-        $content = $this->managedFileContent('sogo_template', false);
-        if ($content === '') {
-            return null;
-        }
+        $targetContent = $this->managedFileContent('sogo_template', false);
+        $source = $this->sogoTemplateSource();
+        $sourceContent = is_file($source) && is_readable($source) ? (string) file_get_contents($source) : '';
+        $sourceLogo = $this->sogoLogoSourceFromContent($sourceContent);
+        $targetLogo = $this->sogoLogoSourceFromContent($targetContent);
+        $logoCustom = $targetLogo !== null && $targetLogo !== $sourceLogo;
 
-        return $this->sogoLogoUrlFromContent($content);
+        return [
+            'logo_url' => $logoCustom ? $targetLogo['value'] : null,
+            'logo_custom' => $logoCustom,
+            'colors' => $this->sogoLoginColorsFromContent($targetContent),
+            'colors_custom' => $this->hasSogoLoginColorOverride($targetContent),
+        ];
     }
 
     private function sogoLogoUrlFromContent(string $content): ?string
     {
-        if (preg_match('/<img\b(?=[^>]*\bclass=(["\'])(?:(?!\1).)*\bmd-margin\b(?:(?!\1).)*\1)[^>]*(?<![:\w-])src=(["\'])(.*?)\2[^>]*>/is', $content, $match)) {
-            return html_entity_decode($match[3], ENT_QUOTES | ENT_HTML5);
-        }
-
-        if (preg_match('/<img\b[^>]*(?<![:\w-])src=(["\'])(.*?)\1[^>]*>/is', $content, $match)) {
-            return html_entity_decode($match[2], ENT_QUOTES | ENT_HTML5);
-        }
-
-        return null;
+        return $this->sogoLogoSourceFromContent($content)['value'] ?? null;
     }
 
     /**
-     * @return array{background: string, foreground: string}
+     * @return array{attribute: string, value: string}|null
      */
-    private function sogoLoginColors(): array
+    private function sogoLogoSourceFromContent(string $content): ?array
     {
-        $content = $this->managedFileContent('sogo_template', false);
-        if ($content === '') {
+        $preferred = '/<img\b(?=[^>]*\bclass=(["\'])(?:(?!\1).)*\bmd-margin\b(?:(?!\1).)*\1)[^>]*>/is';
+        if (preg_match($preferred, $content, $match) !== 1 && preg_match('/<img\b[^>]*>/is', $content, $match) !== 1) {
+            return null;
+        }
+
+        $tag = $match[0];
+        if (preg_match('/(?<![:\w-])src=(["\'])(.*?)\1/is', $tag, $source) === 1) {
             return [
-                'background' => self::SOGO_DEFAULT_LOGIN_BACKGROUND_COLOR,
-                'foreground' => self::SOGO_DEFAULT_LOGIN_FOREGROUND_COLOR,
+                'attribute' => 'src',
+                'value' => html_entity_decode($source[2], ENT_QUOTES | ENT_HTML5),
+            ];
+        }
+        if (preg_match('/\brsrc:src=(["\'])(.*?)\1/is', $tag, $source) === 1) {
+            return [
+                'attribute' => 'rsrc:src',
+                'value' => html_entity_decode($source[2], ENT_QUOTES | ENT_HTML5),
             ];
         }
 
-        return $this->sogoLoginColorsFromContent($content);
+        return null;
     }
 
     /**
@@ -1319,24 +1411,59 @@ final class SystemSettingsService
         return substr($content, 0, $scriptEnd)."\n\n".$block.substr($content, $scriptEnd, $mainComment - $scriptEnd).substr($content, $mainComment);
     }
 
+    private function removeSogoLoginColors(string $content): string
+    {
+        $managedPattern = '/'.preg_quote(self::SOGO_BRANDING_BEGIN_MARKER, '/').'.*?'.preg_quote(self::SOGO_BRANDING_END_MARKER, '/').'/s';
+        $content = preg_replace($managedPattern, '', $content, 1) ?? $content;
+
+        if (preg_match_all('/<style\b[^>]*>[\s\S]*?<\/style>/i', $content, $styleMatches, PREG_OFFSET_CAPTURE)) {
+            foreach ($styleMatches[0] as [$style, $offset]) {
+                if (preg_match('/\.md-default-theme\.md-accent\.md-bg\s*\{/i', $style)
+                    && preg_match('/#login\s+\*\s*\{/i', $style)) {
+                    return substr_replace($content, '', $offset, strlen($style));
+                }
+            }
+        }
+
+        return $content;
+    }
+
+    private function hasSogoLoginColorOverride(string $content): bool
+    {
+        if (str_contains($content, self::SOGO_BRANDING_BEGIN_MARKER)) {
+            return true;
+        }
+
+        return preg_match(
+            '/<style\b[^>]*>(?=[\s\S]*?\.md-default-theme\.md-accent\.md-bg\s*\{)(?=[\s\S]*?#login\s+\*\s*\{)[\s\S]*?<\/style>/i',
+            $content,
+        ) === 1;
+    }
+
     private function replaceSogoLogoUrl(string $content, string $url): string
     {
-        $escaped = htmlspecialchars($url, ENT_QUOTES | ENT_HTML5);
+        return $this->replaceSogoLogoSource($content, 'src', $url);
+    }
+
+    private function replaceSogoLogoSource(string $content, string $attribute, string $value): string
+    {
+        $escaped = htmlspecialchars($value, ENT_QUOTES | ENT_HTML5);
         $imgPattern = '/<img\b(?=[^>]*\bclass=(["\'])(?:(?!\1).)*\bmd-margin\b(?:(?!\1).)*\1)[^>]*>/is';
 
         if (preg_match($imgPattern, $content)) {
-            return preg_replace_callback($imgPattern, fn (array $match) => $this->replaceImgSrc($match[0], $escaped), $content, 1) ?? $content;
+            return preg_replace_callback($imgPattern, fn (array $match) => $this->replaceImgSrc($match[0], $attribute, $escaped), $content, 1) ?? $content;
         }
 
-        return preg_replace_callback('/<img\b[^>]*>/is', fn (array $match) => $this->replaceImgSrc($match[0], $escaped), $content, 1) ?? $content;
+        return preg_replace_callback('/<img\b[^>]*>/is', fn (array $match) => $this->replaceImgSrc($match[0], $attribute, $escaped), $content, 1) ?? $content;
     }
 
-    private function replaceImgSrc(string $tag, string $escapedUrl): string
+    private function replaceImgSrc(string $tag, string $attribute, string $escapedValue): string
     {
+        $replacement = $attribute.'="'.$escapedValue.'"';
         if (preg_match('/(?<![:\w-])src=(["\']).*?\1/is', $tag)) {
             return preg_replace_callback(
                 '/(?<![:\w-])src=(["\']).*?\1/is',
-                fn (): string => 'src="'.$escapedUrl.'"',
+                fn (): string => $replacement,
                 $tag,
                 1,
             ) ?? $tag;
@@ -1345,13 +1472,13 @@ final class SystemSettingsService
         if (preg_match('/\brsrc:src=(["\']).*?\1/is', $tag)) {
             return preg_replace_callback(
                 '/\brsrc:src=(["\']).*?\1/is',
-                fn (): string => 'src="'.$escapedUrl.'"',
+                fn (): string => $replacement,
                 $tag,
                 1,
             ) ?? $tag;
         }
 
-        return rtrim($tag, '>').' src="'.$escapedUrl.'">';
+        return rtrim($tag, '>').' '.$replacement.'>';
     }
 
     private function withFileLock(string $_targetPath, Closure $callback): mixed
@@ -1371,12 +1498,12 @@ final class SystemSettingsService
             return preg_replace_callback($managedPattern, fn (): string => $block."\n", $content, 1) ?? $content;
         }
 
-        $assignmentPattern = '/^\s*(?:#\s*Custom addition by iredadmin-php\s*\R)?(?:#\s*Allow forging email address\s*\R)?ALLOWED_LOGIN_MISMATCH_SENDERS\s*=\s*\[.*?\]\s*\R?/ms';
+        $assignmentPattern = '/^[ \t]*(?:#[ \t]*Custom addition by iredadmin-php[ \t]*\R)?(?:#[ \t]*Allow forging email address[ \t]*\R)?ALLOWED_LOGIN_MISMATCH_SENDERS[ \t]*=[ \t]*\[.*?\][ \t]*\R?/ms';
         if (preg_match($assignmentPattern, $content)) {
             return preg_replace_callback($assignmentPattern, fn (): string => $block."\n", $content, 1) ?? $content;
         }
 
-        return $this->insertNearTop($content, $block);
+        return $this->insertBeforeManagedBlocks($content, $block);
     }
 
     private function replaceUnauthenticatedSettingsBlock(string $content, array $senders, array $networks): string
@@ -1387,10 +1514,10 @@ final class SystemSettingsService
             return preg_replace_callback($managedPattern, fn (): string => $block."\n", $content, 1) ?? $content;
         }
 
-        $assignmentPattern = '/^\s*(ALLOWED_FORGED_SENDERS|MYNETWORKS)\s*=\s*\[.*?\]\s*\R?/ms';
+        $assignmentPattern = '/^[ \t]*(ALLOWED_FORGED_SENDERS|MYNETWORKS)[ \t]*=[ \t]*\[.*?\][ \t]*\R?/ms';
         $content = preg_replace($assignmentPattern, '', $content) ?? $content;
 
-        return $this->insertNearTop($content, $block);
+        return $this->insertBeforeManagedBlocks($content, $block);
     }
 
     private function unauthenticatedSettingsBlock(array $senders, array $networks): string
@@ -1425,7 +1552,9 @@ final class SystemSettingsService
 
         $pattern = '/^([ \t]*plugins[ \t]*=[ \t]*\[)(.*?)(\][^\r\n]*(?:\R|$))/ms';
         if (! preg_match($pattern, $content)) {
-            return $this->insertNearTop($content, "plugins = ['".self::SENDER_MISMATCH_PLUGIN."']");
+            $assignment = "plugins = ['".self::SENDER_MISMATCH_PLUGIN."']";
+
+            return $this->insertBeforeManagedBlocks($content, $assignment);
         }
 
         return preg_replace_callback($pattern, function (array $match): string {
@@ -1485,7 +1614,26 @@ final class SystemSettingsService
         $suffix = implode('', array_slice($lines, $index));
         $separator = $prefix === '' || str_ends_with($prefix, "\n") ? '' : "\n";
 
-        return $prefix.$separator.$block."\n\n".$suffix;
+        return $prefix.$separator.$block."\n".$suffix;
+    }
+
+    private function insertBeforeManagedBlocks(string $content, string $block): string
+    {
+        $positions = array_filter([
+            strpos($content, self::BEGIN_MARKER),
+            strpos($content, self::UNAUTH_BEGIN_MARKER),
+        ], fn (int|false $position): bool => $position !== false);
+
+        if ($positions === []) {
+            return $this->insertNearTop($content, $block);
+        }
+
+        $position = min($positions);
+        $prefix = substr($content, 0, $position);
+        $suffix = substr($content, $position);
+        $separator = $prefix === '' || str_ends_with($prefix, "\n") ? '' : "\n";
+
+        return $prefix.$separator.$block."\n".$suffix;
     }
 
     private function managedFileContent(string $target, bool $required = true): string

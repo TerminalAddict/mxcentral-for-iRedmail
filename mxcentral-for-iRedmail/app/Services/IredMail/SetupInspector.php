@@ -12,7 +12,7 @@ final class SetupInspector
         $checks = [];
         $checks[] = $this->extension('pdo_mysql');
         $checks[] = $this->connection('vmail', ['domain', 'mailbox', 'alias', 'forwardings', 'domain_admins']);
-        $checks[] = $this->connection('iredadmin', ['log', 'deleted_mailboxes', 'settings']);
+        $checks[] = $this->connection('iredadmin', ['log', 'deleted_mailboxes']);
         $checks[] = $this->connection('amavisd', ['msgs', 'msgrcpt', 'maddr', 'quarantine', 'wblist', 'mailaddr']);
         $checks[] = $this->connection('iredapd', ['throttle']);
         $checks[] = $this->connection('fail2ban', ['banned'], false);

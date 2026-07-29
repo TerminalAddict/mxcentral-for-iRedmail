@@ -104,6 +104,8 @@ final class SystemSettingsController extends Controller
             (string) $request->input('sogo_logo_url', ''),
             (string) $request->input('sogo_login_background_color', ''),
             (string) $request->input('sogo_login_foreground_color', ''),
+            $request->boolean('sogo_use_original_logo'),
+            $request->boolean('sogo_use_original_colors'),
         );
 
         if (! $result['reload']['configured']) {

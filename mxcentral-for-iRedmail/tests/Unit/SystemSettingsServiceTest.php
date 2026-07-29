@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\IredMail\AuditLogger;
+use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\SystemSettingsService;
 use ReflectionClass;
 use Tests\Fakes\FakePrivilegedHelper;
@@ -10,6 +11,13 @@ use Tests\TestCase;
 
 final class SystemSettingsServiceTest extends TestCase
 {
+    public function test_deployment_preflight_checks_all_iredapd_transition_orders(): void
+    {
+        $service = new SystemSettingsService(new AuditLogger, new FakePrivilegedHelper);
+
+        $this->assertSame([], $service->deploymentCompatibilityErrors());
+    }
+
     public function test_it_accepts_non_octet_boundary_ipv4_cidr_networks(): void
     {
         $this->assertSame(
@@ -167,6 +175,48 @@ WOX;
         $this->assertStringContainsString(htmlspecialchars($url, ENT_QUOTES | ENT_HTML5), $updated);
     }
 
+    public function test_sogo_logo_and_colours_can_each_use_original_or_custom_values(): void
+    {
+        $directory = sys_get_temp_dir().'/mxcentral-sogo-branding-'.uniqid('', true);
+        mkdir($directory, 0755, true);
+        $source = $directory.'/source.wox';
+        $target = $directory.'/target.wox';
+        file_put_contents($source, <<<'WOX'
+<root>
+  <script></script>
+  <!-- MAIN CONTENT ROW -->
+  <img class="md-margin" rsrc:src="img/sogo-full.svg"/>
+</root>
+WOX);
+        config([
+            'iredmail.sogo_root_template_source' => $source,
+            'iredmail.sogo_root_template_target' => $target,
+        ]);
+        $service = new SystemSettingsService(new AuditLogger, new FakePrivilegedHelper);
+        $actor = new CurrentActor('postmaster@example.com', 'admin', true, false, false);
+
+        $service->saveSogoLogo($actor, 'https://example.com/custom.svg', '#123456', '#abcdef');
+        $this->assertStringContainsString('src="https://example.com/custom.svg"', file_get_contents($target));
+        $this->assertStringContainsString('background-color: #123456', file_get_contents($target));
+
+        $service->saveSogoLogo($actor, '', '#654321', '#fedcba', true, false);
+        $this->assertStringContainsString('rsrc:src="img/sogo-full.svg"', file_get_contents($target));
+        $this->assertStringContainsString('background-color: #654321', file_get_contents($target));
+
+        $service->saveSogoLogo($actor, 'https://example.com/other.svg', '', '', false, true);
+        $this->assertStringContainsString('src="https://example.com/other.svg"', file_get_contents($target));
+        $this->assertStringNotContainsString('BEGIN MXCentral managed SOGo login branding', file_get_contents($target));
+
+        $service->saveSogoLogo($actor, '', '', '', true, true);
+        $this->assertStringContainsString('rsrc:src="img/sogo-full.svg"', file_get_contents($target));
+        $this->assertStringNotContainsString('BEGIN MXCentral managed SOGo login branding', file_get_contents($target));
+
+        @unlink($target);
+        @unlink($source);
+        @unlink($directory.'/restart-called');
+        @rmdir($directory);
+    }
+
     public function test_managed_sender_blocks_treat_dollar_sequences_as_literal_data(): void
     {
         $original = "# BEGIN iredadmin-php managed: login mismatch senders\nALLOWED_LOGIN_MISMATCH_SENDERS = ['old@example.com']\n# END iredadmin-php managed: login mismatch senders\n";
@@ -176,6 +226,65 @@ WOX;
         $this->assertStringContainsString("'sender$0@example.com'", $updated);
         $this->assertStringContainsString("'sender$1@example.com'", $updated);
         $this->assertStringNotContainsString('old@example.com', $updated);
+    }
+
+    public function test_sender_mismatch_plugin_fallback_is_inserted_outside_managed_block(): void
+    {
+        $original = "# iRedAPD settings\nfrom libs import SMTP_ACTIONS\n";
+        $managed = $this->invokePrivate('replaceManagedBlock', [$original, ['sender@example.com']]);
+
+        $updated = $this->invokePrivate('ensureSenderMismatchPluginEnabled', [$managed]);
+        $blockStart = strpos($updated, '# BEGIN iredadmin-php managed: login mismatch senders');
+        $assignment = strpos($updated, "plugins = ['reject_sender_login_mismatch']");
+        $blockEnd = strpos($updated, '# END iredadmin-php managed: login mismatch senders');
+
+        $this->assertNotFalse($assignment);
+        $this->assertNotFalse($blockStart);
+        $this->assertNotFalse($blockEnd);
+        $this->assertLessThan($blockStart, $assignment);
+        $this->assertStringNotContainsString(
+            'plugins =',
+            substr($updated, $blockStart, $blockEnd - $blockStart),
+        );
+    }
+
+    public function test_sender_mismatch_block_is_not_nested_in_existing_unauthenticated_block(): void
+    {
+        $original = implode("\n", [
+            '# iRedAPD settings',
+            '# BEGIN mxcentral managed: unauthenticated senders',
+            'ALLOWED_FORGED_SENDERS = []',
+            'MYNETWORKS = []',
+            '# END mxcentral managed: unauthenticated senders',
+            "plugins = ['reject_null_sender']",
+            '',
+        ]);
+
+        $updated = $this->invokePrivate('replaceManagedBlock', [$original, ['sender@example.com']]);
+
+        $this->assertLessThan(
+            strpos($updated, '# BEGIN mxcentral managed: unauthenticated senders'),
+            strpos($updated, '# END iredadmin-php managed: login mismatch senders'),
+        );
+    }
+
+    public function test_unauthenticated_block_is_not_nested_in_existing_sender_mismatch_block(): void
+    {
+        $original = implode("\n", [
+            '# iRedAPD settings',
+            '# BEGIN iredadmin-php managed: login mismatch senders',
+            'ALLOWED_LOGIN_MISMATCH_SENDERS = []',
+            '# END iredadmin-php managed: login mismatch senders',
+            "plugins = ['reject_sender_login_mismatch']",
+            '',
+        ]);
+
+        $updated = $this->invokePrivate('replaceUnauthenticatedSettingsBlock', [$original, [], []]);
+
+        $this->assertLessThan(
+            strpos($updated, '# BEGIN iredadmin-php managed: login mismatch senders'),
+            strpos($updated, '# END mxcentral managed: unauthenticated senders'),
+        );
     }
 
     /**
