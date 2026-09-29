@@ -12,6 +12,10 @@ This app manages the existing iRedMail databases directly:
 
 For server deployment and required iRedMail/Postfix/SOGo permissions, start with [INSTALL.md](INSTALL.md).
 
+For post-Ubuntu-LTS recovery, see the [mail-server repair notes and second-server checklist](ubuntu-lts24.04-24.04.1.md).
+Despite its historical filename, that runbook records Ubuntu 26.04.1, Dovecot 2.4,
+PHP/Nginx and SOGo recovery, plus branding and DKIM checks.
+
 ## Local Development
 
 ```bash
