@@ -812,3 +812,138 @@ message. `migrate.py` regenerates from the original backup and must not be
 rerun over later changes without review. Rollback has the same constraints
 as the first server: preserve new data and use matching packages/configuration,
 not just the obsolete Dovecot 2.3 files with a 2.4 binary.
+
+## Follow-up: sudo-rs compatibility on both servers
+
+After subsequent reboots, both servers reported:
+
+```text
+/etc/sudoers.d/mxcentral-for-iRedmail:12:20: unknown setting: 'requiretty'
+```
+
+Both were running `sudo-rs 0.2.13-0ubuntu1.2`. Unlike traditional sudo,
+[sudo-rs does not implement the legacy requiretty setting](https://github.com/trifectatechfoundation/sudo-rs/blob/main/FAQ.md).
+The MXCentral policy contained `Defaults:www-data !requiretty`, which was
+unnecessary on these installations and rejected by that parser.
+
+The fix removes that Defaults line without changing the command alias,
+run-as user, or passwordless permission for the fixed privileged helper.
+It does not grant additional commands or disable sudo security checks.
+
+The installed policy and deployed `docs/sudoers.conf` were backed up in:
+
+- `mail`: `/root/mxcentral-sudoers-fix-izRGmP5t/`
+- `ccl-mailbox`: `/root/mxcentral-sudoers-fix-EHDk4414/`
+
+Each directory contains `original`, `deployed-template`, and the corrected
+`candidate`. Candidates were validated with the server's `visudo -cf` before
+installation. The policy retains `root:root` ownership and mode `0440`.
+The deployed template was updated as well to avoid reinstating the old line
+from that local copy. The repository's template was fixed, with a regression
+assertion against reintroducing `requiretty` in an active Defaults line.
+
+After installation, full `visudo -c` validation and MXCentral's production
+health check as `www-data` passed on both servers. These commands were run
+over SSH without allocating a terminal, exercising the helper access used
+by the application. No service restart is required for a sudoers change.
+
+For future servers, check the actual sudo implementation, preserve any
+host-specific policy, validate before installing, and verify noninteractive
+helper access. Traditional-sudo installations with a deliberately enabled
+global `requiretty` policy require separate review; do not blindly remove
+that host's unrelated security settings. The historical vendored iRedMail
+HTML documentation is not the MXCentral policy installed by deployment.
+
+## Follow-up: domain-specific DKIM precedence (4 November 2026)
+
+On `mail.netent.co.nz`, messages from `nx-camera-info.com` were signed as
+`relay.netent.co.nz` even though the new domain's private key and public DNS
+record passed `amavisd testkeys`. This was a configuration-generation bug,
+not a missing key or an established consequence of the Ubuntu upgrade.
+
+The original catch-all map explicitly set `d => 'relay.netent.co.nz'`.
+MXCentral appended its domain-specific map using `push`, giving that earlier
+catch-all priority. The fix changes generation to `unshift`, so managed
+domain rules precede the existing fallback without modifying the fallback.
+
+Changes made:
+
+- Updated `DomainDkimService.php` to generate `unshift`.
+- Updated the privileged helper's narrowly allowed map statements to accept
+  `unshift`. Legacy `push` remains accepted for rolling-upgrade compatibility;
+  new configuration generation always prepends. Other validation restrictions
+  remain in place.
+- Added generator regression coverage that evaluates generated Perl and
+  confirms the managed map is first and the fallback is retained. Existing
+  legacy-block cleanup also verifies migration to `unshift`.
+- Added helper tests for the transition, legacy compatibility, rejected
+  arbitrary statements, duplicate maps and changes outside the managed block.
+- Applied the two runtime code files to `mail` after confirming their previous
+  hashes matched the repository baseline. Updated the deployed helper source
+  copy too, and reloaded PHP FPM. No broad application deployment was performed.
+- Backed up the original runtime files and Amavis configuration to
+  `/root/dkim-precedence-fix-aGTEBaU3/` on `mail`.
+- Changed only `push` to `unshift` in the existing managed Amavis block.
+  Validated the candidate with Amavis's complete ordered configuration set
+  and `testkeys`, then used the privileged helper's validated, locked
+  configuration transaction to atomically apply it and restart Amavis.
+  The operation ID was `5ed68b8d6869facc0f835956b06a9954`.
+
+A standalone `perl -c` cannot validate this Amavis fragment because it needs
+Amavis's declared globals. The successful preflight used each configuration
+file returned by `run-parts --list` for `/usr/share/amavis/conf.d` and
+`/etc/amavis/conf.d`, replacing only `50-user` with a temporary candidate.
+That candidate was root-owned, readable by Amavis, excluded from normal
+`run-parts` discovery by its dotted filename, and removed after validation.
+
+All existing private-key hashes were unchanged. MXCentral's production health
+check passed. A single labelled diagnostic message from
+`accounts@nx-camera-info.com` was submitted through the local originating
+Amavis listener and delivered to `paul@golive.co.nz`. Both Amavis's log and
+the delivered `DKIM-Signature` header confirmed:
+
+```text
+d=nx-camera-info.com; s=mxcentral
+```
+
+The subject is `MXCentral DKIM signing verification`; the recipient may delete
+it. The verification script handles folded DKIM headers and can recheck an
+existing Message-ID without sending another message. This verifies the actual
+signing choice and local delivery, not a third-party recipient's full DMARC
+evaluation. Four older, unrelated deferred messages remained in the queue
+with destination-connectivity errors; they were not deleted or force-retried.
+
+The targeted PHP suite passed (3 tests, 18 assertions), all Python helper
+tests passed (17 tests), and PHP formatting and whitespace checks passed.
+The earlier unrelated sudoers changes in the worktree were preserved.
+No DNS records or private keys were changed. The previously missing fallback
+DNS records were not repaired by this change.
+
+Only `mail` was updated live in this task; `ccl-mailbox` was not changed.
+For other deployments, install the compatible helper before the generator.
+Existing managed blocks need a reviewed `push`-to-`unshift` conversion and
+Amavis restart to take immediate effect; deploying PHP alone does not rewrite
+them. Do not rotate a key merely to fix map ordering.
+
+### Subsequent deployment to ccl-mailbox
+
+Later on 4 November 2026, the user requested the same fix on
+`mailbox.centralcomms.nz`. Read-only inspection first established that its
+catch-all was commented out: recent messages already used the correct
+`centralcomms.nz` signing domain, and both configured keys passed DNS checks.
+The old generator still used `push`, so the fix was deployed preventively.
+
+Original runtime files and Amavis configuration were backed up under
+`/root/dkim-precedence-fix-bkVJYw7D/`. Their runtime code hashes matched the
+same repository baseline before replacement. The updated helper was installed
+before the generator, its deployed source copy was updated, and PHP FPM was
+reloaded. The candidate was validated with the complete Amavis configuration
+set, then applied through the helper transaction
+`15fb1b7872f5c71ea1b0e299efa844c3`, including an Amavis restart.
+
+The sole live Amavis configuration difference is `push` becoming `unshift`
+in the managed block. The catch-all remains commented out and all private
+key hashes are unchanged. Both `centralcomms.nz` and
+`centralcommunications.co.nz` passed `amavisd testkeys` before and after the
+change. The production health check passed, and Amavis, Postfix and PHP FPM
+were active. No new diagnostic email was sent during this deployment.

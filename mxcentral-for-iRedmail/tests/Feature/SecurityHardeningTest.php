@@ -27,6 +27,7 @@ final class SecurityHardeningTest extends TestCase
         $this->assertStringNotContainsString('/usr/sbin/amavisd', $sudoers);
         $this->assertStringNotContainsString('/usr/bin/setfacl', $sudoers);
         $this->assertStringNotContainsString('*.pem', $sudoers);
+        $this->assertDoesNotMatchRegularExpression('/^Defaults[^\r\n]*\brequiretty\b/m', $sudoers);
     }
 
     public function test_privileged_helper_uses_nofollow_and_atomic_replace(): void

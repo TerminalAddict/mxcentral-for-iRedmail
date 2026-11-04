@@ -470,7 +470,7 @@ def validate_amavis_dkim_block(config: dict, content: str) -> None:
         return
     key_domains = set()
     map_domains = set()
-    push_count = 0
+    map_count = 0
     close_count = 0
     selector = re.escape(str(config["dkim"].get("selector", "mxcentral")))
     directory = re.escape(str(config["dkim"]["directory"]).rstrip("/"))
@@ -492,14 +492,15 @@ def validate_amavis_dkim_block(config: dict, content: str) -> None:
         if map_match is not None:
             map_domains.add(map_match.group(1))
             continue
-        if stripped == "push @dkim_signature_options_bysender_maps, {":
-            push_count += 1
+        # Accept legacy blocks during rolling upgrades; new writers prepend.
+        if stripped in {"push @dkim_signature_options_bysender_maps, {", "unshift @dkim_signature_options_bysender_maps, {"}:
+            map_count += 1
             continue
         if stripped == "};":
             close_count += 1
             continue
         raise RequestError("Amavis DKIM block contains an unapproved statement.")
-    if key_domains != map_domains or push_count != 1 or close_count != 1:
+    if key_domains != map_domains or map_count != 1 or close_count != 1:
         raise RequestError("Amavis DKIM key and sender-map domains do not match.")
 
 

@@ -213,7 +213,8 @@ final class DomainDkimService
             $lines[] = sprintf("dkim_key('%s', '%s', '%s');", $this->perlSingleQuoted($domain), $this->perlSingleQuoted($this->selector()), $this->perlSingleQuoted($this->keyPath($domain)));
         }
 
-        $lines[] = 'push @dkim_signature_options_bysender_maps, {';
+        // Domain-specific requirements must precede any existing catch-all map.
+        $lines[] = 'unshift @dkim_signature_options_bysender_maps, {';
         foreach ($domains as $domain) {
             $lines[] = sprintf("    '%s' => { d => '%s', a => 'rsa-sha256', ttl => 10*24*3600 },", $this->perlSingleQuoted($domain), $this->perlSingleQuoted($domain));
         }

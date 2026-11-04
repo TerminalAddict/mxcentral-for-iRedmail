@@ -6,6 +6,7 @@ use App\Services\IredMail\AuditLogger;
 use App\Services\IredMail\CurrentActor;
 use App\Services\IredMail\DomainDkimService;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\Process\Process;
 use Tests\Fakes\FakePrivilegedHelper;
 use Tests\TestCase;
 
@@ -95,6 +96,7 @@ final class DomainDkimServiceTest extends TestCase
         $this->assertSame($expectedDeleted, $deleted);
         $this->assertStringNotContainsString('example.com', $updated);
         $this->assertStringContainsString('other.example', $updated);
+        $this->assertStringContainsString('unshift @dkim_signature_options_bysender_maps, {', $updated);
         $this->assertFileDoesNotExist($this->tempDirectory.'/dkim/example.com.pem');
         $this->assertFileExists($this->tempDirectory.'/dkim/other.example.pem');
         $this->assertFileExists($this->tempDirectory.'/restart-called');
@@ -109,7 +111,7 @@ final class DomainDkimServiceTest extends TestCase
             '# Custom addition by mxcentral-for-iRedmail.',
             '# iRedMail Debian/Ubuntu amavisd config file: /etc/amavis/conf.d/50-user.',
             "dkim_key('example.com', 'mxcentral', '{$this->tempDirectory}/dkim/example.com.pem');",
-            'push @dkim_signature_options_bysender_maps, {',
+            'unshift @dkim_signature_options_bysender_maps, {',
             "    'example.com' => { d => 'example.com', a => 'rsa-sha256', ttl => 10*24*3600 },",
             '};',
             '# END mxcentral-for-iRedmail managed DKIM keys',
@@ -123,6 +125,26 @@ final class DomainDkimServiceTest extends TestCase
         $this->assertTrue($result['rotated']);
         $this->assertTrue($result['restart']['ok']);
         $this->assertFileExists($this->tempDirectory.'/restart-called');
+    }
+
+    public function test_managed_sender_map_precedes_existing_catch_all_without_changing_it(): void
+    {
+        $fallback = "@dkim_signature_options_bysender_maps = ({ '.' => { d => 'relay.example.net' } });\n";
+        $method = new \ReflectionMethod(DomainDkimService::class, 'replaceManagedBlock');
+        $updated = $method->invoke($this->service(), $fallback, ['example.com']);
+
+        $this->assertStringStartsWith($fallback, $updated);
+        $this->assertStringContainsString('unshift @dkim_signature_options_bysender_maps, {', $updated);
+        $this->assertStringNotContainsString('push @dkim_signature_options_bysender_maps', $updated);
+
+        // Evaluate the generated Perl to test actual map ordering, not file order.
+        $process = new Process(['perl', '-e', 'sub dkim_key {}'."\n".$updated.<<<'PERL'
+print $dkim_signature_options_bysender_maps[0]{'example.com'}{d}, "\n";
+print $dkim_signature_options_bysender_maps[1]{'.'}{d}, "\n";
+PERL]);
+        $process->mustRun();
+        $this->assertSame("example.com\nrelay.example.net\n", $process->getOutput());
+        $this->assertSame($updated, $method->invoke($this->service(), $updated, ['example.com']));
     }
 
     private function service(): DomainDkimService
