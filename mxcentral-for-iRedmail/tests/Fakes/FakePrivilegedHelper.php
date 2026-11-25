@@ -57,6 +57,7 @@ final class FakePrivilegedHelper extends PrivilegedHelper
             'iredapd_settings' => (string) config('iredmail.iredapd_settings_path'),
             'postfix_main' => (string) config('iredmail.postfix_main_cf_path'),
             'postfix_sender_access' => (string) config('iredmail.postfix_sender_access_path'),
+            'postfix_login_sender_access' => (string) config('iredmail.postfix_login_sender_access_path'),
             'postfix_discard_recipients' => (string) config('iredmail.postfix_discard_recipients_path'),
             'postfix_staging_domains' => (string) config('iredmail.postfix_staging_domains_path'),
             'sogo_template' => (string) config('iredmail.sogo_root_template_target'),

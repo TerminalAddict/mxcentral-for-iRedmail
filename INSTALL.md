@@ -72,6 +72,30 @@ git clone https://github.com/TerminalAddict/mxcentral-for-iRedmail.git
 gh repo clone TerminalAddict/mxcentral-for-iRedmail
 ```
 
+## Mail-server prerequisites
+
+MXCentral manages an existing iRedMail SQL installation; deployment does not
+install or replace the mail stack. Sender Mismatch/send-only support requires:
+
+- Postfix 2.11 or newer with the `pcre` lookup-table type available.
+- Working SMTP AUTH and iRedAPD's `reject_sender_login_mismatch` plugin.
+- The current MXCentral root helper, Python 3, and the helper-only sudo policy.
+  The deploy script installs the helper and policy; do not grant PHP direct
+  write access to Postfix or iRedAPD configuration.
+
+Check Postfix on each destination server before enabling the feature:
+
+```sh
+postconf mail_version
+postconf -m
+```
+
+The second command must include `pcre`. On Debian/Ubuntu, install the
+`postfix-pcre` package if that lookup type is missing. No new PHP dependency,
+database table, SQL grant, or additional sudo command is required for send-only
+support. Existing per-server `.env` and `.sql` profiles need no changes when
+using the default map path.
+
 ## Deploy App
 
 From the repo root on the build/workstation:
@@ -264,6 +288,7 @@ IREDAPD_SETTINGS_PATH=/opt/iredapd/settings.py
 
 POSTFIX_MAIN_CF_PATH=/etc/postfix/main.cf
 POSTFIX_SENDER_ACCESS_PATH=/etc/postfix/sender_access.pcre
+POSTFIX_LOGIN_SENDER_ACCESS_PATH=/etc/postfix/mxcentral_login_sender_access.pcre
 POSTFIX_DISCARD_RECIPIENTS_PATH=/etc/postfix/discard_recipients
 POSTFIX_STAGING_DOMAINS_PATH=/etc/postfix/mxcentral_staging_domains.pcre
 
@@ -503,6 +528,38 @@ sudo chmod 0400 /var/lib/dkim/example.com.pem
 ### Sender Mismatch
 
 The app edits `/opt/iredapd/settings.py`, enables iRedAPD plugin `reject_sender_login_mismatch`, writes `ALLOWED_LOGIN_MISMATCH_SENDERS`, removes Postfix `reject_sender_login_mismatch` from `smtpd_sender_restrictions`, then restarts iRedAPD and reloads Postfix.
+
+Saving also enables send-only envelope identities for exactly the selected authenticated SMTP logins. The helper writes `/etc/postfix/mxcentral_login_sender_access.pcre` and installs this prefix in `smtpd_sender_restrictions`:
+
+```text
+reject_non_fqdn_sender,
+check_sasl_access pcre:/etc/postfix/mxcentral_login_sender_access.pcre,
+reject_unlisted_sender
+```
+
+Remaining sender restrictions retain their order. `smtpd_reject_unlisted_sender = no` disables the redundant implicit check, which otherwise runs even after the login exception; the explicit `reject_unlisted_sender` above still protects every unapproved or unauthenticated client. Recipient/relay restrictions are not relaxed. No recipient mailbox or alias is created, so replies/bounces require separate routing. Removing a checkbox removes the login from both policies.
+
+After upgrading, save the existing Sender Mismatch selection once. Install the updated root helper first. No new sudo rule or database grant is needed. The PCRE map needs no `postmap` database rebuild. If overriding its path, set both `POSTFIX_LOGIN_SENDER_ACCESS_PATH` and the helper JSON's `files.postfix_login_sender_access`. Postfix must support `check_sasl_access` (2.11+) and PCRE maps. Review any service-specific sender restrictions in `master.cf`; those override `main.cf` and are not rewritten by MXCentral.
+
+Upgrade and verify each server separately:
+
+1. Deploy using that server's existing profile; the deployment installs the
+   current helper while preserving server-specific configuration.
+2. As a global administrator, save **System Settings → Sender Mismatch
+   permission**, retaining the intended SMTP login selections. Deployment alone
+   does not activate or change the selections.
+3. Confirm the save reports success. Test an authenticated submission using a
+   selected login and a nonexistent envelope sender in a hosted domain.
+4. Confirm an unselected login or unauthenticated client still receives an
+   unknown-sender rejection for that address. Use a domain without a catch-all:
+   catch-all routing can make otherwise nonexistent addresses valid to Postfix.
+5. Unselecting a login and saving revokes the exception. Re-enable it only if
+   intended. Existing mailboxes, aliases, and catch-all routing remain valid.
+
+Only trusted sending accounts should be selected: this is permission for the
+SMTP login to use arbitrary envelope sender addresses, not an allowlist of
+individual From addresses. It does not authorize unauthenticated relaying or
+create a destination for replies and bounces.
 
 ### Send Without SMTP Auth
 

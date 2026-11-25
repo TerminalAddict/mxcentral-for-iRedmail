@@ -188,7 +188,13 @@ final class SystemSettingsService
             $updated = $this->ensureSenderMismatchPluginEnabled($this->replaceManagedBlock($original, $senders));
             $postfixOriginal = $this->managedFileContent('postfix_main');
             $postfixUpdated = $this->removePostfixSenderLoginMismatchRestriction($postfixOriginal);
+            $postfixUpdated = $this->configureSendOnlyLogins($postfixUpdated);
+            $loginMapOriginal = $this->managedFileContent('postfix_login_sender_access', false);
+            $loginMapUpdated = $this->sendOnlyLoginMap($senders);
             $writes = [];
+            if ($loginMapUpdated !== $loginMapOriginal) {
+                $writes['postfix_login_sender_access'] = $loginMapUpdated;
+            }
             if ($updated !== $original) {
                 $writes['iredapd_settings'] = $updated;
             }
@@ -196,16 +202,17 @@ final class SystemSettingsService
                 $writes['postfix_main'] = $postfixUpdated;
             }
             $commands = [];
-            if ($postfixUpdated !== $postfixOriginal) {
-                $commands = ['postfix_check', 'postfix_reload'];
-            }
             if ($updated !== $original) {
                 $commands[] = 'iredapd_restart';
             }
+            $postfixChanged = $postfixUpdated !== $postfixOriginal || $loginMapUpdated !== $loginMapOriginal;
+            if ($postfixChanged) {
+                $commands = array_merge($commands, ['postfix_check', 'postfix_reload']);
+            }
             $operation = $this->applyConfiguration($writes, $commands, 'settings');
             $postfix = [
-                'changed' => $postfixUpdated !== $postfixOriginal,
-                'reload' => $this->operationResult($postfixUpdated !== $postfixOriginal, $operation),
+                'changed' => $postfixChanged,
+                'reload' => $this->operationResult($postfixChanged, $operation),
             ];
             $restart = $this->operationResult($updated !== $original, $operation);
             $this->audit->log('update', 'Updated iredapd login mismatch senders: '.implode(', ', $senders).'.');
@@ -236,6 +243,9 @@ final class SystemSettingsService
             $postfixOriginal = $this->managedFileContent('postfix_main');
             $map = 'check_sender_access pcre:'.$this->postfixSenderAccessPath();
             $postfixUpdated = $this->addPostfixAccessHook($postfixOriginal, 'smtpd_sender_restrictions', $map);
+            if (str_contains($postfixUpdated, 'check_sasl_access pcre:'.config('iredmail.postfix_login_sender_access_path'))) {
+                $postfixUpdated = $this->configureSendOnlyLogins($postfixUpdated);
+            }
             $writes = [];
             foreach ([
                 'iredapd_settings' => [$original, $updated],
@@ -490,6 +500,51 @@ final class SystemSettingsService
 
             return $this->persistStagingDomains($stagedDomains);
         });
+    }
+
+    private function sendOnlyLoginMap(array $logins): string
+    {
+        $lines = ['# Managed by MXCentral: authenticated Sender Mismatch logins only.'];
+        $logins = array_values(array_unique(array_map('strtolower', $logins)));
+        sort($logins, SORT_STRING);
+        foreach ($logins as $login) {
+            // Hex encoding prevents regex operators, delimiters and address-extension matching.
+            $encoded = implode('', array_map(fn (string $byte): string => '\\x'.$byte, str_split(bin2hex($login), 2)));
+            $lines[] = '# '.$login;
+            $lines[] = '/\\A'.$encoded.'\\z/i OK';
+        }
+
+        return implode("\n", $lines)."\n";
+    }
+
+    private function configureSendOnlyLogins(string $content): string
+    {
+        $hook = 'check_sasl_access pcre:'.config('iredmail.postfix_login_sender_access_path');
+        $pattern = '/^smtpd_sender_restrictions[ \\t]*=.*(?:\\R[ \\t]+[^\\r\\n]*)*/m';
+        if (preg_match_all($pattern, $content, $matches) !== 1) {
+            throw ValidationException::withMessages(['settings' => 'Expected one explicit smtpd_sender_restrictions setting.']);
+        }
+        $value = preg_replace('/^[^=]*=/', '', $matches[0][0], 1);
+        $value = preg_replace('/^[ \\t]*#.*$/m', '', $value);
+        $value = str_replace($hook, '', $value);
+        $tokens = preg_split('/[\\s,]+/', trim($value), -1, PREG_SPLIT_NO_EMPTY);
+        $remaining = array_values(array_filter($tokens, fn (string $item): bool => ! in_array($item, ['reject_non_fqdn_sender', 'reject_unlisted_sender'], true)));
+        $guard = 'smtpd_sender_restrictions = reject_non_fqdn_sender, '.$hook.', reject_unlisted_sender';
+        if ($remaining !== []) {
+            $guard .= ', '.implode(' ', $remaining);
+        }
+        $content = preg_replace_callback($pattern, fn (): string => $guard, $content, 1) ?? $content;
+
+        // Postfix's implicit check runs even after a PERMIT. Keep the explicit
+        // guard above for every login not matched by the authenticated-only map.
+        $implicit = '/^smtpd_reject_unlisted_sender[ \\t]*=[^\\r\\n]*(?:\\R[ \\t]+[^\\r\\n]*)*/m';
+        if (preg_match_all($implicit, $content) > 1) {
+            throw ValidationException::withMessages(['settings' => 'Duplicate smtpd_reject_unlisted_sender settings require review.']);
+        }
+
+        return preg_match($implicit, $content)
+            ? (preg_replace($implicit, 'smtpd_reject_unlisted_sender = no', $content) ?? $content)
+            : rtrim($content)."\n\nsmtpd_reject_unlisted_sender = no\n";
     }
 
     private function settingsPath(): string

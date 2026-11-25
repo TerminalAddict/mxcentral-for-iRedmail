@@ -49,6 +49,7 @@ return [
     'iredapd_settings_path' => env('IREDAPD_SETTINGS_PATH', '/opt/iredapd/settings.py'),
     'postfix_main_cf_path' => env('POSTFIX_MAIN_CF_PATH', '/etc/postfix/main.cf'),
     'postfix_sender_access_path' => env('POSTFIX_SENDER_ACCESS_PATH', '/etc/postfix/sender_access.pcre'),
+    'postfix_login_sender_access_path' => env('POSTFIX_LOGIN_SENDER_ACCESS_PATH', '/etc/postfix/mxcentral_login_sender_access.pcre'),
     'postfix_discard_recipients_path' => env('POSTFIX_DISCARD_RECIPIENTS_PATH', '/etc/postfix/discard_recipients'),
     'postfix_staging_domains_path' => env('POSTFIX_STAGING_DOMAINS_PATH', '/etc/postfix/mxcentral_staging_domains.pcre'),
     'sogo_root_template_source' => env('SOGO_ROOT_TEMPLATE_SOURCE', ''),

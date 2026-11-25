@@ -4,6 +4,7 @@
     "iredapd_settings": "/opt/iredapd/settings.py",
     "postfix_main": "/etc/postfix/main.cf",
     "postfix_sender_access": "/etc/postfix/sender_access.pcre",
+    "postfix_login_sender_access": "/etc/postfix/mxcentral_login_sender_access.pcre",
     "postfix_discard_recipients": "/etc/postfix/discard_recipients",
     "postfix_staging_domains": "/etc/postfix/mxcentral_staging_domains.pcre",
     "sogo_template": "/var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox"

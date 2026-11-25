@@ -20,7 +20,7 @@
             <div class="span-4 settings-picker" data-settings-picker>
                 <label>Allowed login mismatch senders
                     <input type="search" data-settings-picker-filter placeholder="Filter hosted mailboxes">
-                    <span class="field-hint">Select hosted mailbox accounts that may send with a different From address. The saved iRedAPD setting is generated as a Python list.</span>
+                    <span class="field-hint">Selected SMTP login accounts may send with a different From address, including a send-only envelope sender with no mailbox or alias. SMTP authentication is required. Unselected logins keep the normal sender checks; removing a selection revokes this exception. Replies and bounces to a send-only address are not delivered unless you also configure a mailbox, alias or catch-all.</span>
                 </label>
                 <div class="settings-picker__list" data-settings-picker-list>
                     @forelse($hostedMailboxes as $mailbox)
@@ -43,7 +43,7 @@
             <div class="span-2">
                 <strong>Managed file</strong>
                 <span class="field-hint">{{ $settings['path'] }}</span>
-                <span class="field-hint">The root helper enables the iRedAPD reject_sender_login_mismatch plugin and writes ALLOWED_LOGIN_MISMATCH_SENDERS in one validated, rollback-capable transaction.</span>
+                <span class="field-hint">The root helper synchronizes iRedAPD permissions and an exact-match Postfix SMTP-login map in one validated, rollback-capable transaction. Unknown senders remain rejected for unauthenticated clients and unselected SMTP logins.</span>
             </div>
             <div>
                 <strong>File access</strong>

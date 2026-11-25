@@ -11,6 +11,30 @@ use Tests\TestCase;
 
 final class SystemSettingsServiceTest extends TestCase
 {
+    public function test_send_only_map_matches_only_exact_approved_logins(): void
+    {
+        $map = $this->invokePrivate('sendOnlyLoginMap', [['sender+app@example.com', 'SENDER+APP@example.com']]);
+        $this->assertTrue($this->senderAccessBlockMatches($map, 'sender+app@example.com'));
+        $this->assertTrue($this->senderAccessBlockMatches($map, 'SENDER+APP@example.com'));
+        foreach (['', 'other@example.com', 'sender@example.com', 'sender+app@example.com.evil', 'sender+app+other@example.com'] as $login) {
+            $this->assertFalse($this->senderAccessBlockMatches($map, $login));
+        }
+        $this->assertSame(1, substr_count($map, ' OK'));
+        $this->assertFalse($this->senderAccessBlockMatches($this->invokePrivate('sendOnlyLoginMap', [[]]), 'sender+app@example.com'));
+    }
+
+    public function test_send_only_guard_is_idempotent_and_preserves_other_restrictions(): void
+    {
+        foreach ([', ', ' ', "\n    "] as $separator) {
+            $original = 'smtpd_sender_restrictions = '.implode($separator, ['reject_non_fqdn_sender', 'reject_unlisted_sender', 'permit_mynetworks', 'permit_sasl_authenticated', 'reject_unknown_sender_domain'])."\nsmtpd_reject_unlisted_sender = yes\nsmtpd_recipient_restrictions = reject_unauth_destination\n";
+            $updated = $this->invokePrivate('configureSendOnlyLogins', [$original]);
+            $this->assertStringContainsString('smtpd_sender_restrictions = reject_non_fqdn_sender, check_sasl_access pcre:/etc/postfix/mxcentral_login_sender_access.pcre, reject_unlisted_sender, permit_mynetworks permit_sasl_authenticated reject_unknown_sender_domain', $updated);
+            $this->assertStringContainsString('smtpd_reject_unlisted_sender = no', $updated);
+            $this->assertStringContainsString('smtpd_recipient_restrictions = reject_unauth_destination', $updated);
+            $this->assertSame($updated, $this->invokePrivate('configureSendOnlyLogins', [$updated]));
+        }
+    }
+
     public function test_deployment_preflight_checks_all_iredapd_transition_orders(): void
     {
         $service = new SystemSettingsService(new AuditLogger, new FakePrivilegedHelper);

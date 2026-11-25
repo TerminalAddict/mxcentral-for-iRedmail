@@ -277,6 +277,9 @@ This implements the iRedMail sender mismatch setup documented for iRedAPD:
 - Validation: selected addresses must be existing hosted mailboxes.
 - iRedAPD: enables the `reject_sender_login_mismatch` plugin in `settings.py`.
 - Postfix: removes `reject_sender_login_mismatch` from `smtpd_sender_restrictions` in `main.cf` because iRedAPD handles the flexible check.
+- Send-only identities: selected SMTP logins may use an envelope sender that has no mailbox or alias. The selection is the **authenticated login**, not a list of From addresses. Unselecting a login revokes this exception.
+- The root helper synchronizes an exact-login PCRE map with the iRedAPD list, validates Postfix, and reloads it in the same rollback-capable operation. Unknown local senders remain rejected for unselected and unauthenticated clients; recipient and relay rules are unchanged.
+- This does not create a receiving address. Replies and bounces need a real mailbox, alias, or catch-all if they should be delivered.
 - Output: a managed iRedAPD block containing a Python list, for example:
 
 ```python
@@ -288,6 +291,7 @@ Environment:
 ```dotenv
 IREDAPD_SETTINGS_PATH=/opt/iredapd/settings.py
 POSTFIX_MAIN_CF_PATH=/etc/postfix/main.cf
+POSTFIX_LOGIN_SENDER_ACCESS_PATH=/etc/postfix/mxcentral_login_sender_access.pcre
 ```
 
 ### Send Without SMTP Auth
@@ -508,7 +512,15 @@ No. The local part can be arbitrary, such as `no-reply@hosted-domain.example`. T
 
 ### Do sender mismatch accounts need to be real mailboxes?
 
-Yes. Sender mismatch permission is intentionally limited to existing hosted mailbox accounts.
+The selected SMTP login must be an existing hosted mailbox. Its envelope sender need not exist: for example, selected login `smtp@example.com` can send as `notifications@example.com` without creating that address. This permission allows that login to use arbitrary sender addresses; it is not a per-From-address allowlist.
+
+After upgrading an existing installation, save **System Settings → Sender Mismatch permission** once to synchronize the existing selections into Postfix. Deploy the updated root helper before saving. Custom map paths must agree between the application environment and the helper's `files.postfix_login_sender_access` setting.
+
+See [installation prerequisites](INSTALL.md#mail-server-prerequisites) and the
+[per-server upgrade and verification steps](INSTALL.md#sender-mismatch).
+The feature requires Postfix PCRE support but no new database grants or schema
+changes. Existing catch-all routing can make an otherwise nonexistent sender
+valid even without this exception.
 
 ### Why did a setting save but the service did not reload?
 

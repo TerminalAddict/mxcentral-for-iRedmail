@@ -44,6 +44,7 @@ DEFAULT_CONFIG = {
         "iredapd_settings": "/opt/iredapd/settings.py",
         "postfix_main": "/etc/postfix/main.cf",
         "postfix_sender_access": "/etc/postfix/sender_access.pcre",
+        "postfix_login_sender_access": "/etc/postfix/mxcentral_login_sender_access.pcre",
         "postfix_discard_recipients": "/etc/postfix/discard_recipients",
         "postfix_staging_domains": "/etc/postfix/mxcentral_staging_domains.pcre",
         "sogo_template": "/var/lib/sogo/GNUstep/Library/SOGo/Templates/MainUI/SOGoRootPage.wox",
@@ -53,6 +54,7 @@ DEFAULT_CONFIG = {
         "iredapd_settings": {"owner": "root", "group": "iredapd", "mode": "0640"},
         "postfix_main": {"owner": "root", "group": "root", "mode": "0644"},
         "postfix_sender_access": {"owner": "root", "group": "postfix", "mode": "0640"},
+        "postfix_login_sender_access": {"owner": "root", "group": "postfix", "mode": "0640"},
         "postfix_discard_recipients": {"owner": "root", "group": "postfix", "mode": "0640"},
         "postfix_staging_domains": {"owner": "root", "group": "postfix", "mode": "0640"},
         "sogo_template": {"owner": "root", "group": "sogo", "mode": "0644"},
@@ -305,6 +307,76 @@ def canonical_iredapd(
     )
 
 
+def login_sender_hook(config: dict) -> str:
+    return "check_sasl_access pcre:" + str(config["files"]["postfix_login_sender_access"])
+
+
+def postfix_assignment(content: str, name: str):
+    return list(re.finditer(r"^" + re.escape(name) + r"[ \t]*=([^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*)", content, re.MULTILINE))
+
+
+def postfix_tokens(value: str) -> list[str]:
+    value = re.sub(r"^[ \t]*#.*$", "", value, flags=re.MULTILINE)
+    return [token for token in re.split(r"[\s,]+", value.strip()) if token]
+
+
+def validate_send_only_guard(config: dict, content: str) -> None:
+    sender = postfix_assignment(content, "smtpd_sender_restrictions")
+    implicit = postfix_assignment(content, "smtpd_reject_unlisted_sender")
+    expected = ["reject_non_fqdn_sender", *login_sender_hook(config).split(), "reject_unlisted_sender"]
+    if len(sender) != 1 or postfix_tokens(sender[0][1])[:4] != expected:
+        raise RequestError("Send-only access requires the exact authenticated-login guard before unknown-sender rejection.")
+    if len(implicit) != 1 or implicit[0][1].strip() != "no":
+        raise RequestError("Send-only access requires explicit, not implicit, unknown-sender enforcement.")
+
+
+def canonical_send_only_postfix(config: dict, content: str) -> str:
+    # Only normalize the managed sender guard; all other Postfix settings stay protected.
+    matches = postfix_assignment(content, "smtpd_sender_restrictions")
+    if len(matches) != 1:
+        raise RequestError("Expected exactly one smtpd_sender_restrictions setting.")
+    match = matches[0]
+    value = match[1].replace(login_sender_hook(config), "")
+    tokens = [t for t in postfix_tokens(value) if t not in {"reject_unlisted_sender", "reject_non_fqdn_sender"}]
+    content = content[:match.start()] + "smtpd_sender_restrictions = " + " ".join(tokens) + content[match.end():]
+    implicit = postfix_assignment(content, "smtpd_reject_unlisted_sender")
+    if len(implicit) > 1 or any(m[1].strip() not in {"yes", "no"} for m in implicit):
+        raise RequestError("Ambiguous implicit unknown-sender setting; manual review required.")
+    for match in reversed(implicit):
+        content = content[:match.start()] + content[match.end():]
+    return canonical_postfix(config, content)
+
+
+def approved_mismatch_logins(content: str) -> list[str]:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError as exc:
+        raise RequestError("Invalid iRedAPD settings syntax.") from exc
+    values = []
+    seen = 0
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id == "ALLOWED_LOGIN_MISMATCH_SENDERS" and isinstance(node.ctx, ast.Store):
+            seen += 1
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) and node.targets[0].id == "ALLOWED_LOGIN_MISMATCH_SENDERS":
+            values = ast.literal_eval(node.value)
+            break
+    else:
+        if seen:
+            raise RequestError("Login mismatch permissions must be one top-level literal assignment.")
+    if seen > 1 or not isinstance(values, list) or not all(isinstance(v, str) and EMAIL_PATTERN.fullmatch(v) for v in values):
+        raise RequestError("Login mismatch permissions must contain only exact email logins.")
+    return sorted({v.lower() for v in values})
+
+
+def send_only_login_map(logins: list[str]) -> str:
+    lines = ["# Managed by MXCentral: authenticated Sender Mismatch logins only."]
+    for login in sorted(set(logins)):
+        encoded = "".join(f"\\x{byte:02x}" for byte in login.encode("ascii"))
+        lines.extend(["# " + login, "/\\A" + encoded + "\\z/i OK"])
+    return "\n".join(lines) + "\n"
+
+
 def canonical_postfix(config: dict, content: str) -> str:
     for value in (
         "check_sender_access pcre:" + str(config["files"]["postfix_sender_access"]),
@@ -369,8 +441,16 @@ def validate_managed_change(config: dict, target_id: str, current: str, candidat
         validate_iredapd_managed_blocks(candidate)
         return
     if target_id == "postfix_main":
-        if canonical_postfix(config, current) != canonical_postfix(config, candidate):
+        send_only = "postfix_login_sender_access" in config["files"] and login_sender_hook(config) in candidate
+        if send_only:
+            validate_send_only_guard(config, candidate)
+        canonical = canonical_send_only_postfix if send_only else canonical_postfix
+        if canonical(config, current) != canonical(config, candidate):
             raise RequestError("Refusing a Postfix change outside approved access hooks.")
+        return
+    if target_id == "postfix_login_sender_access":
+        # The complete map is checked against the effective iRedAPD permission
+        # list in prepare_configuration; callers cannot supply arbitrary regexes.
         return
     if target_id == "postfix_sender_access":
         outside = lambda value: without_marker_block(value, "# BEGIN mxcentral managed: unauthenticated senders", "# END mxcentral managed: unauthenticated senders")
@@ -750,6 +830,23 @@ def prepare_configuration(config: dict, parameters: dict) -> tuple[dict[str, str
             content = restore_redacted_iredapd(baseline, content)
             normalized[target_id] = content
         validate_managed_change(config, target_id, baseline, content)
+
+    relevant = {"postfix_login_sender_access", "postfix_main", "iredapd_settings"}
+    if "postfix_login_sender_access" in config["files"] and relevant.intersection(normalized):
+        def effective(target):
+            if target in normalized:
+                return normalized[target]
+            path = str(config["files"][target])
+            return read_nofollow(path).decode("utf-8") if secure_regular_file(path, required=False) else ""
+
+        main = effective("postfix_main")
+        if "postfix_login_sender_access" in normalized or login_sender_hook(config) in main:
+            validate_send_only_guard(config, main)
+            expected_map = send_only_login_map(approved_mismatch_logins(effective("iredapd_settings")))
+            if effective("postfix_login_sender_access") != expected_map:
+                raise RequestError("Send-only logins must exactly match Sender Mismatch permissions in this transaction.")
+            if {"postfix_login_sender_access", "postfix_main"}.intersection(normalized) and not all(c in commands for c in ("postfix_check", "postfix_reload")):
+                raise RequestError("Send-only policy changes require Postfix validation and reload.")
 
     # Validate the full command plan before changing any file.
     for command in commands:
